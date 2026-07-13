@@ -147,6 +147,48 @@ create policy store_isolation on orders for all
   );
 ```
 
+**⚠️ Phase 1 addendum: `accessible_store_ids()` and `accessible_brand_ids()`.** TENANCY.md named `accessible_store_ids()` but never defined its body — this is that definition, plus a companion for brand-only resources (`dayparts`, `promos`) that carry no `outlet_id` at all.
+
+`accessible_outlet_ids()` is **deliberately brand-inclusive**: a brand manager's outlet set includes every outlet carrying their brand, even a shared cloud kitchen — correct for outlet-level resources (inventory, staff), wrong for store-scoped ones (it would let a brand manager read a sibling brand's orders at that shared outlet). `accessible_store_ids()` fixes this by scoping per membership type instead of composing from `accessible_outlet_ids()`:
+
+```sql
+create function accessible_store_ids()
+  returns setof uuid
+  language sql stable security definer set search_path = public
+as $$
+  select s.id from stores s
+  join outlets o on o.id = s.outlet_id
+  join memberships m on m.user_id = (select auth.uid())
+  where (m.scope_type = 'org' and m.scope_id = o.org_id)
+     or (m.scope_type = 'brand' and m.scope_id = s.brand_id)
+     or (m.scope_type = 'outlet' and m.scope_id = s.outlet_id)
+     or (m.scope_type = 'outlet_group' and s.outlet_id in (
+           select outlet_id from outlet_group_members where outlet_group_id = m.scope_id));
+$$;
+```
+
+```sql
+create function accessible_brand_ids()
+  returns setof uuid
+  language sql stable security definer set search_path = public
+as $$
+  select distinct b.id from brands b
+  join memberships m on m.user_id = (select auth.uid())
+  where (m.scope_type = 'org' and m.scope_id = b.org_id)
+     or (m.scope_type = 'brand' and m.scope_id = b.id)
+     or (m.scope_type in ('outlet','outlet_group') and exists (
+           select 1 from stores s where s.brand_id = b.id
+             and ((m.scope_type='outlet' and s.outlet_id = m.scope_id)
+               or (m.scope_type='outlet_group' and s.outlet_id in (
+                     select outlet_id from outlet_group_members where outlet_group_id = m.scope_id)))
+         ));
+$$;
+```
+
+**⚠️ The RLS finding that mattered most in Phase 1: enabling RLS on a partitioned parent does not protect its child partitions.** Confirmed empirically, not by documentation-reading: `alter table orders enable row level security` leaves every monthly partition (`orders_2026_07`, etc.) with `relrowsecurity = false`. A direct query against the partition — `select * from orders_2026_07` — **returned every outlet's rows, RLS entirely bypassed**, even though querying through the parent correctly filtered. Since Supabase's PostgREST exposes every `public` table by default, an undated-partition endpoint would have been a live, unauthenticated-adjacent data leak.
+
+**The fix:** `create_partitions_ahead()` (§4.6) now runs `alter table <partition> enable row level security` immediately after creating each partition — no separate policies needed on the child, since a partition's policies are inherited from its parent's `CREATE POLICY` definitions once its own `relrowsecurity` flag is on. The result is stricter than "make the child behave like the parent": with RLS enabled and zero policies defined *on the partition itself*, Postgres denies **all** direct access to it, for every role. Since application code only ever queries through the parent table name — Postgres routes to the correct partition internally via the `business_date` predicate — this is exactly right: partition names become an internal implementation detail nobody can query directly, full stop.
+
 ## 3. Menu
 
 ```sql
@@ -244,7 +286,195 @@ create table orders (
 create unique index on orders (idempotency_key);   -- replay safety, globally
 ```
 
-Same shape for `order_items`, `kots`, `kot_items`, `bills`, `payments`, `order_status_events` — all partitioned by `business_date`, monthly. Partitions are created **three months ahead** by a scheduled job; a missing partition is an outage, so the job alarms loudly and the check runs in CI against staging.
+**⚠️ Phase 1 addendum (2026-07):** the DDL below for `order_items`, `kots`, `kot_items`, `payments`, `order_status_events`, plus `table_sessions`, `dayparts`, `promos` and the physical `tables`, did not exist anywhere in the Phase 0 draft of this document — they were referenced by FK from tables above but never actually defined ("same shape... omitted for brevity" was true of nothing executable). They are designed here from [DOMAIN.md](DOMAIN.md)'s state machines and applied against real Postgres as part of the Phase 1 schema checkpoint. See [DECISIONS.md](../DECISIONS.md) for the full account, including a real RLS bypass this exercise found and fixed (row-level security enabled on a partitioned parent does **not** propagate to child partitions — every partition needs it set individually, which `create_partitions_ahead()` now does automatically).
+
+### 4.1 The physical floor table and table sessions
+
+```sql
+create table tables (                            -- the physical floor table
+  id uuid primary key,
+  outlet_id  uuid not null references outlets,
+  area_id    uuid not null references areas,
+  label      text not null,                      -- 'T12', 'Booth 3' — not necessarily numeric
+  capacity   int not null default 4,
+  status     text not null default 'available' check (status in ('available','out_of_service')),
+  unique (outlet_id, label)
+);
+-- Deliberately no 'reserved' status: reservations are explicitly out of v1 (PRD.md §4).
+-- Occupancy is derived from open table_sessions, not stored here.
+
+create table table_sessions (                    -- DOMAIN.md §3.1 state machine
+  id uuid primary key,
+  outlet_id       uuid not null references outlets,
+  store_id        uuid not null references stores,   -- merges are blocked across stores
+  business_day_id uuid not null references business_days,
+  status          text not null check (status in
+                    ('open','ordering','dining','bill_requested','settling','closed','abandoned','merged_into')),
+  merged_into_session_id uuid references table_sessions,
+  covers          int not null default 1,
+  opened_at       timestamptz not null default now(),
+  closed_at       timestamptz,
+  abandoned_reason text,
+  idempotency_key uuid not null unique,
+  constraint merged_into_set_iff_status check (
+    (status = 'merged_into' and merged_into_session_id is not null) or
+    (status != 'merged_into' and merged_into_session_id is null)
+  ),
+  constraint abandoned_reason_required check (
+    (status = 'abandoned' and abandoned_reason is not null) or (status != 'abandoned')
+  )
+);
+-- NOT partitioned: real volume, but never called out as partitioned in the
+-- Phase 0 retention plan (ADR-0002). Deliberate Phase 1 call; revisit via a
+-- future ADR if volume becomes a real problem.
+
+create table table_session_tables (               -- a session may span multiple tables
+  table_session_id uuid not null references table_sessions,
+  table_id         uuid not null references tables,
+  unique (table_session_id, table_id)
+);
+```
+
+### 4.2 Brand-scoped menu dimensions
+
+```sql
+create table dayparts (                           -- TENANCY.md §7.3 dimension D
+  id uuid primary key,
+  brand_id     uuid not null references brands,
+  code         text not null,                     -- 'happy_hour', 'breakfast'
+  name         text not null,
+  days_of_week int[] not null default '{0,1,2,3,4,5,6}',  -- 0=Sunday..6=Saturday
+  start_time   time not null,
+  end_time     time not null,                     -- local wall-clock time; overnight-spanning
+  unique (brand_id, code)                          -- windows (22:00-02:00) are a later-phase case
+);
+
+create table promos (                              -- TENANCY.md §7.3 dimension P
+  id uuid primary key,
+  brand_id  uuid not null references brands,
+  code      text not null,                         -- 'MONSOON20'
+  name      text not null,
+  starts_at timestamptz not null,
+  ends_at   timestamptz,
+  status    text not null default 'draft' check (status in ('draft','active','ended','cancelled')),
+  unique (brand_id, code)
+);
+```
+
+### 4.3 order_items and the append-only void ledger
+
+DOMAIN.md §3.2: the original line is never edited. A partial quantity reduction is a new row in `order_item_voids` referencing the original; a full pre-fire void flips `status` directly (free — nothing was cooked).
+
+```sql
+create table order_items (
+  id              uuid not null,
+  business_date   date not null,
+  order_id        uuid not null,                  -- composite FK -> orders(id, business_date)
+  outlet_id       uuid not null references outlets,   -- denormalized for RLS (§6 below)
+  store_id        uuid not null references stores,
+  menu_item_id    uuid not null references menu_items,
+  quantity        int not null check (quantity > 0),
+  unit_price_paise bigint not null check (unit_price_paise >= 0),  -- server-resolved at add time
+  tax_class_id    uuid not null references tax_classes,
+  status          text not null check (status in ('pending','fired','served','void_requested','voided')),
+  client_line_id  uuid not null,                   -- terminal-generated id for offline dedup
+  idempotency_key uuid not null,
+  created_at      timestamptz not null default now(),
+  primary key (id, business_date),
+  unique (order_id, client_line_id, business_date),
+  unique (idempotency_key, business_date)
+) partition by range (business_date);
+-- variants/addon_groups selections: deferred to Phase 2, same precedent as §3.
+
+create table order_item_voids (                    -- append-only. Never mutates order_items.
+  id              uuid not null,
+  business_date   date not null,                   -- = the original order_item's business_date
+  order_item_id   uuid not null,                    -- composite FK -> order_items(id, business_date)
+  outlet_id       uuid not null references outlets,
+  store_id        uuid not null references stores,
+  quantity_voided int not null check (quantity_voided > 0),
+  reason_code     text not null check (reason_code in
+                    ('guest_changed_mind','wrong_item_made','quality_complaint','staff_error')),
+  requires_auth   boolean not null,                 -- true if the item had already fired
+  authorized_by   uuid,
+  note            text,
+  voided_by       uuid not null,
+  voided_at       timestamptz not null default now(),
+  primary key (id, business_date),
+  constraint auth_required_check check (requires_auth = false or authorized_by is not null)
+) partition by range (business_date);
+```
+
+### 4.4 KOTs — outlet-scoped, never store-scoped
+
+A shared cloud kitchen's KDS shows every brand's tickets (TENANCY.md §2 Case A); `store_id` on `kots`/`kot_items` is display-tagging only and carries no RLS weight.
+
+```sql
+create table kots (
+  id              uuid not null,
+  business_date   date not null,
+  outlet_id       uuid not null references outlets,
+  store_id        uuid not null references stores,   -- tagging only, not a security boundary
+  table_session_id uuid not null references table_sessions,
+  order_id        uuid not null,                     -- composite FK -> orders(id, business_date)
+  kitchen_section text not null check (kitchen_section in ('hot','cold','bar')),
+  kot_number      int not null,                       -- per outlet, per business day, resets daily
+  status          text not null check (status in
+                    ('queued','printed','print_failed','acknowledged','preparing','ready','bumped','voided')),
+  reprint_count   int not null default 0,              -- a reprint increments this; never a 2nd row
+  fired_at        timestamptz not null default now(),  -- the ticket-age clock (DOMAIN.md §3.3)
+  bumped_at       timestamptz,
+  idempotency_key uuid not null,
+  primary key (id, business_date),
+  unique (outlet_id, business_date, kot_number),
+  unique (idempotency_key, business_date)
+) partition by range (business_date);
+
+create table kot_items (
+  id            uuid not null,
+  business_date date not null,
+  kot_id        uuid not null,                        -- composite FK -> kots(id, business_date)
+  order_item_id uuid not null,                         -- composite FK -> order_items(id, business_date)
+  outlet_id     uuid not null references outlets,
+  quantity      int not null,
+  prep_notes    text,
+  primary key (id, business_date),
+  unique (order_item_id, business_date)                -- an order_item fires onto exactly one KOT
+) partition by range (business_date);
+```
+
+### 4.5 The generic event log
+
+The append-only log ADR-0005's KDS reconnect logic reads. `event_seq` is a per-outlet monotonic counter (backed by `outlet_event_counters`, §4.6) — **not** a shared global sequence, because a client comparing consecutive seq numbers for gap detection must never see another outlet's events as a false gap.
+
+```sql
+create table order_status_events (
+  id            uuid not null,
+  business_date date not null,
+  outlet_id     uuid not null references outlets,
+  event_seq     bigint not null,
+  entity_type   text not null check (entity_type in ('order','order_item','kot','table_session','bill')),
+  entity_id     uuid not null,
+  event_type    text not null,                        -- free-form, consumed by realtime clients
+  payload       jsonb not null default '{}',
+  created_at    timestamptz not null default now(),
+  primary key (id, business_date),
+  unique (outlet_id, event_seq, business_date)
+) partition by range (business_date);
+```
+
+### 4.6 outlet_event_counters
+
+```sql
+create table outlet_event_counters (
+  outlet_id uuid primary key references outlets,
+  next_seq  bigint not null default 1
+);
+-- App increments transactionally: UPDATE ... SET next_seq = next_seq + 1
+-- RETURNING next_seq - 1. Same pattern as invoice_series.next_seq (§5).
+```
+
+Partitions are created **three months ahead** by a scheduled job; a missing partition is an outage, so the job alarms loudly and the check runs in CI against staging.
 
 ```sql
 create table bills (
@@ -301,6 +531,31 @@ create table bill_tax_lines (
   amount_paise  bigint not null,
   primary key (bill_id, business_date, tax_class_id, component)
 ) partition by range (business_date);
+```
+
+One payment method, one tender against a bill — a bill may have many (split tender). `outlet_id`/`store_id` are denormalized here too: a partitioned table's RLS policy can't cheaply join through `bills` to find its scope, so the scope columns live directly on the row (Phase 1 addendum, same reasoning as `order_items` above).
+
+```sql
+create table payments (
+  id              uuid not null,
+  business_date   date not null,
+  bill_id         uuid not null,                    -- composite FK -> bills(id, business_date)
+  outlet_id       uuid not null references outlets,
+  store_id        uuid not null references stores,
+  method          text not null check (method in
+                    ('cash','upi_intent','upi_collect','card','netbanking','wallet','pending_dues')),
+  amount_paise    bigint not null check (amount_paise > 0),
+  status          text not null check (status in ('pending','captured','failed','refunded')),
+  gateway         text,                              -- 'razorpay','cashfree'; null for cash
+  gateway_txn_id  text,
+  idempotency_key uuid not null,
+  created_at      timestamptz not null default now(),
+  primary key (id, business_date),
+  unique (idempotency_key, business_date)
+) partition by range (business_date);
+
+create unique index payments_gateway_txn_unique on payments (gateway, gateway_txn_id, business_date)
+  where gateway is not null and gateway_txn_id is not null;
 ```
 
 ## 5. Invoice numbering

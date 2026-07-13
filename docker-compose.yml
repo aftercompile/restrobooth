@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector/pgvector, not stock postgres — the vector extension isn't
+    # available in the stock image, and this matches what Supabase's own
+    # Postgres actually ships (their images are built on this same base).
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: restrobooth

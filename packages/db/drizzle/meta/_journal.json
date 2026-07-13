@@ -1,0 +1,76 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1783950088639,
+      "tag": "0000_init_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783950433948,
+      "tag": "0001_auth_uid_stub",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783950435168,
+      "tag": "0002_access_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783950436391,
+      "tag": "0003_partition_maintenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783950436500,
+      "tag": "0004_add_store_id_denorm",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783950437532,
+      "tag": "0005_rls_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783950438704,
+      "tag": "0006_invoice_numbering_exclude",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783950439862,
+      "tag": "0007_menu_resolver",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783950441055,
+      "tag": "0008_tenancy_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1783950442233,
+      "tag": "0009_pgvector_embedding",
+      "breakpoints": true
+    }
+  ]
+}
