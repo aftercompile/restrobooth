@@ -1,0 +1,799 @@
+<title>RestroBooth — Three Design Directions</title>
+
+<style>
+  /* ============================================================
+     PAGE IDENTITY — deliberately neutral so it does not bias the
+     three directions it is presenting. Graphite with a slight
+     green bias (a nod to the industry, borrowed from none of the
+     three candidates). Each direction card forces its own palette.
+     ============================================================ */
+  :root {
+    --page-bg:      #F4F6F4;
+    --page-surface: #FFFFFF;
+    --page-sunken:  #E9EDEA;
+    --page-ink:     #141A18;
+    --page-ink-2:   #4A554F;
+    --page-ink-3:   #77837C;
+    --page-line:    #D6DCD8;
+    --page-accent:  #1F5F52;
+    --page-warn:    #9A5B12;
+
+    --font-ui:   system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+
+    --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+    --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+
+    --maxw: 1080px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg:      #0E1211;
+      --page-surface: #161B19;
+      --page-sunken:  #1D2422;
+      --page-ink:     #E8EDEA;
+      --page-ink-2:   #A3AFA9;
+      --page-ink-3:   #75827B;
+      --page-line:    #2A3330;
+      --page-accent:  #5FBFA6;
+      --page-warn:    #D9A24B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg:      #0E1211;
+    --page-surface: #161B19;
+    --page-sunken:  #1D2422;
+    --page-ink:     #E8EDEA;
+    --page-ink-2:   #A3AFA9;
+    --page-ink-3:   #75827B;
+    --page-line:    #2A3330;
+    --page-accent:  #5FBFA6;
+    --page-warn:    #D9A24B;
+  }
+  :root[data-theme="light"] {
+    --page-bg:      #F4F6F4;
+    --page-surface: #FFFFFF;
+    --page-sunken:  #E9EDEA;
+    --page-ink:     #141A18;
+    --page-ink-2:   #4A554F;
+    --page-ink-3:   #77837C;
+    --page-line:    #D6DCD8;
+    --page-accent:  #1F5F52;
+    --page-warn:    #9A5B12;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-ink);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--s5); }
+
+  /* ---------- type scale ---------- */
+  h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
+  h1 { font-size: clamp(32px, 5vw, 52px); font-weight: 700; }
+  h2 { font-size: clamp(24px, 3.4vw, 34px); font-weight: 650; }
+  h3 { font-size: 19px; font-weight: 650; letter-spacing: -0.01em; }
+  p  { margin: 0; max-width: 68ch; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--page-ink-3);
+  }
+  .lede { font-size: 18px; color: var(--page-ink-2); max-width: 62ch; }
+  .muted { color: var(--page-ink-2); }
+  .small { font-size: 14px; }
+
+  /* ---------- masthead ---------- */
+  header.masthead {
+    border-bottom: 1px solid var(--page-line);
+    padding: var(--s8) 0 var(--s7);
+    background: var(--page-surface);
+  }
+  .masthead .wrap { display: flex; flex-direction: column; gap: var(--s4); }
+
+  .judge {
+    margin-top: var(--s5);
+    padding: var(--s4) var(--s5);
+    background: var(--page-sunken);
+    border-left: 4px solid var(--page-accent);
+    border-radius: 0 6px 6px 0;
+    max-width: 68ch;
+  }
+  .judge strong { color: var(--page-ink); }
+
+  section { padding: var(--s8) 0; border-bottom: 1px solid var(--page-line); }
+
+  /* ---------- constraint table ---------- */
+  .tablewrap { overflow-x: auto; margin-top: var(--s5); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+  th, td { text-align: left; padding: var(--s3) var(--s4); border-bottom: 1px solid var(--page-line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--page-ink-3); font-weight: 600; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+
+  /* ---------- direction card ---------- */
+  .dir {
+    margin-top: var(--s7);
+    border: 1px solid var(--page-line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--page-surface);
+  }
+  .dir-head {
+    padding: var(--s5);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s4);
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--page-line);
+  }
+  .dir-title { display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap; }
+  .dir-letter {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 4px;
+    background: var(--page-sunken);
+    color: var(--page-ink-2);
+  }
+  .pick {
+    background: var(--page-accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .dir-body { padding: var(--s5); display: flex; flex-direction: column; gap: var(--s6); }
+
+  /* ---------- swatches ---------- */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--s2); }
+  .sw { border-radius: 6px; overflow: hidden; border: 1px solid var(--page-line); }
+  .sw-chip { height: 60px; }
+  .sw-meta { padding: var(--s2) var(--s3); background: var(--page-sunken); }
+  .sw-name { font-size: 12px; font-weight: 600; }
+  .sw-hex { font-family: var(--font-mono); font-size: 11px; color: var(--page-ink-3); text-transform: uppercase; }
+
+  /* ---------- signature callout ---------- */
+  .sig {
+    padding: var(--s4) var(--s5);
+    border-radius: 8px;
+    background: var(--page-sunken);
+    border-left: 4px solid var(--page-warn);
+  }
+  .sig .eyebrow { color: var(--page-warn); }
+  .sig p { margin-top: var(--s2); font-size: 17px; }
+
+  /* ---------- mock screens ---------- */
+  .mocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--s4); }
+  .mock { border-radius: 8px; overflow: hidden; border: 1px solid var(--page-line); }
+  .mock-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: var(--s2) var(--s3);
+    background: var(--page-sunken);
+    color: var(--page-ink-3);
+    border-bottom: 1px solid var(--page-line);
+  }
+  .screen { padding: 14px; font-size: 13px; line-height: 1.45; min-height: 220px; }
+  .screen .row { display: flex; justify-content: space-between; gap: 10px; }
+  .screen .n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- critique ---------- */
+  .crit { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--s4); }
+  .crit ul { margin: var(--s2) 0 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: var(--s2); }
+  .crit li { font-size: 14px; line-height: 1.5; padding-left: 22px; position: relative; color: var(--page-ink-2); }
+  .crit li::before { position: absolute; left: 0; font-family: var(--font-mono); font-weight: 700; }
+  .crit .win li::before  { content: "+"; color: #2E8B6F; }
+  .crit .lose li::before { content: "\2212"; color: #C0492F; }
+  .crit li b { color: var(--page-ink); font-weight: 650; }
+
+  /* ============================================================
+     DIRECTION A — TICKET RAIL
+     ============================================================ */
+  .A-rail   { background: #1E242C; }
+  .A-screen { background: #1E242C; color: #C3CBD4; }
+  .A-ticket {
+    background: #FFFFFF; color: #14171C;
+    padding: 10px 12px 12px; margin-bottom: 10px;
+    /* the signature: a CSS-rendered perforated top edge */
+    border-top: 3px dotted #C9CFD6;
+    position: relative;
+  }
+  .A-ticket::before {
+    content: ""; position: absolute; inset: -3px 0 auto 0; height: 6px;
+    background: radial-gradient(circle at 4px -1px, transparent 4px, #FFFFFF 4px);
+    background-size: 10px 6px;
+  }
+  .A-no { font-family: var(--font-mono); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; }
+  .A-thermal { color: #E8462B; font-weight: 700; }
+  .A-fire { color: #B27200; }
+  .A-go   { color: #1E7A52; }
+
+  /* ============================================================
+     DIRECTION B — SERVICE BOARD  (the state rail)
+     ============================================================ */
+  .B-dark  { background: #0C1517; color: #D3DEDA; }
+  .B-light { background: #EDF1EF; color: #0C1517; }
+
+  .B-item {
+    display: flex; gap: 10px; align-items: stretch;
+    padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .B-light .B-item { border-bottom-color: rgba(12,21,23,0.10); }
+  .B-item:last-child { border-bottom: 0; }
+
+  /* THE SIGNATURE: 4px leading rail. Colour = time-temperature. */
+  .B-rail { width: 4px; border-radius: 2px; flex: 0 0 4px; }
+  .B-fresh { background: #17796A; }
+  .B-warm  { background: #D9A32B; }
+  .B-hot   { background: #D2622A; }
+  .B-crit  {
+    background: repeating-linear-gradient(45deg, #C63A2A 0 4px, #8E2A1E 4px 8px);
+  }
+  .B-none  { background: rgba(255,255,255,0.12); }
+  .B-light .B-none { background: rgba(12,21,23,0.14); }
+
+  .B-brass { color: #C89B3C; }
+  .B-light .B-brass { color: #0E4F45; } /* brass FAILS AA on light — enamel instead. The rule, enforced. */
+
+  .B-age { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 12px; }
+
+  .ramp { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--page-line); }
+  .ramp div { flex: 1; height: 44px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; }
+  .ramp span { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.92); font-variant-numeric: tabular-nums; }
+
+  /* floor-map tables, same rail */
+  .B-floor { display: flex; gap: 10px; flex-wrap: wrap; }
+  .B-table {
+    width: 68px; height: 58px; border-radius: 5px;
+    background: rgba(255,255,255,0.05);
+    border-left: 4px solid transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .B-table .cov { font-size: 12px; font-weight: 600; }
+
+  /* ============================================================
+     DIRECTION C — LIVING MAP
+     ============================================================ */
+  .C-screen { background: #101418; color: #C6CED7; }
+  .C-card { background: #191F26; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
+  .C-iso { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .C-cell {
+    aspect-ratio: 1.4 / 1;
+    border-radius: 5px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 11px;
+    transform: skewY(-6deg);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: rgba(255,255,255,0.95);
+  }
+
+  /* ---------- recommendation ---------- */
+  .rec { background: var(--page-surface); }
+  .rec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s5); margin-top: var(--s5); }
+  .rec-pt h3 { margin-bottom: var(--s2); }
+  .rec-pt p { font-size: 15px; color: var(--page-ink-2); }
+  .concede {
+    margin-top: var(--s6);
+    padding: var(--s5);
+    border: 1px solid var(--page-warn);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--page-warn) 8%, transparent);
+  }
+
+  .note {
+    font-size: 13px; color: var(--page-ink-3);
+    border-top: 1px dashed var(--page-line);
+    padding-top: var(--s4); margin-top: var(--s6);
+    max-width: 72ch;
+  }
+
+  footer { padding: var(--s7) 0 var(--s8); }
+
+  :focus-visible { outline: 3px solid var(--page-accent); outline-offset: 2px; border-radius: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">RestroBooth · Phase 0 · Design gate</div>
+    <h1>Three directions. Pick one.</h1>
+    <p class="lede">
+      A restaurant OS has to be three products at once: a cinematic thing a guest meets for ninety
+      seconds, a dense thing a cashier stares at for ten hours, and a calm thing an owner reads on a
+      Sunday. One design system, three densities. These are the three ways I'd do it.
+    </p>
+    <div class="judge">
+      <p><strong>How to judge these.</strong> Don't ask which screenshot you like. Ask which
+      <em>signature element</em> still earns its place on the KDS — the screen a chef reads across a hot
+      line, where every pixel is a ticket you can or cannot see. That question decides it, and it decides
+      it against my own instincts about which of these is prettiest.</p>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">The constraints, as tests</div>
+    <h2>Pass or fail — not aspirations</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Constraint</th><th>The test it has to pass</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>One system, three densities</td>
+            <td>The same tokens produce Booth, POS + KDS, and Console. If a direction needs <em>different tokens</em> per surface, it has failed.</td>
+          </tr>
+          <tr>
+            <td>Boldness in one place</td>
+            <td>Name the signature element in one sentence. If you can't, there isn't one.</td>
+          </tr>
+          <tr>
+            <td>Animation-free POS</td>
+            <td>A 200 ms transition on a billing screen is a bug. The cashier hits a key 400 times a shift and all 400 must land instantly. <strong>Speed is the aesthetic there.</strong> A direction that needs motion to feel finished has failed.</td>
+          </tr>
+          <tr>
+            <td>Not a template</td>
+            <td>No cream + serif + terracotta. No near-black + acid green. No glassmorphism, no gradient hero, no broadsheet hairlines. These are the current AI-design defaults and they read as a tell.</td>
+          </tr>
+          <tr>
+            <td>Quality floor</td>
+            <td>WCAG AA. Visible focus. <span class="num">44 px</span> touch targets on POS. <code>prefers-reduced-motion</code>. Tabular numerals wherever digits stack.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DIRECTION A ================= -->
+<section>
+  <div class="wrap">
+    <div class="dir">
+      <div class="dir-head">
+        <div class="dir-title">
+          <span class="dir-letter">A</span>
+          <h2>Ticket Rail</h2>
+        </div>
+        <span class="small muted">Archivo · Inter · IBM Plex Mono</span>
+      </div>
+
+      <div class="dir-body">
+        <p class="muted">The restaurant's native document isn't a dashboard card — it's a ticket. So the
+        ticket becomes the layout primitive: a fixed measure, a perforated edge, a monospace data spine.
+        The app ground is the dark board the tickets hang on. Inverting the obvious (dark board, white
+        ticket, rather than cream receipt paper everywhere) is what keeps it out of diner pastiche — and
+        what sidesteps the banned cream palette by construction.</p>
+
+        <div class="swatches">
+          <div class="sw"><div class="sw-chip" style="background:#1E242C"></div><div class="sw-meta"><div class="sw-name">rail</div><div class="sw-hex">#1E242C</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#FFFFFF;border-bottom:1px solid #ddd"></div><div class="sw-meta"><div class="sw-name">ticket</div><div class="sw-hex">#FFFFFF</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#14171C"></div><div class="sw-meta"><div class="sw-name">ink</div><div class="sw-hex">#14171C</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#E8462B"></div><div class="sw-meta"><div class="sw-name">thermal</div><div class="sw-hex">#E8462B</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#F2A93B"></div><div class="sw-meta"><div class="sw-name">fire</div><div class="sw-hex">#F2A93B</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#2E9E6B"></div><div class="sw-meta"><div class="sw-name">go</div><div class="sw-hex">#2E9E6B</div></div></div>
+        </div>
+
+        <div class="sig">
+          <div class="eyebrow">Signature</div>
+          <p><strong>The perforation.</strong> A CSS-rendered notch edge that divides any two stacked
+          records — tickets on the KDS, lines on a bill, rows in a report. A border style, not an
+          illustration.</p>
+        </div>
+
+        <div class="mocks">
+          <div class="mock">
+            <div class="mock-label">KDS — dense</div>
+            <div class="screen A-screen">
+              <div class="A-ticket">
+                <div class="row"><span class="A-no">#0412</span><span class="A-no A-fire">04:12</span></div>
+                <div class="row"><span>2 &times; Butter Chicken</span></div>
+                <div class="row"><span>4 &times; Naan</span></div>
+              </div>
+              <div class="A-ticket">
+                <div class="row"><span class="A-no">#0413</span><span class="A-no A-thermal">18:40</span></div>
+                <div class="row"><span>1 &times; Paneer Tikka</span></div>
+              </div>
+              <div class="A-ticket">
+                <div class="row"><span class="A-no">#0414</span><span class="A-no A-go">00:48</span></div>
+                <div class="row"><span>3 &times; Masala Dosa</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mock">
+            <div class="mock-label">POS — bill</div>
+            <div class="screen A-screen">
+              <div class="A-ticket">
+                <div class="row" style="font-weight:650"><span>Table 12</span><span class="n">4 covers</span></div>
+                <div style="height:8px"></div>
+                <div class="row"><span>Butter Chicken &times;2</span><span class="n">760.00</span></div>
+                <div class="row"><span>Naan &times;4</span><span class="n">240.00</span></div>
+                <div class="row"><span>Coke &times;2</span><span class="n">240.00</span></div>
+                <div style="border-top:1px dotted #C9CFD6;margin:8px 0"></div>
+                <div class="row"><span>CGST 2.5%</span><span class="n">31.00</span></div>
+                <div class="row"><span>SGST 2.5%</span><span class="n">31.00</span></div>
+                <div class="row"><span>Round off</span><span class="n">&minus;0.40</span></div>
+                <div class="row" style="font-weight:700;margin-top:6px"><span>Total</span><span class="n">1302.00</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="crit">
+          <div class="win">
+            <div class="eyebrow">Works</div>
+            <ul>
+              <li>Rooted in the restaurant's own material culture. Nothing on the banned list.</li>
+              <li>The Booth extension is genuinely lovely — a <b>split-flap board</b> for live order status is the one place motion earns its keep.</li>
+            </ul>
+          </div>
+          <div class="lose">
+            <div class="eyebrow">Breaks</div>
+            <ul>
+              <li><b>The signature hurts the surface that matters most.</b> A perforated divider is decoration that eats vertical pixels on the KDS — the one screen where every pixel is a ticket you can or cannot see from two metres.</li>
+              <li>Mono-as-texture drifts toward "developer aesthetic", which is its own 2026 tell.</li>
+              <li>Risks tipping into American-diner pastiche. This is an Indian restaurant OS.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DIRECTION B ================= -->
+<section>
+  <div class="wrap">
+    <div class="dir">
+      <div class="dir-head">
+        <div class="dir-title">
+          <span class="dir-letter">B</span>
+          <h2>Service Board</h2>
+          <span class="pick">Recommended</span>
+        </div>
+        <span class="small muted">Bricolage Grotesque · Inter · IBM Plex Mono</span>
+      </div>
+
+      <div class="dir-body">
+        <p class="muted">Not a diner — the Irani café, the railway refreshment room, the enamel signage of
+        an Indian F&amp;B interior, the steel gantry of a hot line. Deep enamel green, graphite, one brass
+        accent. Industrial precision rather than nostalgia. Adult, restrained, and unmistakably of
+        <em>this</em> industry rather than of the SaaS industry.</p>
+
+        <div class="swatches">
+          <div class="sw"><div class="sw-chip" style="background:#0C1517"></div><div class="sw-meta"><div class="sw-name">ink-900</div><div class="sw-hex">#0C1517</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#0E4F45"></div><div class="sw-meta"><div class="sw-name">enamel-700</div><div class="sw-hex">#0E4F45</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#17796A"></div><div class="sw-meta"><div class="sw-name">enamel-500</div><div class="sw-hex">#17796A</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#C89B3C"></div><div class="sw-meta"><div class="sw-name">brass-500</div><div class="sw-hex">#C89B3C</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#EDF1EF;border-bottom:1px solid #ddd"></div><div class="sw-meta"><div class="sw-name">chalk-50</div><div class="sw-hex">#EDF1EF</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#C63A2A"></div><div class="sw-meta"><div class="sw-name">signal-600</div><div class="sw-hex">#C63A2A</div></div></div>
+        </div>
+
+        <div class="sig">
+          <div class="eyebrow">Signature</div>
+          <p><strong>The state rail.</strong> Every entity — a table, a ticket, a bill row, an outlet in a
+          report — carries a 4 px rail on its leading edge, and the rail's colour <em>is</em> its state.
+          Nothing else in the interface is allowed to encode state with colour.</p>
+        </div>
+
+        <div>
+          <div class="eyebrow">The rail's fill: a time-temperature ramp</div>
+          <p class="small muted" style="margin:8px 0 12px">
+            Cool when fresh, hot when late. Borrowed from Direction C — it's the best single idea in this
+            document and it deserves to survive its direction. Constrained here to drive <em>only</em> the
+            rail, never the whole surface.
+            <b>Colour is never the only channel:</b> the rail always sits beside a numeric age, and the
+            critical state adds a hatch, so it survives colour-blindness and a glare-lit kitchen screen.
+          </p>
+          <div class="ramp">
+            <div style="background:#17796A"><span>0:00</span></div>
+            <div style="background:#D9A32B"><span>08:00</span></div>
+            <div style="background:#D2622A"><span>14:00</span></div>
+            <div style="background:repeating-linear-gradient(45deg,#C63A2A 0 6px,#8E2A1E 6px 12px)"><span>20:00+</span></div>
+          </div>
+        </div>
+
+        <div class="mocks">
+          <div class="mock">
+            <div class="mock-label">KDS — dark, dense, zero motion</div>
+            <div class="screen B-dark">
+              <div class="row" style="margin-bottom:10px">
+                <span class="B-brass" style="font-weight:650">Hot line</span>
+                <span class="B-age B-brass">SPACE = bump</span>
+              </div>
+              <div class="B-item">
+                <div class="B-rail B-warm"></div>
+                <div style="flex:1">
+                  <div class="row"><span style="font-weight:650">#0412 &middot; T12 &middot; 4pax</span><span class="B-age">04:12</span></div>
+                  <div>2 Butter Chicken</div><div>4 Naan</div><div>2 Coke</div>
+                </div>
+              </div>
+              <div class="B-item">
+                <div class="B-rail B-crit"></div>
+                <div style="flex:1">
+                  <div class="row"><span style="font-weight:650">#0413 &middot; T07 &middot; 2pax</span><span class="B-age" style="color:#E8735F">18:40 LATE</span></div>
+                  <div>1 Paneer Tikka</div>
+                </div>
+              </div>
+              <div class="B-item">
+                <div class="B-rail B-fresh"></div>
+                <div style="flex:1">
+                  <div class="row"><span style="font-weight:650">#0414 &middot; T03 &middot; 2pax</span><span class="B-age">00:48</span></div>
+                  <div>3 Masala Dosa</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mock">
+            <div class="mock-label">Floor — the same rail, now a table edge</div>
+            <div class="screen B-dark">
+              <div class="B-floor">
+                <div class="B-table" style="border-left-color:#17796A"><span class="cov">T1 &middot; 4</span><span class="B-age" style="color:#8FA6A0">04:12</span></div>
+                <div class="B-table" style="border-left-color:rgba(255,255,255,0.12)"><span class="cov">T2</span><span class="B-age" style="color:#5C6A66">free</span></div>
+                <div class="B-table" style="border-left-color:#D9A32B"><span class="cov">T3 &middot; 2</span><span class="B-age" style="color:#8FA6A0">11:30</span></div>
+                <div class="B-table" style="border-left-color:#D2622A"><span class="cov">T4 &middot; 6</span><span class="B-age" style="color:#8FA6A0">16:02</span></div>
+                <div class="B-table" style="border-left-color:rgba(255,255,255,0.12)"><span class="cov">T5</span><span class="B-age" style="color:#5C6A66">free</span></div>
+                <div class="B-table" style="border-left:4px solid transparent;background:repeating-linear-gradient(45deg,rgba(198,58,42,.22) 0 6px,transparent 6px 12px);border-left-color:#C63A2A"><span class="cov">T7 &middot; 2</span><span class="B-age" style="color:#E8735F">22:05</span></div>
+              </div>
+              <p class="small" style="margin-top:12px;color:#7E918B;font-size:12px">
+                One primitive. A cashier, a chef and an owner all read the same visual language for
+                "this needs attention."
+              </p>
+            </div>
+          </div>
+
+          <div class="mock">
+            <div class="mock-label">Console — editorial, calm, light</div>
+            <div class="screen B-light">
+              <div style="font-weight:650;margin-bottom:2px">Ticket time by outlet</div>
+              <div class="small" style="color:#4C605B;margin-bottom:12px;font-size:12px">Last 7 days &middot; network median 12:40</div>
+              <div class="B-item">
+                <div class="B-rail B-fresh"></div>
+                <div style="flex:1" class="row"><span>Ahmedabad &middot; Vastrapur</span><span class="B-age">09:20</span></div>
+              </div>
+              <div class="B-item">
+                <div class="B-rail B-warm"></div>
+                <div style="flex:1" class="row"><span>Ahmedabad &middot; Bopal</span><span class="B-age">13:05</span></div>
+              </div>
+              <div class="B-item">
+                <div class="B-rail B-crit"></div>
+                <div style="flex:1" class="row"><span>Mumbai &middot; Andheri</span><span class="B-age">20:48</span></div>
+              </div>
+              <p class="small" style="margin-top:12px;color:#4C605B;font-size:12px">
+                Andheri is <b>8 minutes</b> above the network median, and its reviews mention food
+                arriving cold.
+              </p>
+            </div>
+          </div>
+
+          <div class="mock">
+            <div class="mock-label">Booth — guest, generous, motion-rich</div>
+            <div class="screen B-light" style="padding:18px">
+              <div style="font-size:22px;font-weight:700;letter-spacing:-0.02em;line-height:1.2">Picked for you</div>
+              <div class="small" style="color:#4C605B;margin:4px 0 14px">Mild, shareable, and nothing with peanuts.</div>
+              <div style="border-left:4px solid #17796A;background:#fff;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:8px">
+                <div class="row"><span style="font-weight:650">Dal Makhani</span><span class="n" style="font-weight:650">₹340</span></div>
+                <div class="small" style="color:#4C605B;font-size:12px">Mild, slow-cooked, easily shared &middot; 12 min</div>
+              </div>
+              <div style="border-left:4px solid #17796A;background:#fff;border-radius:0 8px 8px 0;padding:12px 14px">
+                <div class="row"><span style="font-weight:650">Paneer Tikka</span><span class="n" style="font-weight:650">₹285</span></div>
+                <div class="small" style="color:#4C605B;font-size:12px">Most-loved by first-timers &middot; 10 min</div>
+              </div>
+              <p class="small" style="margin-top:12px;color:#4C605B;font-size:12px">
+                The menu paints instantly. This rail slides in when the AI is ready &mdash; or never, and
+                nothing breaks.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="crit">
+          <div class="win">
+            <div class="eyebrow">Works</div>
+            <ul>
+              <li><b>The signature is information, not decoration.</b> It's the only direction whose signature makes the <i>dense</i> surfaces better rather than merely tolerating them.</li>
+              <li>Survives all three densities as one system: 4 px on KDS, 6 px on a console row, a glowing card edge on the Booth.</li>
+              <li><b>Leaves the colour budget free.</b> Because only the rail encodes state, everything else can be quiet. That is what "spend the boldness in one place" actually means.</li>
+              <li>Refuses every banned default without trying to — it's derived from the industry's material culture, not from a palette database.</li>
+            </ul>
+          </div>
+          <div class="lose">
+            <div class="eyebrow">Breaks</div>
+            <ul>
+              <li><b>It's quiet.</b> It will not win a design award and it does not make a great screenshot. I think that's the right trade for software someone stares at for ten hours — but it is a real cost.</li>
+              <li>Enamel + brass could tip "heritage/colonial" if the photography and copy go wrong. Mitigation: contemporary food photography, sentence case, zero ornament, no serif anywhere.</li>
+              <li><b>Brass fails AA on light (2.2:1).</b> So brass is a <i>fill</i>, never light-mode text — enamel-700 (7.6:1) carries text there. A real constraint, encoded as a lint rule, not discovered in a Phase 10 audit.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DIRECTION C ================= -->
+<section>
+  <div class="wrap">
+    <div class="dir">
+      <div class="dir-head">
+        <div class="dir-title">
+          <span class="dir-letter">C</span>
+          <h2>Living Map</h2>
+        </div>
+        <span class="small muted">Space Grotesk · Inter · IBM Plex Mono</span>
+      </div>
+
+      <div class="dir-body">
+        <p class="muted">The floor plan as the hero — the restaurant as an organism you can watch breathe.
+        The organising idea is a single colour-temperature scale bound to elapsed time, reused everywhere
+        time matters: table dwell, ticket age, ticket-time anomaly, the hourly heatmap.
+        <b>Warmth = elapsed time = attention needed.</b> One scale, one meaning, every surface.</p>
+
+        <div class="swatches">
+          <div class="sw"><div class="sw-chip" style="background:#101418"></div><div class="sw-meta"><div class="sw-name">void</div><div class="sw-hex">#101418</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#191F26"></div><div class="sw-meta"><div class="sw-name">surface</div><div class="sw-hex">#191F26</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#1F6F9E"></div><div class="sw-meta"><div class="sw-name">t-fresh</div><div class="sw-hex">#1F6F9E</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#4FA88C"></div><div class="sw-meta"><div class="sw-name">t-ok</div><div class="sw-hex">#4FA88C</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#E0A32E"></div><div class="sw-meta"><div class="sw-name">t-warn</div><div class="sw-hex">#E0A32E</div></div></div>
+          <div class="sw"><div class="sw-chip" style="background:#D2452F"></div><div class="sw-meta"><div class="sw-name">t-late</div><div class="sw-hex">#D2452F</div></div></div>
+        </div>
+
+        <div class="sig">
+          <div class="eyebrow">Signature</div>
+          <p><strong>The occupancy pulse.</strong> A continuous cool-to-warm ramp bound to elapsed time,
+          driving every time-sensitive surface — over an isometric floor map where the room is literally
+          visible.</p>
+        </div>
+
+        <div class="mocks">
+          <div class="mock">
+            <div class="mock-label">Floor — the hero</div>
+            <div class="screen C-screen">
+              <div class="C-iso">
+                <div class="C-cell" style="background:#1F6F9E">T1<br>04:12</div>
+                <div class="C-cell" style="background:#243039;color:#6C7A87">T2<br>free</div>
+                <div class="C-cell" style="background:#4FA88C">T3<br>08:30</div>
+                <div class="C-cell" style="background:#E0A32E;color:#231a05">T4<br>16:02</div>
+                <div class="C-cell" style="background:#243039;color:#6C7A87">T5<br>free</div>
+                <div class="C-cell" style="background:#D2452F">T7<br>22:05</div>
+              </div>
+              <p class="small" style="margin-top:14px;color:#7A8794;font-size:12px">
+                The room, breathing. Spectacular — and a great demo.
+              </p>
+            </div>
+          </div>
+
+          <div class="mock">
+            <div class="mock-label">KDS — where it starts to hurt</div>
+            <div class="screen C-screen">
+              <div class="C-card" style="border-left:3px solid #4FA88C">
+                <div class="row"><span style="font-weight:650">#0412 &middot; T12</span><span class="n">04:12</span></div>
+                <div class="small" style="color:#8B98A5">2 Butter Chicken &middot; 4 Naan</div>
+              </div>
+              <div class="C-card" style="border-left:3px solid #D2452F">
+                <div class="row"><span style="font-weight:650">#0413 &middot; T07</span><span class="n">18:40</span></div>
+                <div class="small" style="color:#8B98A5">1 Paneer Tikka</div>
+              </div>
+              <p class="small" style="margin-top:12px;color:#7A8794;font-size:12px">
+                The isometry has to be abandoned here — so the signature does not, in fact, survive all
+                three densities.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="crit">
+          <div class="win">
+            <div class="eyebrow">Works</div>
+            <ul>
+              <li><b>The most functionally motivated idea of the three.</b> It encodes the thing the product actually cares about — elapsed time, attention — directly into colour, across four features already in the roadmap.</li>
+              <li>Spectacular on the Floor surface, and a genuinely great demo.</li>
+            </ul>
+          </div>
+          <div class="lose">
+            <div class="eyebrow">Breaks</div>
+            <ul>
+              <li><b>It spends the entire colour budget on one semantic axis.</b> Once cool-to-warm means <i>time</i>, colour can't safely mean anything else — including <b>veg/non-veg, which in India is a legally-coded green/brown mark and is not negotiable.</b> A system that has already spent green on "time" fights the law of the land on every menu screen.</li>
+              <li><b>Isometric is a trap at POS density.</b> It is beautiful and inefficient with screen area — the exact wrong trade on a tablet at 9 PM. It degrades to a plan view on POS, which means the signature fails the core constraint.</li>
+              <li>Dark-first in a brightly-lit dining room is a glare problem. Kitchens are bright. This wants dimming, and dimming isn't available.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RECOMMENDATION ================= -->
+<section class="rec">
+  <div class="wrap">
+    <div class="eyebrow">Recommendation</div>
+    <h2>Direction B — Service Board</h2>
+    <p class="lede" style="margin-top:12px">
+      It is the only direction whose signature element makes the <em>dense</em> surfaces better instead of
+      merely surviving them — and the dense surfaces are the product.
+    </p>
+
+    <div class="rec-grid">
+      <div class="rec-pt">
+        <h3>The dense surfaces decide it</h3>
+        <p>A cashier looks at the POS for ten hours; a chef reads the KDS across a hot line. A's
+        perforation costs pixels there. C's isometry costs area there and has to be abandoned. B's rail
+        costs 4 px and tells you something true. That asymmetry is the whole argument.</p>
+      </div>
+      <div class="rec-pt">
+        <h3>The signature is information</h3>
+        <p>"Spend the boldness in one place" is usually read as <em>put one beautiful thing on the
+        page</em>. The stronger reading is <em>put one meaningful thing everywhere</em>. A cashier, a chef
+        and an owner learn the rail once and read it on every surface.</p>
+      </div>
+      <div class="rec-pt">
+        <h3>The colour budget stays free</h3>
+        <p>Because only the rail encodes state, the rest of the UI can be quiet. C cannot say that — and
+        India's legally-coded veg/non-veg marks mean the colour budget is not actually ours to spend
+        twice.</p>
+      </div>
+      <div class="rec-pt">
+        <h3>What I'm taking from the losers</h3>
+        <p>From C, the time-temperature ramp, as the rail's fill — the best single idea here, and it
+        deserves to survive its direction. From A, the split-flap order-status board on the Booth: motion,
+        in the one place motion belongs.</p>
+      </div>
+    </div>
+
+    <div class="concede">
+      <div class="eyebrow">Where I could be wrong &mdash; overrule me here</div>
+      <p style="margin-top:8px">Direction B will not win a design award and it will not make a good
+      screenshot. It is <strong>quiet</strong>. If the goal is a product that makes a restaurateur gasp in
+      a demo, <strong>C is the better choice and I would build it without complaint.</strong></p>
+      <p style="margin-top:12px">I'm recommending B because I think the person who has to look at it for
+      ten hours matters more than the person who looks at it for ten seconds. But that is a judgment about
+      who we're building for, and it's yours to make, not mine.</p>
+    </div>
+
+    <p class="note">
+      <b>Two honest notes on this page.</b> The brief asks me to read a <code>frontend-design</code> skill;
+      it doesn't exist in this environment, so I used <code>ui-ux-pro-max</code> for the quality floor
+      (contrast, touch targets, tabular numerals, reduced motion, no colour-only meaning) and designed the
+      directions myself — a generic palette database is precisely where the banned AI-design tells come
+      from. Separately: this page's sandbox blocks external font CDNs, so the specimens render in system
+      faces. The named typefaces are the specification, not what you're looking at. Colour, the rail, the
+      ramp, and the density behaviour — the things that actually decide this gate — are exactly as they
+      would ship.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="small muted">RestroBooth &middot; Phase 0 &middot; Design gate &middot; Approve one direction to proceed.</p>
+  </div>
+</footer>
