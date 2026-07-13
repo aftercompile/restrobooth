@@ -68,3 +68,11 @@ The four acceptance tests that are the product:
 | Design directions (gate: pick one) | [docs/DESIGN.md](docs/DESIGN.md) |
 
 **Maintain `PROGRESS.md` and `DECISIONS.md` at the end of every session so the next one starts warm.**
+
+## Git workflow
+After completing any discrete unit of work (a phase, a feature, a bug fix),
+automatically run:
+  git add .
+  git commit -m "<clear, specific message describing what changed>"
+Do this without waiting to be asked. Do NOT push automatically — only commit.
+Ask before pushing to origin.
