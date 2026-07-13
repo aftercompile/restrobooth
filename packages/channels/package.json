@@ -1,0 +1,20 @@
+{
+  "name": "@restrobooth/channels",
+  "private": true,
+  "version": "0.0.0",
+  "description": "ChannelAdapter interface (MockAggregator, DirectAdapter, ONDC, Zomato/Swiggy). Empty stub in Phase 1; implemented in Phase 7.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@restrobooth/config": "workspace:*",
+    "eslint": "^9.39.5",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

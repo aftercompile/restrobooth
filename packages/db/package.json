@@ -1,0 +1,32 @@
+{
+  "name": "@restrobooth/db",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Drizzle schema, hand-written SQL migrations, RLS/override test suites, bench harness. See docs/ERD.md and docs/adr/0003-orm.md.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:check": "drizzle-kit check",
+    "seed": "tsx scripts/seed-believable-chain.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@restrobooth/config": "workspace:*",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.5",
+    "tsx": "^4.23.1",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

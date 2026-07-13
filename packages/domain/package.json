@@ -1,0 +1,21 @@
+{
+  "name": "@restrobooth/domain",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Pure billing/tax/KOT/session logic. Zero deps, zero I/O, zero framework. See docs/DOMAIN.md.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@restrobooth/config": "workspace:*",
+    "eslint": "^9.39.5",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "extends": "@restrobooth/config/typescript/base.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": ["src", "scripts", "bench", "test", "drizzle.config.ts"]
+}
