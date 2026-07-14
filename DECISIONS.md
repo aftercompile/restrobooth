@@ -4,6 +4,26 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-14 — Phase 1 closed. Both provisional ADRs **CONFIRMED**; RLS/override suites, benchmarks, design tokens, and CI all shipped.
+
+**Decided by:** Mohammed (session directive: "proceed till end of this phase").
+
+The two decisions left PROVISIONAL at the end of Phase 0 are now settled with real numbers, not reasoning:
+
+- **ADR-0006 (live menu override resolution): CONFIRMED.** BENCH-02's gate (R1: full 200-item menu resolve) ran at p95=2.9ms against a 50ms threshold — 17x margin. No escalation needed.
+- **RLS via `STABLE` + `(select …)` InitPlan hoist (TENANCY.md §4): CONFIRMED.** BENCH-01 ran the 7-query set as 4 role shapes against the full 9M-row fixture. Full numbers, methodology, and three real bugs the benchmark caught (two missing indexes, one stale-statistics gap, one planner/RLS interaction with inline date arithmetic) are in [docs/BENCHMARKS-RESULTS.md](docs/BENCHMARKS-RESULTS.md) — none of the three were `accessible_outlet_ids()` itself; `EXPLAIN` confirms it evaluates once per statement (`loops=1`) everywhere, exactly as designed.
+
+**A genuine negative result, reported rather than massaged:** the planned three-way RLS off/wrapped/naive-VOLATILE comparison did not reproduce the textbook "naive RLS is catastrophic" case for the two query shapes tested — an uncorrelated `IN (SELECT set_returning_fn())` gets hashed once by the planner regardless of the function's volatility marking. Doesn't weaken the case for the `(select …)` wrapper (which is what makes the *scalar* `auth.uid()` form safe), but the specific comparison as built came back smaller than TENANCY.md's prose implied.
+
+**Also shipped this session:** the 15-case RLS adversarial suite and 21-row override precedence suite (both passing against a real Supabase CLI local stack, real GoTrue-backed `auth.uid()`, not the dev stub); design tokens + all 10 UI primitives for Direction B on `/style-guide`; a `db:check-partitions` assertion; and three CI workflows (per-PR, a scheduled staging check that no-ops until a real staging project exists, and a manual benchmark re-run).
+
+**Known gaps, not silently closed:**
+- **No screenshot/visual critique of `/style-guide` happened.** CLAUDE.md rule 11 calls for one; this environment has no browser/screenshot tool, so verification stopped at a clean production build plus HTTP-content assertions across all four density sections. A human still needs to actually look at it.
+- **CI has not run for real** — the three workflow files validate as well-formed YAML and every step was exercised locally with equivalent commands (lint/typecheck/build/db:check/db:check-partitions/RLS suite all passed), but nothing has actually executed inside GitHub Actions yet, since that requires pushing to origin and this session did not push (commits only, per standing instruction).
+- **A6, A7, A9, A14 of the 15-case RLS suite are `test.skip`, not implemented-and-passing** — role capability (not tenant scope) and QR-token-replay concerns that ROADMAP.md itself scopes to Phase 2/3a/5. Documented in the test file, not hidden.
+
+---
+
 ## 2026-07-13 — Domain model **APPROVED**; offline conflict rules **PARKED**
 
 **Decided by:** Mohammed. **Gate items 1 and 2.**
