@@ -5,6 +5,12 @@ services:
     # Postgres actually ships (their images are built on this same base).
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    # Docker's default 64MB /dev/shm is too small once real data is loaded —
+    # VACUUM ANALYZE on the ~9M-row bench fixture hit "No space left on
+    # device" against the default. The upcoming BENCH-01/02 EXPLAIN ANALYZE
+    # runs need headroom too, so this is generous on purpose, not tuned to
+    # the minimum that happens to pass.
+    shm_size: "1gb"
     environment:
       POSTGRES_USER: restrobooth
       POSTGRES_PASSWORD: restrobooth
