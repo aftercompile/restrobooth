@@ -1,0 +1,31 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--enamel-700);
+  text-decoration: none;
+  margin-bottom: var(--space-1);
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  color: var(--enamel-700);
+  margin: 0 0 4px;
+}
+
+.sectionHint {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: color-mix(in srgb, var(--enamel-700) 60%, var(--chalk-50));
+  max-width: 62ch;
+}

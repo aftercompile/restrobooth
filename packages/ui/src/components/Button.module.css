@@ -8,34 +8,69 @@
   border-radius: var(--radius);
   border: 1px solid transparent;
   font-family: var(--font-body);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background var(--motion-duration) var(--motion-easing), border-color var(--motion-duration) var(--motion-easing);
+  white-space: nowrap;
+  transition: background var(--motion-duration) var(--motion-easing),
+    border-color var(--motion-duration) var(--motion-easing),
+    color var(--motion-duration) var(--motion-easing);
+}
+
+/* Press feedback that does NOT shift layout (stable-interaction-states):
+   no transform on the button itself, just a tonal step. On POS/KDS the
+   duration is 0 anyway — the state still changes, it just changes
+   instantly, which is the point. */
+.button:active:not(:disabled) {
+  filter: brightness(0.94);
 }
 
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
-/* Brass is a FILL here (button face), never text on a light ground — the
-   text on top of it is --ink-900, not brass itself. See tokens/colors.css. */
+/* Brass is a FILL here — the button face — with ink text on top. It is
+   never the text colour on a light ground (2.2:1, fails AA). The
+   lint-brass.mjs rule enforces this mechanically. */
 .primary {
   background: var(--brass-500);
   color: var(--ink-900);
 }
 .primary:hover:not(:disabled) {
-  background: #b8892f;
+  background: #d4a94a;
 }
 
 .secondary {
   background: transparent;
-  border-color: currentColor;
-  color: inherit;
+  border-color: var(--border-on-light);
+  color: var(--enamel-700);
+}
+.secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--enamel-700) 6%, transparent);
+  border-color: var(--enamel-700);
 }
 
+[data-density="pos"] .secondary,
+[data-density="kds"] .secondary {
+  border-color: var(--border-on-dark);
+  color: var(--chalk-50);
+}
+[data-density="pos"] .secondary:hover:not(:disabled),
+[data-density="kds"] .secondary:hover:not(:disabled) {
+  background: var(--ink-500);
+}
+
+/* Destructive actions use the semantic danger colour and are visually
+   separated from primary (destructive-emphasis). */
 .danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--signal-600) 45%, transparent);
+  color: var(--signal-600);
+}
+.danger:hover:not(:disabled) {
   background: var(--signal-600);
   color: var(--chalk-50);
+  border-color: var(--signal-600);
 }

@@ -1,0 +1,144 @@
+/* Split screen: enamel on the left (the brand), chalk on the right (the
+   work). The one place the console is allowed a moment of composition —
+   and it costs the dense screens nothing, because they never see it. */
+.page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  background: var(--surface-light);
+}
+
+.brandPane {
+  background: var(--enamel-700);
+  color: var(--chalk-50);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 3px solid var(--brass-500);
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: var(--tracking-display);
+}
+
+.markRail {
+  width: 5px;
+  height: 26px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to bottom,
+    var(--ramp-fresh) 0%,
+    var(--ramp-fresh) 40%,
+    var(--ramp-warming) 40%,
+    var(--ramp-warming) 70%,
+    var(--ramp-hot) 70%,
+    var(--ramp-hot) 100%
+  );
+}
+
+.markDim {
+  opacity: 0.62;
+  font-weight: 500;
+}
+
+.pitch {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3.4vw, 44px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: var(--tracking-display);
+  margin: 0;
+  max-width: 15ch;
+}
+
+.pitchSub {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  color: rgb(237 241 239 / 70%);
+  max-width: 40ch;
+}
+
+/* The rail legend — teaches the signature element before you ever see it
+   in the product. */
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-sm);
+  color: rgb(237 241 239 / 74%);
+}
+
+.legendRail {
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.formPane {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+.formInner {
+  width: 100%;
+  max-width: 360px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  color: var(--enamel-700);
+  margin: 0 0 4px;
+}
+
+.sub {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: color-mix(in srgb, var(--enamel-700) 60%, var(--chalk-50));
+}
+
+.error {
+  color: var(--signal-600);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+@media (width <= 860px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+  /* content-priority: on a phone the sign-in form is the job; the pitch is
+     not. Keep the mark, drop the essay. */
+  .brandPane {
+    border-right: none;
+    border-bottom: 3px solid var(--brass-500);
+    padding: var(--space-2);
+  }
+  .pitch,
+  .pitchSub,
+  .legend {
+    display: none;
+  }
+}

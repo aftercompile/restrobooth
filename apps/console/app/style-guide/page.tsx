@@ -8,9 +8,12 @@ import {
   DensityProvider,
   Dialog,
   Input,
+  MoneyInput,
+  Select,
   StateRail,
   Tabs,
   TabularNumber,
+  Textarea,
   useToast,
   type Density,
 } from "@restrobooth/ui";
@@ -53,13 +56,27 @@ function PrimitiveGallery() {
 
   return (
     <div style={{ padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-      {/* StateRail — the signature element, all four ramp states */}
+      {/* StateRail — the signature. Two families: the time-temperature ramp
+          (elapsed time) and lifecycle states (draft/archived). Never mix
+          the meanings; see StateRail's own header. */}
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
         <StateRail state="fresh">Table 4 — fresh, 02:10</StateRail>
         <StateRail state="warming">Table 7 — warming, 14:32</StateRail>
         <StateRail state="hot">Table 2 — hot, 21:05</StateRail>
-        <StateRail state="critical">Table 9 — critical, 38:47</StateRail>
+        <StateRail state="critical">Table 9 — critical, 38:47 (hatched)</StateRail>
+        <StateRail state="idle">Paneer Tikka — draft, not live</StateRail>
+        <StateRail state="archived">Old Winter Menu — archived (dashed)</StateRail>
       </div>
+
+      {/* The new form primitives */}
+      <div style={{ display: "grid", gap: "var(--space-2)", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+        <Select label="Tax class" defaultValue="food5">
+          <option value="food5">FOOD_5 (5.0%)</option>
+          <option value="goods18">GOODS_18 (18.0%)</option>
+        </Select>
+        <MoneyInput label="Base price" valuePaise={38000n} onChangePaise={() => {}} />
+      </div>
+      <Textarea label="Description" rows={2} defaultValue="Slow-cooked, tomato and cream, finished with kasuri methi." />
 
       {/* Button */}
       <div style={{ display: "flex", gap: "var(--space-1)" }}>

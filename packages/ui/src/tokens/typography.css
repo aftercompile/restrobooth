@@ -5,19 +5,31 @@
  * stack (prices, quantities, timers, totals) — non-negotiable, a total
  * that shifts a pixel as it counts looks wrong.
  *
- * Self-hosted font files are a Phase 2+ concern (not shipped in Phase 1);
- * these stacks fall back to system faces until then, exactly as the
- * DESIGN.md artifact itself did under its own CDN-blocked sandbox.
+ * The actual font FILES are supplied by the consuming app, not by this
+ * package: apps/console loads them with next/font (which self-hosts them
+ * at build time — no CDN, no layout shift) and exposes them as
+ * --font-bricolage / --font-inter / --font-plex-mono. Keeping the loader
+ * out of packages/ui is deliberate: next/font is a Next-specific API, and
+ * ADR-0001's whole point is that no UI component may depend on a
+ * framework/host-specific API. The fallback chain below is what renders
+ * if an app forgets to supply them.
  */
 :root {
-  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-data: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
 
   --text-base: 16px;
   --text-sm: 14px;
   --text-lg: 20px;
   --text-xl: 28px;
+
+  /* Type scale — Console is editorial: generous display sizes, tight
+     tracking on the display face only (Bricolage is already characterful;
+     body text keeps default tracking per the letter-spacing rule). */
+  --text-2xl: 40px;
+  --tracking-display: -0.02em;
+  --leading-body: 1.55;
 }
 
 [data-density="pos"],
@@ -38,4 +50,18 @@
 .rb-tabular {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-data);
+}
+
+/* The display face is Console/Booth only — DESIGN.md: "never used" on
+   POS/KDS, where Inter's lack of opinion is the whole point. */
+.rb-display {
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-display);
+  font-weight: 600;
+}
+
+[data-density="pos"] .rb-display,
+[data-density="kds"] .rb-display {
+  font-family: var(--font-body);
+  letter-spacing: normal;
 }

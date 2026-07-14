@@ -39,8 +39,16 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isLoginRoute = request.nextUrl.pathname.startsWith("/login");
-  if (!user && !isLoginRoute) {
+  const { pathname } = request.nextUrl;
+  const isLoginRoute = pathname.startsWith("/login");
+
+  // /style-guide is the design system's own reference page. It renders no
+  // user data and reads nothing from the database — it exists to be LOOKED
+  // at (CLAUDE.md rule 11: "screenshot the UI and critique it"). Gating it
+  // behind a login makes it useless for exactly that, so it stays public.
+  const isPublic = isLoginRoute || pathname.startsWith("/style-guide");
+
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

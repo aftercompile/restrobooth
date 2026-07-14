@@ -1,8 +1,16 @@
 import { schema } from "@restrobooth/db";
+import { Animate, Card, PageHeader } from "@restrobooth/ui";
 import { queryAsCurrentUser } from "../../../lib/db";
+import { createClient } from "../../../lib/supabase/server";
+import { ConsoleShell } from "../../ConsoleShell";
 import { NewItemForm } from "./NewItemForm";
 
 export default async function NewMenuItemPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { brands, categories, taxClasses } = await queryAsCurrentUser(async (tx) => {
     const brands = await tx.select({ id: schema.brands.id, name: schema.brands.name }).from(schema.brands);
     const categories = await tx
@@ -15,9 +23,16 @@ export default async function NewMenuItemPage() {
   });
 
   return (
-    <main style={{ padding: "var(--space-3)", maxWidth: 480 }}>
-      <h1 style={{ fontFamily: "var(--font-display)", marginBottom: "var(--space-3)" }}>New menu item</h1>
-      <NewItemForm brands={brands} categories={categories} taxClasses={taxClasses} />
-    </main>
+    <ConsoleShell email={user?.email}>
+      <PageHeader
+        title="New item"
+        subtitle="Items are defined once, at brand level. Store-specific prices and 86s come after — on the item's own page."
+      />
+      <Animate>
+        <Card style={{ maxWidth: 520 }}>
+          <NewItemForm brands={brands} categories={categories} taxClasses={taxClasses} />
+        </Card>
+      </Animate>
+    </ConsoleShell>
   );
 }

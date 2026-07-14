@@ -1,16 +1,67 @@
 .card {
   border-radius: var(--radius);
-  padding: var(--space-2);
   border: 1px solid var(--border-on-dark);
+  overflow: hidden;
 }
 
 [data-density="console"] .card,
 [data-density="booth"] .card {
   border-color: var(--border-on-light);
   background: #fff;
+  /* A single, consistent elevation step — not a random shadow value
+     (elevation-consistent). Deliberately shallow: this is a back office,
+     not a landing page. */
+  box-shadow: 0 1px 2px rgb(12 21 23 / 4%);
 }
 
 [data-density="pos"] .card,
 [data-density="kds"] .card {
   background: var(--ink-700);
+}
+
+/* Padding is opt-in. A card wrapping a list of DataRows must NOT have
+   padding — the rows carry their own, and the state rail has to reach the
+   card's actual leading edge to read as an edge at all. */
+.padded {
+  padding: var(--space-2);
+}
+
+/* Section header inside a card — a category name, a group label. */
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border-on-light);
+  background: color-mix(in srgb, var(--chalk-50) 55%, #fff);
+}
+
+[data-density="pos"] .cardHead,
+[data-density="kds"] .cardHead {
+  border-bottom-color: var(--border-on-dark);
+  background: var(--ink-900);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  color: var(--enamel-700);
+  margin: 0;
+}
+
+[data-density="pos"] .cardTitle,
+[data-density="kds"] .cardTitle {
+  font-family: var(--font-body);
+  letter-spacing: normal;
+  color: var(--chalk-50);
+}
+
+.cardCount {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  color: var(--chalk-400);
 }

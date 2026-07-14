@@ -1,0 +1,177 @@
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-light);
+  color: var(--text-on-light);
+}
+
+/* The enamel header — the one saturated surface in the console. Everything
+   below it is chalk and quiet, which is what buys the state rail its
+   loudness (docs/DESIGN.md: "spend the boldness in one place"). */
+.header {
+  background: var(--enamel-700);
+  color: var(--chalk-50);
+  border-bottom: 3px solid var(--brass-500); /* brass as a FILL, never text */
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.headerInner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 60px;
+}
+
+/* The mark: a literal state rail next to the wordmark. The product's own
+   signature element, used as its logo — not a generic glyph. */
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: var(--tracking-display);
+  color: var(--chalk-50);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.markRail {
+  width: 4px;
+  height: 22px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--ramp-fresh) 0%,
+    var(--ramp-fresh) 40%,
+    var(--ramp-warming) 40%,
+    var(--ramp-warming) 70%,
+    var(--ramp-hot) 70%,
+    var(--ramp-hot) 100%
+  );
+}
+
+.markDim {
+  opacity: 0.62;
+  font-weight: 500;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-2);
+}
+
+.navLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  color: rgb(237 241 239 / 72%);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: color var(--motion-duration) var(--motion-easing),
+    background var(--motion-duration) var(--motion-easing);
+}
+
+.navLink:hover {
+  color: var(--chalk-50);
+  background: rgb(237 241 239 / 8%);
+}
+
+/* Current location is never signalled by colour alone — it also gets a
+   brass underline (nav-state-active + color-not-only). */
+.navLink[aria-current="page"] {
+  color: var(--chalk-50);
+}
+
+.navLink[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 2px 2px 0 0;
+  background: var(--brass-500);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.userEmail {
+  color: rgb(237 241 239 / 72%);
+  font-variant-numeric: tabular-nums;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-2) var(--space-5);
+}
+
+/* Page header: display face, generous, editorial. The one place the
+   console is allowed to be big. */
+.pageHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.1;
+  margin: 0;
+  color: var(--enamel-700);
+}
+
+.pageSub {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  color: color-mix(in srgb, var(--enamel-700) 62%, var(--chalk-50));
+  max-width: 62ch; /* line-length rule: 60-75 chars */
+  line-height: var(--leading-body);
+}
+
+@media (width <= 720px) {
+  .headerInner {
+    flex-wrap: wrap;
+    padding-block: var(--space-1);
+  }
+  .nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    overflow-x: auto;
+  }
+  .userEmail {
+    display: none; /* content-priority: the sign-out control matters, the address doesn't */
+  }
+}

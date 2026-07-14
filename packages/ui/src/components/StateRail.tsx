@@ -1,42 +1,62 @@
 import type { CSSProperties, ReactNode } from "react";
 import styles from "./StateRail.module.css";
 
-export type RailState = "fresh" | "warming" | "hot" | "critical";
+/**
+ * Two families of state, one rail (docs/DESIGN.md):
+ *
+ *  - The TIME-TEMPERATURE ramp — fresh → warming → hot → critical. Grafted
+ *    from Direction C. Use it for anything whose state is elapsed time: a
+ *    KDS ticket ageing, a table's dwell, a late order.
+ *  - LIFECYCLE states — idle (not live yet) and archived (retired). A menu
+ *    item is not "hot" or "cold"; it is draft, live, 86'd, or archived.
+ *    Forcing those onto a temperature ramp would be a lie about what the
+ *    colour means, and the rail only works because its colour means
+ *    exactly one thing.
+ *
+ * Both families share the rail because the RULE is what's shared: this is
+ * the only primitive in the system permitted to encode state with colour.
+ * Everything else stays quiet so this stays legible.
+ */
+export type RailState = "fresh" | "warming" | "hot" | "critical" | "idle" | "archived";
 
 const RAIL_COLOR: Record<RailState, string> = {
   fresh: "var(--ramp-fresh)",
   warming: "var(--ramp-warming)",
   hot: "var(--ramp-hot)",
   critical: "var(--ramp-critical)",
+  idle: "var(--chalk-400)",
+  archived: "var(--chalk-200)",
 };
 
 /**
- * The signature element (docs/DESIGN.md): a 4-6px rail on an entity's
- * leading edge whose colour and fill level IS its state — a table, a
- * ticket, a bill row, an outlet in a report. This is the ONLY primitive
- * allowed to encode state with colour; everything else in the system
- * stays quiet so this stays legible.
+ * The signature element: a 4px (POS/KDS) / 6px (Console/Booth) rail on an
+ * entity's leading edge whose colour IS its state.
  *
- * Colour is never the only channel: pass `state="critical"` and the rail
- * also gets a diagonal hatch, and callers are expected to show the
- * numeric age alongside it (this component doesn't render that text
- * itself — composition, not a monolithic "ticket" component).
+ * Colour is never the only channel: `critical` also gets a diagonal hatch,
+ * `archived` a dashed break — both survive greyscale and a glare-lit
+ * kitchen screen. Callers are expected to show the state in words or a
+ * number alongside (this component deliberately renders no label of its
+ * own — composition, not a monolithic "row" component).
  */
 export function StateRail({
   state,
   children,
   style,
+  label,
 }: {
   state: RailState;
   children: ReactNode;
-  style?: CSSProperties;
+  style?: CSSProperties | undefined;
+  /** Screen-reader text for the rail's meaning, since colour conveys it visually. */
+  label?: string | undefined;
 }) {
   return (
     <div
       className={styles.rail}
-      data-critical={state === "critical"}
+      data-rail={state}
       style={{ ["--rail-color" as string]: RAIL_COLOR[state], ...style }}
     >
+      {label && <span className={styles.srOnly}>{label}</span>}
       {children}
     </div>
   );
