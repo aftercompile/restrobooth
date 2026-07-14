@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "description": "Drizzle schema, hand-written SQL migrations, RLS/override test suites, bench harness. See docs/ERD.md and docs/adr/0003-orm.md.",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -14,7 +15,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:check": "drizzle-kit check",
     "db:check-partitions": "tsx scripts/check-partitions-ahead.ts",
-    "seed": "tsx scripts/seed-believable-chain.ts"
+    "seed": "tsx scripts/seed-believable-chain.ts",
+    "seed:auth": "tsx scripts/seed-auth-users.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@restrobooth/config": "workspace:*",
+    "@supabase/supabase-js": "^2.110.3",
     "@types/pg": "^8.20.0",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",

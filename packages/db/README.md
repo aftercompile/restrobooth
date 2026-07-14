@@ -2,6 +2,14 @@
 
 Schema, migrations, RLS, and the correctness/benchmark suites. See [docs/ERD.md](../../docs/ERD.md), [docs/TENANCY.md](../../docs/TENANCY.md), [docs/adr/0003-orm.md](../../docs/adr/0003-orm.md).
 
+## Two ways this package gets consumed — and why there's a build step
+
+This package's `tsconfig.json` uses `moduleResolution: NodeNext` (via `@restrobooth/config/typescript/base.json`), which is what lets `scripts/`, `bench/`, and `test/` run directly against `.ts` source via `tsx` and Vitest — both understand NodeNext's explicit `.js`-suffixed relative imports natively.
+
+`apps/console` (and any future Next.js app) consumes this package differently: as `import { schema } from "@restrobooth/db"`, bundled by Turbopack. Turbopack does **not** resolve a literal `./rls.js` specifier to a sibling `./rls.ts` file — unlike `tsx`/Node, it takes the extension literally and fails with "Module not found." (`packages/ui` never hits this because its own tsconfig uses `moduleResolution: bundler`, which expects extensionless imports — appropriate there because Next is its *only* consumer. `packages/db` has two consumers with two different resolution conventions, so one of them needs a real build.)
+
+The fix: `pnpm build` here (`tsc -p tsconfig.build.json`, `src/` only) compiles to `dist/`, and `package.json`'s `main`/`types` point there — real, unambiguous `.js` files, nothing for a bundler to guess about. `scripts/`/`bench/`/`test/` are untouched by this; they import source files by relative path, never through `package.json`'s `main`. Turborepo's `dev`/`build` tasks `dependsOn: ["^build"]`, so this package builds before `apps/console` does.
+
 ## Migration workflow — read before touching `drizzle/`
 
 Two disjoint halves, verified two different ways (confirmed empirically, Phase 1 Day-1 spike):
