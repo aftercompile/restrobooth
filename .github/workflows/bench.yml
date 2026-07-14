@@ -1,0 +1,69 @@
+name: Benchmark (manual)
+
+# BENCH-01/02 (docs/BENCHMARKS.md). Too big and slow to gate PRs on — the
+# fixture is 20 outlets / 9M order_items, generated fresh each run. This
+# exists so a schema change that might affect RLS or resolve_menu()
+# performance can be re-verified on demand without re-running it on every
+# push. Not scheduled: the fixture doesn't change on its own, so there is
+# nothing new to catch by re-running this nightly.
+on:
+  workflow_dispatch:
+    inputs:
+      scale:
+        description: "Fixture scale (tiny = ~500 orders/correctness smoke test, full = the real 9M-row fixture)"
+        required: true
+        default: "full"
+        type: choice
+        options: ["tiny", "full"]
+
+jobs:
+  bench:
+    name: Run BENCH-01 + BENCH-02
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: restrobooth
+          POSTGRES_PASSWORD: restrobooth
+          POSTGRES_DB: restrobooth
+        ports: ["5432:5432"]
+        options: >-
+          --shm-size=1gb
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://restrobooth:restrobooth@localhost:5432/restrobooth
+      BENCH_DATABASE_URL: postgres://restrobooth:restrobooth@localhost:5432/restrobooth
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.12.0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        working-directory: packages/db
+        run: pnpm db:migrate
+      - name: Generate the bench fixture
+        working-directory: packages/db
+        run: npx tsx bench/seed.ts --scale=${{ inputs.scale }}
+      - name: BENCH-01 (RLS)
+        working-directory: packages/db
+        run: npx tsx bench/harness/bench-01.ts
+      - name: BENCH-02 (override resolution)
+        working-directory: packages/db
+        run: npx tsx bench/harness/bench-02.ts
+      - name: Upload raw results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: |
+            packages/db/bench-01-results.json
+            packages/db/bench-02-results.json

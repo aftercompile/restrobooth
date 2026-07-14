@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "11.12.0"
+
+jobs:
+  verify:
+    name: Lint, typecheck, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -w lint
+      - run: pnpm -w typecheck
+      - run: pnpm -w build
+
+  db-checks:
+    name: Drizzle drift + partitions-ahead
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Plain Postgres, not the Supabase stack — this job checks schema
+        # shape and partition bookkeeping, neither of which needs real
+        # GoTrue-backed auth.uid(). The RLS suite (separate job below) is
+        # the one that pays for stack fidelity.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: restrobooth
+          POSTGRES_PASSWORD: restrobooth
+          POSTGRES_DB: restrobooth
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://restrobooth:restrobooth@localhost:5432/restrobooth
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        working-directory: packages/db
+        run: pnpm db:migrate
+      # Per packages/db/README.md: drizzle-kit generate is the safe,
+      # snapshot-based half of the drift story — `check` verifies the
+      # migration journal itself is internally consistent. It does not
+      # (and per that README, cannot be trusted to) diff live partitioned
+      # tables; that's what create_partitions_ahead()'s own RLS-enable
+      # step and this job's next step cover instead.
+      - name: Drizzle migration-journal check
+        working-directory: packages/db
+        run: pnpm db:check
+      - name: Partitions exist 3 months ahead
+        working-directory: packages/db
+        run: pnpm db:check-partitions
+
+  rls-suite:
+    name: RLS adversarial + override precedence suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Real GoTrue-backed auth.uid(), not the local-dev stub — the Phase 1
+      # planning decision was to pay this CI-time cost because RLS being
+      # wrong is the risk that ends the company (docs/RISKS.md R6), and a
+      # suite that only ever exercised the hand-rolled stub wouldn't be
+      # proof of anything running against real Supabase in production.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start Supabase local stack
+        run: supabase start
+      - name: Apply migrations
+        working-directory: packages/db
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: pnpm db:migrate
+      - name: Run RLS + override suites
+        working-directory: packages/db
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: pnpm test

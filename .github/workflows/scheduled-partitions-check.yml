@@ -1,0 +1,48 @@
+name: Scheduled — partitions-ahead (staging)
+
+# A missing partition is an outage: every insert into a partitioned table
+# for a month with no matching child fails outright. Per-PR CI (ci.yml)
+# only proves create_partitions_ahead() ITSELF works against a throwaway
+# database; it says nothing about whether the real staging/production
+# project's scheduled job actually ran last night. This is that check —
+# daily, against the real thing, and it must alarm loudly on failure.
+on:
+  schedule:
+    - cron: "17 3 * * *" # 03:17 UTC daily — off the hour, avoids the thundering-herd minute
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    name: Assert partitions exist 3 months ahead
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check STAGING_DATABASE_URL is configured
+        id: has-secret
+        run: |
+          if [ -z "${{ secrets.STAGING_DATABASE_URL }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: No staging project yet — skip, don't fail
+        if: steps.has-secret.outputs.configured == 'false'
+        run: |
+          echo "::warning::STAGING_DATABASE_URL is not set. There is no real staging/production project yet (pilot gate — see CLAUDE.md), so this check has nothing to run against. Configure the secret once one exists; until then this workflow intentionally no-ops rather than failing every night on a missing precondition."
+      - uses: pnpm/action-setup@v4
+        if: steps.has-secret.outputs.configured == 'true'
+        with:
+          version: "11.12.0"
+      - uses: actions/setup-node@v4
+        if: steps.has-secret.outputs.configured == 'true'
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.has-secret.outputs.configured == 'true'
+      - name: Partitions exist 3 months ahead
+        if: steps.has-secret.outputs.configured == 'true'
+        working-directory: packages/db
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: pnpm db:check-partitions
