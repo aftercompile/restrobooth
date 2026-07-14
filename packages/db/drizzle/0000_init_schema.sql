@@ -90,9 +90,24 @@ CREATE TABLE "terminals" (
 	CONSTRAINT "terminals_outlet_id_code_unique" UNIQUE("outlet_id","code")
 );
 --> statement-breakpoint
-CREATE TABLE "auth"."users" (
-	"id" uuid PRIMARY KEY NOT NULL
-);
+-- Guarded, not a bare CREATE TABLE: against real Supabase, "auth" is owned
+-- by supabase_auth_admin and "auth.users" already exists (managed by
+-- GoTrue) with "postgres" holding no CREATE privilege in that schema at
+-- all — an unguarded statement here doesn't no-op, it errors outright.
+-- Skipping when the table already exists means the memberships FK below
+-- correctly targets the REAL auth.users in that environment, which is the
+-- behavior we actually want in production anyway.
+DO $$
+BEGIN
+	IF NOT EXISTS (
+		SELECT 1 FROM information_schema.tables
+		WHERE table_schema = 'auth' AND table_name = 'users'
+	) THEN
+		CREATE TABLE "auth"."users" (
+			"id" uuid PRIMARY KEY NOT NULL
+		);
+	END IF;
+END $$;
 --> statement-breakpoint
 CREATE TABLE "memberships" (
 	"id" uuid PRIMARY KEY NOT NULL,

@@ -4,31 +4,23 @@
  * 3 outlets across 2 states (IGST/dual-GSTIN live from day one), one of
  * them a cloud kitchen where both brands share a physical outlet. A
  * ~120-item menu. This is also the fixture the RLS adversarial suite and
- * the override precedence suite (next checkpoint) are written against —
- * every ID here is a named constant in ./data/fixture-ids.ts for exactly
- * that reason.
+ * the override precedence suite are written against — every ID here is a
+ * named constant in ./data/fixture-ids.ts for exactly that reason.
  *
- * Destructive: TRUNCATEs before seeding. Local dev only, never point this
- * at anything but the docker-compose Postgres.
+ * seedBelievableChain(db) is exported so test/rls and test/override can
+ * seed the SAME fixture against the Supabase-local Postgres (real
+ * auth.uid()) rather than duplicating this logic. The CLI entrypoint at
+ * the bottom is a thin wrapper around it for `pnpm seed`.
+ *
+ * Destructive: TRUNCATEs before seeding.
  */
 import { config } from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createDbClient } from "../src/client.js";
+import { createDbClient, type Database } from "../src/client.js";
 import * as schema from "../src/schema/index.js";
 import { menuItems as fullMenu, type SeedMenuItem } from "./data/menu-items.js";
 import * as id from "./data/fixture-ids.js";
-
-// dotenv/config's default lookup is relative to process.cwd(), which pnpm
-// sets to packages/db, not the repo root where .env actually lives. Same
-// fix as drizzle.config.ts, kept consistent in case this ever runs under a
-// loader that doesn't populate import.meta.dirname.
-const here = path.dirname(fileURLToPath(import.meta.url));
-config({ path: path.resolve(here, "../../../.env") });
-
-const url = process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env at the repo root.");
-const db = createDbClient(url);
 
 // ---------------------------------------------------------------------------
 // A tiny, LOCAL, seed-only version of the bill math in DOMAIN.md §5 — not
@@ -59,7 +51,7 @@ function computeSimpleBill(lines: BillLine[]) {
   return { subtotal, tax, roundOff, payable, taxLines };
 }
 
-async function main() {
+export async function seedBelievableChain(db: Database) {
   console.log("Truncating (local dev only)...");
   await db.execute(`
     truncate table
@@ -124,11 +116,18 @@ async function main() {
   ]);
 
   // Surat is a cloud kitchen: no dine-in tables, delivery/takeout only.
-  const tableRows = [];
-  for (let i = 1; i <= 8; i++) tableRows.push({ id: crypto.randomUUID(), outletId: id.OUTLET_AMD, areaId: id.AREA_AMD_MAIN, label: `T${i}`, capacity: i % 4 === 0 ? 6 : 4 });
+  // AMD's first two tables are NAMED constants (TABLE_AMD_1/2 = "T5"/"T6"
+  // in TENANCY.md §6's generic naming) — the anonymous-guest adversarial
+  // cases (A11-A14) need two distinct, addressable tables at the same
+  // outlet to prove table-level isolation, not just outlet-level.
+  const tableRows = [
+    { id: id.TABLE_AMD_1, outletId: id.OUTLET_AMD, areaId: id.AREA_AMD_MAIN, label: "T1", capacity: 4 },
+    { id: id.TABLE_AMD_2, outletId: id.OUTLET_AMD, areaId: id.AREA_AMD_MAIN, label: "T2", capacity: 4 },
+  ];
+  for (let i = 3; i <= 8; i++) tableRows.push({ id: crypto.randomUUID(), outletId: id.OUTLET_AMD, areaId: id.AREA_AMD_MAIN, label: `T${i}`, capacity: i % 4 === 0 ? 6 : 4 });
   for (let i = 1; i <= 6; i++) tableRows.push({ id: crypto.randomUUID(), outletId: id.OUTLET_MUM, areaId: id.AREA_MUM_MAIN, label: `T${i}`, capacity: 4 });
   for (let i = 1; i <= 5; i++) tableRows.push({ id: crypto.randomUUID(), outletId: id.OUTLET_BLR, areaId: id.AREA_BLR_MAIN, label: `T${i}`, capacity: 4 });
-  const amdTableOne = tableRows[0]!.id;
+  const amdTableOne = id.TABLE_AMD_1;
   await db.insert(schema.tables).values(tableRows);
 
   await db.insert(schema.terminals).values([
@@ -270,7 +269,7 @@ async function main() {
   console.log("A light end-to-end narrative at each outlet (table session -> order -> KOT -> bill -> payment)...");
 
   // Ahmedabad: Brand A menu, at the OVERRIDE price (₹400, not the ₹380 default).
-  await seedNarrative({
+  await seedNarrative(db, {
     tableSessionId: id.TABLE_SESSION_AMD_1, orderId: id.ORDER_AMD_1, kotId: id.KOT_AMD_1, billId: id.BILL_AMD_1,
     outletId: id.OUTLET_AMD, storeId: id.STORE_AMD_A, businessDayId: id.BIZDAY_AMD, gstRegistrationId: id.GST_GJ,
     terminalId: id.TERMINAL_AMD_T1, tableId: amdTableOne, seriesId: id.INVOICE_SERIES_AMD, invoiceSeq: 1,
@@ -280,8 +279,35 @@ async function main() {
     ],
   });
 
+  // A second, minimal session+order at TABLE_AMD_2 ("T6") — no KOT/bill,
+  // just enough for A11 to have a real orders row to attempt reading and
+  // be denied. Table-level isolation: a guest at T5 must not read this.
+  await db.insert(schema.tableSessions).values([{
+    id: id.TABLE_SESSION_AMD_2, outletId: id.OUTLET_AMD, storeId: id.STORE_AMD_A, businessDayId: id.BIZDAY_AMD,
+    status: "dining", covers: 2, openedAt: new Date(Date.now() - 1800000), idempotencyKey: crypto.randomUUID(),
+  }]);
+  await db.insert(schema.tableSessionTables).values([{ tableSessionId: id.TABLE_SESSION_AMD_2, tableId: id.TABLE_AMD_2 }]);
+  await db.insert(schema.orders).values([{
+    id: id.ORDER_AMD_2, businessDate: today(), outletId: id.OUTLET_AMD, storeId: id.STORE_AMD_A,
+    businessDayId: id.BIZDAY_AMD, tableSessionId: id.TABLE_SESSION_AMD_2, channelCode: "dinein",
+    status: "open", idempotencyKey: crypto.randomUUID(),
+  }]);
+
+  // QR token + guest session for TABLE_AMD_1 ("T5"), bound to the FIRST
+  // (full) table session — the anonymous-guest adversarial cases need a
+  // real qr_tokens/guest_sessions row to authenticate as, matching
+  // "the QR token IS the auth" (TENANCY.md §6).
+  await db.insert(schema.qrTokens).values([{
+    id: id.QR_TOKEN_AMD_T1, outletId: id.OUTLET_AMD, tableId: id.TABLE_AMD_1,
+    tokenHash: "test-fixture-token-hash-amd-t1", rotatesAt: new Date(Date.now() + 3600000),
+  }]);
+  await db.insert(schema.guestSessions).values([{
+    id: id.GUEST_SESSION_AMD_T1, tableSessionId: id.TABLE_SESSION_AMD_1, storeId: id.STORE_AMD_A,
+    qrTokenId: id.QR_TOKEN_AMD_T1, expiresAt: new Date(Date.now() + 3600000),
+  }]);
+
   // Surat, Brand A store: same combo, brand default price (no override here).
-  await seedNarrative({
+  await seedNarrative(db, {
     tableSessionId: crypto.randomUUID(), orderId: crypto.randomUUID(), kotId: crypto.randomUUID(), billId: crypto.randomUUID(),
     outletId: id.OUTLET_SURAT, storeId: id.STORE_SURAT_A, businessDayId: id.BIZDAY_SURAT, gstRegistrationId: id.GST_GJ,
     terminalId: id.TERMINAL_SURAT_T1, tableId: null, seriesId: id.INVOICE_SERIES_SURAT, invoiceSeq: 1,
@@ -292,7 +318,7 @@ async function main() {
   });
 
   // Surat, Brand B store: THE A8 CASE — same outlet, sibling brand, its own order.
-  await seedNarrative({
+  await seedNarrative(db, {
     tableSessionId: crypto.randomUUID(), orderId: crypto.randomUUID(), kotId: crypto.randomUUID(), billId: crypto.randomUUID(),
     outletId: id.OUTLET_SURAT, storeId: id.STORE_SURAT_B, businessDayId: id.BIZDAY_SURAT, gstRegistrationId: id.GST_GJ,
     terminalId: id.TERMINAL_SURAT_T1, tableId: null, seriesId: id.INVOICE_SERIES_SURAT, invoiceSeq: 2,
@@ -303,7 +329,7 @@ async function main() {
   });
 
   // Mumbai: Brand B only.
-  await seedNarrative({
+  await seedNarrative(db, {
     tableSessionId: crypto.randomUUID(), orderId: crypto.randomUUID(), kotId: crypto.randomUUID(), billId: crypto.randomUUID(),
     outletId: id.OUTLET_MUM, storeId: id.STORE_MUM_B, businessDayId: id.BIZDAY_MUM, gstRegistrationId: id.GST_MH,
     terminalId: id.TERMINAL_MUM_T1, tableId: null, seriesId: id.INVOICE_SERIES_MUM, invoiceSeq: 1,
@@ -314,7 +340,7 @@ async function main() {
   });
 
   // Bangalore (org2 — a separate franchisee, case A10).
-  await seedNarrative({
+  await seedNarrative(db, {
     tableSessionId: crypto.randomUUID(), orderId: crypto.randomUUID(), kotId: crypto.randomUUID(), billId: crypto.randomUUID(),
     outletId: id.OUTLET_BLR, storeId: id.STORE_BLR_C, businessDayId: id.BIZDAY_BLR, gstRegistrationId: id.GST_KA,
     terminalId: id.TERMINAL_BLR_T1, tableId: null, seriesId: id.INVOICE_SERIES_BLR, invoiceSeq: 1,
@@ -343,7 +369,7 @@ function financialYear(): string {
 }
 
 type NarrativeLine = { menuItemId: string; name: string; unitPricePaise: number; qty: number; taxClassId: string; taxRateBps: number };
-async function seedNarrative(args: {
+async function seedNarrative(db: Database, args: {
   tableSessionId: string; orderId: string; kotId: string; billId: string;
   outletId: string; storeId: string; businessDayId: string; gstRegistrationId: string;
   terminalId: string; tableId: string | null; seriesId: string; invoiceSeq: number;
@@ -409,9 +435,20 @@ async function seedNarrative(args: {
   }]);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+// --- CLI entrypoint (`pnpm seed`) — everything above is importable directly. ---
+async function cliMain() {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  config({ path: path.resolve(here, "../../../.env") });
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env at the repo root.");
+  await seedBelievableChain(createDbClient(url));
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  cliMain()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}

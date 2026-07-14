@@ -2,8 +2,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Schema, RLS suite (test/rls/), override suite (test/override/), and
-    // partitioning tests land in the next Phase 1 checkpoint.
     passWithNoTests: true,
+    globalSetup: ["./test/globalSetup.ts"],
+    // test/override mutates a single shared set of rows per test case
+    // (setOverrides replaces ALL overrides for the test item each time) —
+    // those tests must run in strict sequence, not across worker threads.
+    fileParallelism: false,
   },
 });

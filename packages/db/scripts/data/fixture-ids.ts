@@ -93,3 +93,17 @@ export const INVOICE_SERIES_AMD = "00000000-0000-0000-0010-00000000000a";
 export const INVOICE_SERIES_SURAT = "00000000-0000-0000-0010-00000000000b";
 export const INVOICE_SERIES_MUM = "00000000-0000-0000-0010-00000000000c";
 export const INVOICE_SERIES_BLR = "00000000-0000-0000-0010-00000000000d";
+
+// ---- Named tables + a second AMD table session, for the anonymous-guest
+// adversarial cases (TENANCY.md §6 A11-A14): "T5" and "T6" in the doc's
+// generic naming. A guest scanning T5's QR must not be able to read
+// orders that belong to T6's session, even though both are the same
+// outlet — table-level isolation, not just outlet-level.
+export const TABLE_AMD_1 = "00000000-0000-0000-0011-000000000001"; // = T5: bound to TABLE_SESSION_AMD_1
+export const TABLE_AMD_2 = "00000000-0000-0000-0011-000000000002"; // = T6: its own separate session
+
+export const TABLE_SESSION_AMD_2 = "00000000-0000-0000-000c-000000000002";
+export const ORDER_AMD_2 = "00000000-0000-0000-000d-000000000002";
+
+export const QR_TOKEN_AMD_T1 = "00000000-0000-0000-0012-000000000001"; // bound to TABLE_AMD_1
+export const GUEST_SESSION_AMD_T1 = "00000000-0000-0000-0013-000000000001"; // bound to TABLE_SESSION_AMD_1

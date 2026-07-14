@@ -22,7 +22,13 @@ as $$
            select brand_id from stores where outlet_id = o.id));
 $$;
 revoke execute on function accessible_outlet_ids() from public;
-grant execute on function accessible_outlet_ids() to authenticated;
+-- anon needs EXECUTE too, not because a guest should ever get a non-empty
+-- result (auth.uid() is null for anon, so the join yields nothing), but
+-- because "for all" policies with no `to` clause (e.g. order_isolation)
+-- apply to every role and are OR'd against the anon-specific policies —
+-- Postgres must be able to CALL the function to evaluate that OR at all,
+-- regardless of which branch ultimately matches.
+grant execute on function accessible_outlet_ids() to authenticated, anon;
 
 -- docs/TENANCY.md §7.1's "second predicate" for store-scoped tables. This is
 -- the actual fix for adversarial case A8: accessible_outlet_ids() is
@@ -51,7 +57,7 @@ as $$
            select outlet_id from outlet_group_members where outlet_group_id = m.scope_id));
 $$;
 revoke execute on function accessible_store_ids() from public;
-grant execute on function accessible_store_ids() to authenticated;
+grant execute on function accessible_store_ids() to authenticated, anon;
 
 -- For brand-scoped-only resources with no outlet_id at all (dayparts,
 -- promos, menu_items). A brand is accessible if its own membership grants
@@ -78,4 +84,4 @@ as $$
          ));
 $$;
 revoke execute on function accessible_brand_ids() from public;
-grant execute on function accessible_brand_ids() to authenticated;
+grant execute on function accessible_brand_ids() to authenticated, anon;
