@@ -1,0 +1,16 @@
+.card {
+  border-radius: var(--radius);
+  padding: var(--space-2);
+  border: 1px solid var(--border-on-dark);
+}
+
+[data-density="console"] .card,
+[data-density="booth"] .card {
+  border-color: var(--border-on-light);
+  background: #fff;
+}
+
+[data-density="pos"] .card,
+[data-density="kds"] .card {
+  background: var(--ink-700);
+}

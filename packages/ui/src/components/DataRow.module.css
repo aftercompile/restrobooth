@@ -1,0 +1,23 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  min-height: var(--touch-target);
+  border-bottom: 1px solid var(--border-on-dark);
+}
+
+[data-density="console"] .row,
+[data-density="booth"] .row {
+  border-bottom-color: var(--border-on-light);
+}
+
+.label {
+  font-weight: 500;
+}
+
+.trailing {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}

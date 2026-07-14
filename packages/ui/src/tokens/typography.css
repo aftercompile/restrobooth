@@ -1,0 +1,41 @@
+/**
+ * display: Bricolage Grotesque (Booth, Console only — "never used" on
+ * POS/KDS per docs/DESIGN.md). body: Inter, deliberately opinion-free at
+ * POS density. data: IBM Plex Mono, tabular numerals wherever numbers
+ * stack (prices, quantities, timers, totals) — non-negotiable, a total
+ * that shifts a pixel as it counts looks wrong.
+ *
+ * Self-hosted font files are a Phase 2+ concern (not shipped in Phase 1);
+ * these stacks fall back to system faces until then, exactly as the
+ * DESIGN.md artifact itself did under its own CDN-blocked sandbox.
+ */
+:root {
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --text-base: 16px;
+  --text-sm: 14px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+}
+
+[data-density="pos"],
+[data-density="kds"] {
+  --text-base: 15px;
+  --text-sm: 13px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+}
+
+[data-density="booth"] {
+  --text-base: 18px;
+  --text-sm: 15px;
+  --text-lg: 24px;
+  --text-xl: 36px;
+}
+
+.rb-tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-data);
+}

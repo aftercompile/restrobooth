@@ -1,0 +1,29 @@
+@import "./colors.css";
+@import "./spacing.css";
+@import "./typography.css";
+@import "./motion.css";
+
+[data-density] {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+}
+
+[data-density="pos"],
+[data-density="kds"] {
+  background: var(--surface-dark);
+  color: var(--text-on-dark);
+}
+
+[data-density="console"],
+[data-density="booth"] {
+  background: var(--surface-light);
+  color: var(--text-on-light);
+}
+
+/* The focus ring is the POS cashier's primary navigation affordance —
+   never removed, never :focus-visible-gated to "keyboard only" in a way
+   that hides it from a barcode-scanner or keypad-driven session. */
+[data-density] :focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}

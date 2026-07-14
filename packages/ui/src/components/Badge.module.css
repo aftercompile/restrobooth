@@ -1,0 +1,34 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-1);
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.neutral {
+  background: var(--border-on-dark);
+  color: var(--chalk-50);
+}
+[data-density="console"] .neutral,
+[data-density="booth"] .neutral {
+  background: var(--chalk-200);
+  color: var(--ink-900);
+}
+
+.live {
+  background: var(--enamel-500);
+  color: var(--chalk-50);
+}
+
+.warning {
+  background: var(--ramp-warming);
+  color: var(--ink-900);
+}
+
+.critical {
+  background: var(--signal-600);
+  color: var(--chalk-50);
+}

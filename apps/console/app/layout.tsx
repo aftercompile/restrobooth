@@ -1,3 +1,5 @@
+import "@restrobooth/ui/src/tokens/index.css";
+import { DensityProvider, ToastProvider } from "@restrobooth/ui";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -9,7 +11,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <DensityProvider density="console">
+          <ToastProvider>{children}</ToastProvider>
+        </DensityProvider>
+      </body>
     </html>
   );
 }

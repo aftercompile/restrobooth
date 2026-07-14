@@ -1,0 +1,39 @@
+/**
+ * "A 200ms transition on a billing screen is a bug." POS and KDS get
+ * `transition: none` on the whole subtree — not a slow duration, an
+ * absolute zero, and it applies even under prefers-reduced-motion (they're
+ * already at the floor, which is itself proof the decision was right on
+ * its own merits, not just an accessibility concession — docs/DESIGN.md).
+ */
+:root,
+[data-density="console"] {
+  --motion-duration: 150ms;
+  --motion-easing: ease-out;
+}
+
+[data-density="booth"] {
+  --motion-duration: 320ms;
+  --motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-density="pos"],
+[data-density="kds"] {
+  --motion-duration: 0ms;
+  --motion-easing: linear;
+}
+
+[data-density="pos"] *,
+[data-density="kds"] * {
+  transition: none !important;
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration: 0ms;
+  }
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

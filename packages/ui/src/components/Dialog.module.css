@@ -1,0 +1,39 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(12 21 23 / 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  z-index: 100;
+}
+
+.panel {
+  background: var(--surface-light);
+  color: var(--text-on-light);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 24%);
+}
+
+[data-density="pos"] .panel,
+[data-density="kds"] .panel {
+  background: var(--ink-700);
+  color: var(--text-on-dark);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  margin: 0 0 var(--space-2);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}

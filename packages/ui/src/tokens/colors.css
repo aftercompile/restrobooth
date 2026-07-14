@@ -1,0 +1,44 @@
+/**
+ * Direction B, "Service Board" (docs/DESIGN.md). Enamel green, graphite
+ * steel, one brass accent — the material language of a working commercial
+ * kitchen, not a diner and not a SaaS dashboard.
+ *
+ * Hard rule, enforced by scripts/lint-brass.mjs (not a CSS-only comment):
+ * --brass-500 is 2.2:1 on --chalk-50 and FAILS AA for text. It is a FILL
+ * only — rail, focus ring, a button face with dark text on it — never a
+ * `color` on a light background. On dark grounds it reaches 6.4:1 and is
+ * safe for text.
+ */
+:root {
+  /* Ground */
+  --ink-900: #0c1517; /* dark ground: POS chrome, KDS */
+  --chalk-50: #edf1ef; /* light ground: Console, Booth — green-shifted, not cream */
+
+  /* Brand */
+  --enamel-700: #0e4f45; /* headers, primary surfaces, text-on-light (7.6:1 on chalk-50) */
+  --enamel-500: #17796a; /* live / fresh / OK state */
+  --brass-500: #c89b3c; /* the one warm accent — FILL ONLY, see header comment */
+  --signal-600: #c63a2a; /* destructive: void, 86, critical age */
+
+  /* State rail ramp (docs/DESIGN.md "time-temperature ramp") */
+  --ramp-fresh: #17796a;
+  --ramp-warming: #d9a32b;
+  --ramp-hot: #d2622a;
+  --ramp-critical: #c63a2a;
+
+  /* Neutrals derived from the two grounds, for borders/dividers/disabled */
+  --ink-700: #1b262a;
+  --ink-500: #2e3d42;
+  --chalk-200: #d7dedb;
+  --chalk-400: #aab6b1;
+
+  /* Semantic aliases — components reference these, never raw hex */
+  --surface-dark: var(--ink-900);
+  --surface-light: var(--chalk-50);
+  --text-on-dark: var(--chalk-50);
+  --text-on-light: var(--enamel-700);
+  --border-on-dark: var(--ink-500);
+  --border-on-light: var(--chalk-200);
+  --focus-ring: var(--brass-500);
+  --danger: var(--signal-600);
+}

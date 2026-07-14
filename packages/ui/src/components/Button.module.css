@@ -1,0 +1,41 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--motion-duration) var(--motion-easing), border-color var(--motion-duration) var(--motion-easing);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Brass is a FILL here (button face), never text on a light ground — the
+   text on top of it is --ink-900, not brass itself. See tokens/colors.css. */
+.primary {
+  background: var(--brass-500);
+  color: var(--ink-900);
+}
+.primary:hover:not(:disabled) {
+  background: #b8892f;
+}
+
+.secondary {
+  background: transparent;
+  border-color: currentColor;
+  color: inherit;
+}
+
+.danger {
+  background: var(--signal-600);
+  color: var(--chalk-50);
+}

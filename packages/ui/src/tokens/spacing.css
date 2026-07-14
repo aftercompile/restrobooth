@@ -1,0 +1,37 @@
+/**
+ * Three density scales, one token set (docs/DESIGN.md "How B works at each
+ * density"). A component never hardcodes a px value — it reads
+ * --space-*, and the enclosing [data-density] element decides what that
+ * resolves to. Default (no ancestor) is Console, the most common host.
+ */
+:root,
+[data-density="console"] {
+  --space-1: 16px;
+  --space-2: 24px;
+  --space-3: 32px;
+  --space-4: 48px;
+  --space-5: 64px;
+  --touch-target: 40px; /* pointer-driven, not a hard floor */
+  --radius: 6px;
+}
+
+[data-density="pos"],
+[data-density="kds"] {
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --touch-target: 44px; /* enforced minimum — CLAUDE.md floor, not polish */
+  --radius: 4px;
+}
+
+[data-density="booth"] {
+  --space-1: 24px;
+  --space-2: 32px;
+  --space-3: 48px;
+  --space-4: 64px;
+  --space-5: 96px;
+  --touch-target: 48px;
+  --radius: 12px;
+}
