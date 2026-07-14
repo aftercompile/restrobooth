@@ -71,6 +71,13 @@
       "when": 1783950442233,
       "tag": "0009_pgvector_embedding",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784025273108,
+      "tag": "0010_bench01_indexes",
+      "breakpoints": true
     }
   ]
 }

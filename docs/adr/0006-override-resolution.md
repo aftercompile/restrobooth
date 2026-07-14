@@ -1,7 +1,7 @@
 # ADR-0006 — Menu override resolution: live vs. materialised
 
-**Status:** **PROVISIONAL** — decision stands pending **BENCH-02**
-**Date:** 2026-07-13
+**Status:** **CONFIRMED** — BENCH-02 passed on the first run, no escalation needed. See [BENCHMARKS-RESULTS.md](../BENCHMARKS-RESULTS.md).
+**Date:** 2026-07-13. Confirmed 2026-07-14.
 
 ## Context
 
@@ -13,7 +13,7 @@ Worst case: 20 outlets × 200 items × 6 channels = **24 000 resolved cells**, t
 
 ## Decision
 
-**Live resolution, in a single SQL function. Provisionally — the decision is conditional on BENCH-02 and will be revisited with real numbers in Phase 1, before Phase 2 builds on it.**
+**Live resolution, in a single SQL function.** Confirmed by BENCH-02 (2026-07-14): R1, the gate, ran at p95=2.9ms against a 50ms threshold — a 17x margin. No escalation was needed.
 
 ### Why live, on the merits
 
@@ -27,7 +27,7 @@ Worst case: 20 outlets × 200 items × 6 channels = **24 000 resolved cells**, t
 
 ### Why it might not survive
 
-The resolver runs on every menu read, and the Booth's LCP budget is **2 s on 4G**. If resolving 200 items takes 400 ms, that is a meaningful chunk of the budget spent in Postgres. The risk is real and it is why this ADR is provisional.
+The resolver runs on every menu read, and the Booth's LCP budget is **2 s on 4G**. If resolving 200 items takes 400 ms, that is a meaningful chunk of the budget spent in Postgres. The risk was real, which is why this ADR was provisional until BENCH-02 actually ran — see "Result" below.
 
 ## BENCH-02 — the gate
 
@@ -37,9 +37,13 @@ Specified in full in [BENCHMARKS.md](../BENCHMARKS.md). Summary:
 - Query: resolve a full 200-item menu for `(store, channel, now)`.
 - **Pass: p95 < 50 ms.** Fail → escalate.
 
+### Result (2026-07-14)
+
+**Passed, no escalation.** Full numbers, methodology, and two honest fixture gaps (bench overrides don't vary by channel or reference dayparts/promos, so R2/R3 don't fully exercise what their names imply) are in [BENCHMARKS-RESULTS.md](../BENCHMARKS-RESULTS.md). Headline: R1 (the gate) p95=2.9ms, R4 (single item, the cart path) p95=1.7ms, R5 (168-cell full channel push) 310ms total against a 10s budget.
+
 ## The escalation ladder — in order, cheapest first
 
-We do **not** jump straight to a materialised view if BENCH-02 fails. In order:
+Recorded for the future: this is what we'd have done if BENCH-02 had failed, and is what to reach for if a later phase's real override density changes the picture enough to revisit this.
 
 1. **Index and rewrite.** A partial index on `(menu_item_id, status, specificity desc) where status='published'` and a `distinct on` formulation. Most likely sufficient; costs nothing.
 2. **Cache the resolved menu in the application**, keyed on `(store, channel, daypart, promo_set_hash)`, invalidated by a Postgres `NOTIFY` on publish/86. Keeps the DB as the source of truth, keeps effective-dating correct (the cache key includes the daypart), and gets us a ~5 ms hot read. **This is the most likely landing spot** and it preserves every advantage of live resolution.
@@ -49,7 +53,7 @@ We do **not** jump straight to a materialised view if BENCH-02 fails. In order:
 
 - **Positive:** effective-dated pricing and instant 86 both work with no background worker, and cannot fail because a worker was down.
 - **Positive:** the sparse-override design is preserved end to end.
-- **Negative:** the resolver is on the hot path of the most latency-sensitive read in the product (the Booth menu). It must be fast, and we do not yet know that it is.
-- **Negative:** the decision is provisional, so Phase 2 must not hard-code an assumption that resolution is free. **Requirement: all menu reads go through one function** (`resolveMenu()` in `packages/db`), so that swapping live → cached → materialised is a change in *one place* and not a refactor of every surface.
+- **Negative:** the resolver is on the hot path of the most latency-sensitive read in the product (the Booth menu). BENCH-02 confirms it is fast — 17x margin on the gate — but it must stay that way as override volume grows past this fixture's 15% sparsity.
+- **Requirement, still binding even though the ADR is confirmed:** all menu reads go through one function (`resolve_menu()` in `packages/db`), so that swapping live → cached → materialised, if a future phase's real data ever needs it, is a change in *one place* and not a refactor of every surface.
 
-That last point is the real deliverable of this ADR. **Whatever BENCH-02 says, there is exactly one call site to change.**
+That last point is the real deliverable of this ADR. **Whatever a future benchmark says, there is exactly one call site to change.**

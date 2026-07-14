@@ -1,0 +1,271 @@
+{
+  "refs": {
+    "outletId": "e4abc8b1-7727-42a4-a877-c8b2191d3e09",
+    "storeId": "21234e65-f523-4e83-ac84-2347c71adb79",
+    "businessDate": "2026-07-12T18:30:00.000Z",
+    "orderId": "cf7d5d11-4789-4b8b-bf62-1ce114f5b2be",
+    "clusterOutletId": "860b4816-6285-4bf8-b47f-427da0e9a49c",
+    "users": {
+      "cashier": "7885e906-3acf-492b-a4c0-2894160130b1",
+      "outletManager": "66e85ccd-774c-4204-9a37-c67440159588",
+      "clusterManager": "558e19ee-fd05-465f-b90f-8b43df669b4a",
+      "orgOwner": "79894bc4-f0a1-4e3e-9518-ad698009297f"
+    },
+    "gstRegistrationId": "5d4681f0-1815-467a-b777-cb246f04c017",
+    "terminalId": "b08d4d73-20b1-4dec-ae86-c8dcc699040a",
+    "taxClassId": "18dd3606-a0e5-4489-9374-37d4d777ca45"
+  },
+  "variantA": {
+    "Q1 POS hot path: order + items for one order": {
+      "p50": 0.9633000000000038,
+      "p95": 1.4266999999999825,
+      "p99": 1.6762999999999693,
+      "n": 200
+    },
+    "Q2 POS menu load: resolve_menu(store, dinein, now())": {
+      "p50": 1.8595000000000255,
+      "p95": 2.5878999999999905,
+      "p99": 3.7479000000000724,
+      "n": 200
+    },
+    "Q3 KDS: KOTs fired in the 4h before this outlet's latest ticket": {
+      "p50": 3.1881000000000768,
+      "p95": 4.399300000000039,
+      "p99": 5.210199999999986,
+      "n": 200
+    },
+    "Q4 Floor map: table sessions for an outlet, one business_date": {
+      "p50": 2.680099999999811,
+      "p95": 4.142100000000028,
+      "p99": 6.39240000000018,
+      "n": 200
+    },
+    "Q5 Bill finalise: insert bill (rolled back) — RLS WITH CHECK + constraint cost on the write path": {
+      "p50": 2.961899999999787,
+      "p95": 4.090700000000197,
+      "p99": 6.426600000000235,
+      "n": 50
+    },
+    "Q6 Report: day-end summary for one outlet, one business_date": {
+      "p50": 6.034700000000157,
+      "p95": 7.3771999999999025,
+      "p99": 8.107899999999972,
+      "n": 200
+    },
+    "Q7 Cluster report: 30-day summary across a cluster's outlets (live agg, no rollup table in Phase 1)": {
+      "p50": 25.843299999999545,
+      "p95": 31.99499999999989,
+      "p99": 33.77390000000014,
+      "n": 200
+    }
+  },
+  "variantB": {
+    "Q1 POS hot path: order + items for one order": {
+      "cashier": {
+        "p50": 1.5092999999997119,
+        "p95": 2.0679000000000087,
+        "p99": 4.070499999999811,
+        "n": 200
+      },
+      "outletManager": {
+        "p50": 1.4264000000002852,
+        "p95": 1.7950999999993655,
+        "p99": 2.5223000000005413,
+        "n": 200
+      },
+      "clusterManager": {
+        "p50": 1.4721000000008644,
+        "p95": 1.720100000000457,
+        "p99": 1.9953000000004977,
+        "n": 200
+      },
+      "orgOwner": {
+        "p50": 1.3812999999991007,
+        "p95": 1.6306000000004133,
+        "p99": 1.9089999999996508,
+        "n": 200
+      }
+    },
+    "Q2 POS menu load: resolve_menu(store, dinein, now())": {
+      "cashier": {
+        "p50": 3.5540000000000873,
+        "p95": 4.332000000000335,
+        "p99": 5.153199999998833,
+        "n": 200
+      },
+      "outletManager": {
+        "p50": 3.7053999999989173,
+        "p95": 4.580799999999726,
+        "p99": 6.0393999999996595,
+        "n": 200
+      },
+      "clusterManager": {
+        "p50": 3.7550999999984924,
+        "p95": 4.593700000001263,
+        "p99": 5.13970000000154,
+        "n": 200
+      },
+      "orgOwner": {
+        "p50": 3.6045000000012806,
+        "p95": 5.496100000000297,
+        "p99": 6.770500000000538,
+        "n": 200
+      }
+    },
+    "Q3 KDS: KOTs fired in the 4h before this outlet's latest ticket": {
+      "cashier": {
+        "p50": 4.3060999999997875,
+        "p95": 5.532999999999447,
+        "p99": 9.400299999999334,
+        "n": 200
+      },
+      "outletManager": {
+        "p50": 4.187399999998888,
+        "p95": 5.244899999999689,
+        "p99": 6.502800000000207,
+        "n": 200
+      },
+      "clusterManager": {
+        "p50": 4.66820000000007,
+        "p95": 5.839299999999639,
+        "p99": 6.690899999999601,
+        "n": 200
+      },
+      "orgOwner": {
+        "p50": 4.155099999999948,
+        "p95": 4.985599999999977,
+        "p99": 5.717000000000553,
+        "n": 200
+      }
+    },
+    "Q4 Floor map: table sessions for an outlet, one business_date": {
+      "cashier": {
+        "p50": 3.193200000001525,
+        "p95": 4.938399999999092,
+        "p99": 8.650900000000547,
+        "n": 200
+      },
+      "outletManager": {
+        "p50": 2.9192000000002736,
+        "p95": 3.9390000000021246,
+        "p99": 10.176900000002206,
+        "n": 200
+      },
+      "clusterManager": {
+        "p50": 3.133800000003248,
+        "p95": 4.351200000000972,
+        "p99": 5.826499999999214,
+        "n": 200
+      },
+      "orgOwner": {
+        "p50": 3.0416000000004715,
+        "p95": 4.290399999998044,
+        "p99": 8.85399999999936,
+        "n": 200
+      }
+    },
+    "Q5 Bill finalise: insert bill (rolled back) — RLS WITH CHECK + constraint cost on the write path": {
+      "cashier": {
+        "p50": 2.7986999999993714,
+        "p95": 3.3800000000010186,
+        "p99": 4.159700000000157,
+        "n": 50
+      },
+      "outletManager": {
+        "p50": 2.750800000001618,
+        "p95": 3.1644999999989523,
+        "p99": 3.654399999999441,
+        "n": 50
+      },
+      "clusterManager": {
+        "p50": 2.8149000000012165,
+        "p95": 3.052299999999377,
+        "p99": 3.2164000000011583,
+        "n": 50
+      },
+      "orgOwner": {
+        "p50": 2.7396000000007916,
+        "p95": 3.530800000000454,
+        "p99": 4.9046999999991385,
+        "n": 50
+      }
+    },
+    "Q6 Report: day-end summary for one outlet, one business_date": {
+      "cashier": {
+        "p50": 10.302800000001298,
+        "p95": 13.496699999999691,
+        "p99": 15.7029999999977,
+        "n": 200
+      },
+      "outletManager": {
+        "p50": 10.478900000001886,
+        "p95": 12.10570000000007,
+        "p99": 13.099099999999453,
+        "n": 200
+      },
+      "clusterManager": {
+        "p50": 12.527200000000448,
+        "p95": 13.91400000000067,
+        "p99": 15.02980000000025,
+        "n": 200
+      },
+      "orgOwner": {
+        "p50": 14.701900000000023,
+        "p95": 16.170900000000984,
+        "p99": 17.12540000000081,
+        "n": 200
+      }
+    },
+    "Q7 Cluster report: 30-day summary across a cluster's outlets (live agg, no rollup table in Phase 1)": {
+      "cashier": {
+        "p50": 1.7338000000017928,
+        "p95": 2.370200000001205,
+        "p99": 2.8267000000014377,
+        "n": 200
+      },
+      "outletManager": {
+        "p50": 1.6961000000010245,
+        "p95": 2.0249000000003434,
+        "p99": 2.4169999999976426,
+        "n": 200
+      },
+      "clusterManager": {
+        "p50": 50.22580000000016,
+        "p95": 56.980499999997846,
+        "p99": 61.17840000000069,
+        "n": 200
+      },
+      "orgOwner": {
+        "p50": 1.7492999999958556,
+        "p95": 2.4698999999964144,
+        "p99": 2.6889999999984866,
+        "n": 200
+      }
+    }
+  },
+  "variantC": {
+    "q1": {
+      "p50": 1.4144000000014785,
+      "p95": 2.0335999999952037,
+      "p99": 2.5175000000017462,
+      "n": 200
+    },
+    "q6": {
+      "p50": 10.148500000002969,
+      "p95": 11.946199999998498,
+      "p99": 12.621099999996659,
+      "n": 200
+    },
+    "q1Explain": "Index Scan using order_items_2026_07_order_id_client_line_id_business_date_key on order_items_2026_07 oi  (cost=15.95..24.01 rows=1 width=159) (actual time=0.737..0.742 rows=5 loops=1)\n  Index Cond: ((order_id = 'cf7d5d11-4789-4b8b-bf62-1ce114f5b2be'::uuid) AND (business_date = '2026-07-13'::date))\n  Filter: ((hashed SubPlan 1) AND (hashed SubPlan 2))\n  Buffers: shared hit=16\n  SubPlan 1\n    ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.240..0.253 rows=1 loops=1)\n          Buffers: shared hit=2\n          ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\n  SubPlan 2\n    ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.430..0.445 rows=1 loops=1)\n          Buffers: shared hit=7\n          ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)\nPlanning Time: 0.093 ms\nExecution Time: 0.800 ms",
+    "q6Explain": "Aggregate  (cost=3585.11..3585.12 rows=1 width=72) (actual time=8.619..8.621 rows=1 loops=1)\n  Buffers: shared hit=1992\n  ->  Seq Scan on bills_2026_07 bills  (cost=15.53..3584.53 rows=76 width=16) (actual time=8.086..8.596 rows=301 loops=1)\n        Filter: ((hashed SubPlan 1) AND (hashed SubPlan 2) AND (outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (business_date = '2026-07-13'::date))\n        Rows Removed by Filter: 77959\n        Buffers: shared hit=1992\n        SubPlan 1\n          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.230..0.240 rows=1 loops=1)\n                Buffers: shared hit=2\n                ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)\n        SubPlan 2\n          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.411..0.427 rows=1 loops=1)\n                Buffers: shared hit=7\n                ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\nPlanning Time: 0.145 ms\nExecution Time: 8.652 ms"
+  },
+  "explains": {
+    "Q1 POS hot path: order + items for one order": "Index Scan using order_items_2026_07_order_id_client_line_id_business_date_key on order_items_2026_07 oi  (cost=15.95..24.01 rows=1 width=159) (actual time=0.863..0.870 rows=5 loops=1)\n  Index Cond: ((order_id = 'cf7d5d11-4789-4b8b-bf62-1ce114f5b2be'::uuid) AND (business_date = '2026-07-13'::date))\n  Filter: ((hashed SubPlan 1) AND (hashed SubPlan 2))\n  Buffers: shared hit=16\n  SubPlan 1\n    ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.367..0.384 rows=1 loops=1)\n          Buffers: shared hit=2\n          ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\n  SubPlan 2\n    ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.416..0.436 rows=1 loops=1)\n          Buffers: shared hit=7\n          ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\nPlanning Time: 0.180 ms\nExecution Time: 0.945 ms",
+    "Q2 POS menu load: resolve_menu(store, dinein, now())": "Hash Left Join  (cost=126.35..155.04 rows=100 width=25) (actual time=1.594..1.755 rows=200 loops=1)\n  Hash Cond: (mi.id = aw.menu_item_id)\n  Buffers: shared hit=57\n  CTE candidates\n    ->  Bitmap Heap Scan on menu_item_overrides o  (cost=92.76..107.67 rows=13 width=175) (actual time=0.778..0.788 rows=26 loops=1)\n          Recheck Cond: ((store_id IS NULL) OR (store_id = '21234e65-f523-4e83-ac84-2347c71adb79'::uuid))\n          Filter: ((hashed SubPlan 8) AND ((channel_code IS NULL) OR (channel_code = 'dinein'::text)) AND (status = 'published'::text) AND (now() >= effective_from) AND ((effective_to IS NULL) OR (now() < effective_to)) AND ((daypart_id IS NULL) OR (hashed SubPlan 3)) AND ((promo_id IS NULL) OR (hashed SubPlan 6)))\n          Heap Blocks: exact=1\n          Buffers: shared hit=29\n          ->  BitmapOr  (cost=8.51..8.51 rows=26 width=0) (actual time=0.005..0.005 rows=0 loops=1)\n                Buffers: shared hit=2\n                ->  Bitmap Index Scan on menu_item_overrides_store_channel_idx  (cost=0.00..4.16 rows=1 width=0) (actual time=0.003..0.003 rows=0 loops=1)\n                      Index Cond: (store_id IS NULL)\n                      Buffers: shared hit=1\n                ->  Bitmap Index Scan on menu_item_overrides_store_channel_idx  (cost=0.00..4.35 rows=26 width=0) (actual time=0.002..0.002 rows=26 loops=1)\n                      Index Cond: (store_id = '21234e65-f523-4e83-ac84-2347c71adb79'::uuid)\n                      Buffers: shared hit=1\n          SubPlan 8\n            ->  Hash Join  (cost=20.03..47.30 rows=200 width=16) (actual time=0.605..0.741 rows=200 loops=1)\n                  Hash Cond: (menu_items.brand_id = (accessible_brand_ids()))\n                  Buffers: shared hit=26\n                  ->  Seq Scan on menu_items  (cost=7.77..31.77 rows=400 width=32) (actual time=0.338..0.452 rows=200 loops=1)\n                        Filter: (hashed SubPlan 7)\n                        Rows Removed by Filter: 600\n                        Buffers: shared hit=20\n                        SubPlan 7\n                          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.317..0.322 rows=1 loops=1)\n                                Buffers: shared hit=6\n                                ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)\n                  ->  Hash  (cost=9.77..9.77 rows=200 width=16) (actual time=0.262..0.263 rows=1 loops=1)\n                        Buckets: 1024  Batches: 1  Memory Usage: 9kB\n                        Buffers: shared hit=6\n                        ->  HashAggregate  (cost=7.77..9.77 rows=200 width=16) (actual time=0.261..0.261 rows=1 loops=1)\n                              Group Key: accessible_brand_ids()\n                              Batches: 1  Memory Usage: 40kB\n                              Buffers: shared hit=6\n                              ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.253..0.258 rows=1 loops=1)\n                                    Buffers: shared hit=6\n                                    ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)\n          SubPlan 3\n            ->  Nested Loop  (cost=15.53..18.18 rows=1 width=16) (never executed)\n                  Join Filter: (d.brand_id = s_1.brand_id)\n                  ->  Seq Scan on dayparts d  (cost=7.77..8.98 rows=1 width=32) (never executed)\n                        Filter: ((hashed SubPlan 1) AND (((now() AT TIME ZONE 'Asia/Kolkata'::text))::time without time zone >= start_time) AND (((now() AT TIME ZONE 'Asia/Kolkata'::text))::time without time zone <= end_time) AND ((EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Kolkata'::text)))::integer = ANY (days_of_week)))\n                        SubPlan 1\n                          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (never executed)\n                                ->  Result  (cost=0.00..0.01 rows=1 width=0) (never executed)\n                  ->  Seq Scan on stores s_1  (cost=7.77..9.19 rows=1 width=16) (never executed)\n                        Filter: ((hashed SubPlan 2) AND (id = '21234e65-f523-4e83-ac84-2347c71adb79'::uuid))\n                        SubPlan 2\n                          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (never executed)\n                                ->  Result  (cost=0.00..0.01 rows=1 width=0) (never executed)\n          SubPlan 6\n            ->  Nested Loop  (cost=15.53..18.26 rows=1 width=16) (never executed)\n                  Join Filter: (pr.brand_id = s_2.brand_id)\n                  ->  Seq Scan on stores s_2  (cost=7.77..9.19 rows=1 width=16) (never executed)\n                        Filter: ((hashed SubPlan 5) AND (id = '21234e65-f523-4e83-ac84-2347c71adb79'::uuid))\n                        SubPlan 5\n                          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (never executed)\n                                ->  Result  (cost=0.00..0.01 rows=1 width=0) (never executed)\n                  ->  Seq Scan on promos pr  (cost=7.77..9.02 rows=5 width=32) (never executed)\n                        Filter: ((hashed SubPlan 4) AND (status = 'active'::text) AND (starts_at <= now()) AND ((ends_at IS NULL) OR (ends_at > now())))\n                        SubPlan 4\n                          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (never executed)\n                                ->  Result  (cost=0.00..0.01 rows=1 width=0) (never executed)\n  ->  Hash Left Join  (cost=17.82..46.25 rows=100 width=32) (actual time=1.583..1.722 rows=200 loops=1)\n        Hash Cond: (mi.id = pw.menu_item_id)\n        Buffers: shared hit=57\n        ->  Hash Join  (cost=16.96..45.12 rows=100 width=24) (actual time=0.763..0.881 rows=200 loops=1)\n              Hash Cond: (mi.brand_id = s.brand_id)\n              Buffers: shared hit=28\n              ->  Seq Scan on menu_items mi  (cost=7.77..33.77 rows=400 width=40) (actual time=0.392..0.486 rows=200 loops=1)\n                    Filter: ((hashed SubPlan 10) AND (status = 'published'::text))\n                    Rows Removed by Filter: 600\n                    Buffers: shared hit=20\n                    SubPlan 10\n                      ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.354..0.380 rows=1 loops=1)\n                            Buffers: shared hit=6\n                            ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)\n              ->  Hash  (cost=9.19..9.19 rows=1 width=16) (actual time=0.367..0.367 rows=1 loops=1)\n                    Buckets: 1024  Batches: 1  Memory Usage: 9kB\n                    Buffers: shared hit=8\n                    ->  Seq Scan on stores s  (cost=7.77..9.19 rows=1 width=16) (actual time=0.362..0.365 rows=1 loops=1)\n                          Filter: ((hashed SubPlan 11) AND (id = '21234e65-f523-4e83-ac84-2347c71adb79'::uuid))\n                          Rows Removed by Filter: 27\n                          Buffers: shared hit=8\n                          SubPlan 11\n                            ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.330..0.343 rows=1 loops=1)\n                                  Buffers: shared hit=7\n                                  ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)\n        ->  Hash  (cost=0.70..0.70 rows=13 width=24) (actual time=0.816..0.816 rows=26 loops=1)\n              Buckets: 1024  Batches: 1  Memory Usage: 10kB\n              Buffers: shared hit=29\n              ->  Subquery Scan on pw  (cost=0.50..0.70 rows=13 width=24) (actual time=0.803..0.808 rows=26 loops=1)\n                    Buffers: shared hit=29\n                    ->  Unique  (cost=0.50..0.57 rows=13 width=36) (actual time=0.802..0.806 rows=26 loops=1)\n                          Buffers: shared hit=29\n                          ->  Sort  (cost=0.50..0.53 rows=13 width=36) (actual time=0.802..0.803 rows=26 loops=1)\n                                Sort Key: candidates.menu_item_id, candidates.specificity DESC, candidates.published_at DESC NULLS LAST\n                                Sort Method: quicksort  Memory: 26kB\n                                Buffers: shared hit=29\n                                ->  CTE Scan on candidates  (cost=0.00..0.26 rows=13 width=36) (actual time=0.780..0.793 rows=26 loops=1)\n                                      Filter: (price_paise IS NOT NULL)\n                                      Buffers: shared hit=29\n  ->  Hash  (cost=0.70..0.70 rows=13 width=17) (actual time=0.006..0.006 rows=0 loops=1)\n        Buckets: 1024  Batches: 1  Memory Usage: 8kB\n        ->  Subquery Scan on aw  (cost=0.50..0.70 rows=13 width=17) (actual time=0.006..0.006 rows=0 loops=1)\n              ->  Unique  (cost=0.50..0.57 rows=13 width=29) (actual time=0.005..0.006 rows=0 loops=1)\n                    ->  Sort  (cost=0.50..0.53 rows=13 width=29) (actual time=0.005..0.005 rows=0 loops=1)\n                          Sort Key: candidates_1.menu_item_id, candidates_1.specificity DESC, candidates_1.published_at DESC NULLS LAST\n                          Sort Method: quicksort  Memory: 25kB\n                          ->  CTE Scan on candidates candidates_1  (cost=0.00..0.26 rows=13 width=29) (actual time=0.002..0.002 rows=0 loops=1)\n                                Filter: (is_available IS NOT NULL)\n                                Rows Removed by Filter: 26\nPlanning:\n  Buffers: shared hit=4\nPlanning Time: 1.171 ms\nExecution Time: 1.885 ms",
+    "Q3 KDS: KOTs fired in the 4h before this outlet's latest ticket": "Append  (cost=186.48..48328.00 rows=18929 width=135) (actual time=1.095..1.133 rows=84 loops=1)\n  Buffers: shared hit=126\n  InitPlan 3 (returns $2)\n    ->  Result  (cost=130.35..130.36 rows=1 width=8) (actual time=0.735..0.742 rows=1 loops=1)\n          Buffers: shared hit=83\n          InitPlan 2 (returns $1)\n            ->  Limit  (cost=130.27..130.35 rows=1 width=8) (actual time=0.734..0.741 rows=1 loops=1)\n                  Buffers: shared hit=83\n                  ->  Merge Append  (cost=130.27..4652.87 rows=56782 width=8) (actual time=0.733..0.739 rows=1 loops=1)\n                        Sort Key: kots.fired_at DESC\n                        Buffers: shared hit=83\n                        ->  Index Only Scan Backward using kots_2025_07_outlet_id_fired_at_idx on kots_2025_07 kots_1  (cost=8.19..265.08 rows=4731 width=8) (actual time=0.267..0.267 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                              SubPlan 1\n                                ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.030..0.036 rows=1 loops=13)\n                                      Buffers: shared hit=26\n                                      ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=13)\n                        ->  Index Only Scan Backward using kots_2025_08_outlet_id_fired_at_idx on kots_2025_08 kots_2  (cost=8.19..262.83 rows=4681 width=8) (actual time=0.033..0.033 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2025_09_outlet_id_fired_at_idx on kots_2025_09 kots_3  (cost=8.19..247.02 rows=4419 width=8) (actual time=0.028..0.028 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2025_10_outlet_id_fired_at_idx on kots_2025_10 kots_4  (cost=8.19..253.79 rows=4569 width=8) (actual time=0.027..0.027 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2025_11_outlet_id_fired_at_idx on kots_2025_11 kots_5  (cost=8.19..252.98 rows=4551 width=8) (actual time=0.028..0.028 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2025_12_outlet_id_fired_at_idx on kots_2025_12 kots_6  (cost=8.19..264.09 rows=4709 width=8) (actual time=0.027..0.027 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2026_01_outlet_id_fired_at_idx on kots_2026_01 kots_7  (cost=8.19..266.18 rows=4756 width=8) (actual time=0.026..0.026 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2026_02_outlet_id_fired_at_idx on kots_2026_02 kots_8  (cost=8.19..238.20 rows=4222 width=8) (actual time=0.026..0.027 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2026_03_outlet_id_fired_at_idx on kots_2026_03 kots_9  (cost=8.19..261.86 rows=4659 width=8) (actual time=0.059..0.060 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2026_04_outlet_id_fired_at_idx on kots_2026_04 kots_10  (cost=8.19..245.80 rows=4392 width=8) (actual time=0.042..0.042 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2026_05_outlet_id_fired_at_idx on kots_2026_05 kots_11  (cost=8.19..260.18 rows=4622 width=8) (actual time=0.055..0.055 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2026_06_outlet_id_fired_at_idx on kots_2026_06 kots_12  (cost=8.19..247.29 rows=4425 width=8) (actual time=0.046..0.047 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=6\n                        ->  Index Only Scan Backward using kots_2026_07_outlet_id_fired_at_idx on kots_2026_07 kots_13  (cost=8.06..119.97 rows=2043 width=8) (actual time=0.049..0.049 rows=1 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=5\n                        ->  Index Only Scan Backward using kots_2026_08_outlet_id_fired_at_idx on kots_2026_08 kots_14  (cost=7.89..15.91 rows=1 width=8) (actual time=0.006..0.006 rows=0 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=2\n                        ->  Index Only Scan Backward using kots_2026_09_outlet_id_fired_at_idx on kots_2026_09 kots_15  (cost=7.89..15.91 rows=1 width=8) (actual time=0.006..0.006 rows=0 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=2\n                        ->  Index Only Scan Backward using kots_2026_10_outlet_id_fired_at_idx on kots_2026_10 kots_16  (cost=7.89..15.91 rows=1 width=8) (actual time=0.004..0.005 rows=0 loops=1)\n                              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at IS NOT NULL))\n                              Filter: (hashed SubPlan 1)\n                              Heap Fetches: 0\n                              Buffers: shared hit=2\n  ->  Bitmap Heap Scan on kots_2025_07 k_1  (cost=56.12..3946.36 rows=1577 width=135) (actual time=0.741..0.742 rows=0 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=86\n        ->  Bitmap Index Scan on kots_2025_07_outlet_id_fired_at_idx  (cost=0.00..47.96 rows=3154 width=0) (actual time=0.740..0.740 rows=0 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=86\n        SubPlan 4\n          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.262..0.271 rows=1 loops=1)\n                Buffers: shared hit=2\n                ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\n  ->  Bitmap Heap Scan on kots_2025_08 k_2  (cost=55.79..3938.18 rows=1560 width=135) (actual time=0.004..0.004 rows=0 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n        ->  Bitmap Index Scan on kots_2025_08_outlet_id_fired_at_idx  (cost=0.00..47.63 rows=3121 width=0) (actual time=0.003..0.003 rows=0 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=3\n  ->  Index Scan using kots_2025_09_outlet_id_fired_at_idx on kots_2025_09 k_3  (cost=8.19..3820.72 rows=1473 width=135) (actual time=0.005..0.005 rows=0 loops=1)\n        Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n  ->  Index Scan using kots_2025_10_outlet_id_fired_at_idx on kots_2025_10 k_4  (cost=8.19..3948.35 rows=1523 width=135) (actual time=0.005..0.005 rows=0 loops=1)\n        Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n  ->  Bitmap Heap Scan on kots_2025_11 k_5  (cost=54.91..3815.53 rows=1517 width=135) (actual time=0.005..0.006 rows=0 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n        ->  Bitmap Index Scan on kots_2025_11_outlet_id_fired_at_idx  (cost=0.00..46.76 rows=3034 width=0) (actual time=0.005..0.005 rows=0 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=3\n  ->  Bitmap Heap Scan on kots_2025_12 k_6  (cost=55.97..3942.68 rows=1570 width=135) (actual time=0.003..0.004 rows=0 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n        ->  Bitmap Index Scan on kots_2025_12_outlet_id_fired_at_idx  (cost=0.00..47.81 rows=3139 width=0) (actual time=0.003..0.003 rows=0 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=3\n  ->  Bitmap Heap Scan on kots_2026_01 k_7  (cost=56.28..3953.35 rows=1585 width=135) (actual time=0.003..0.004 rows=0 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n        ->  Bitmap Index Scan on kots_2026_01_outlet_id_fired_at_idx  (cost=0.00..48.12 rows=3170 width=0) (actual time=0.003..0.003 rows=0 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=3\n  ->  Bitmap Heap Scan on kots_2026_02 k_8  (cost=52.69..3557.50 rows=1407 width=135) (actual time=0.005..0.005 rows=0 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n        ->  Bitmap Index Scan on kots_2026_02_outlet_id_fired_at_idx  (cost=0.00..44.57 rows=2815 width=0) (actual time=0.004..0.004 rows=0 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=3\n  ->  Bitmap Heap Scan on kots_2026_03 k_9  (cost=55.64..3932.41 rows=1553 width=135) (actual time=0.004..0.004 rows=0 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n        ->  Bitmap Index Scan on kots_2026_03_outlet_id_fired_at_idx  (cost=0.00..47.48 rows=3106 width=0) (actual time=0.003..0.003 rows=0 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=3\n  ->  Index Scan using kots_2026_04_outlet_id_fired_at_idx on kots_2026_04 k_10  (cost=8.19..3802.82 rows=1464 width=135) (actual time=0.010..0.010 rows=0 loops=1)\n        Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n  ->  Bitmap Heap Scan on kots_2026_05 k_11  (cost=55.38..3923.98 rows=1541 width=135) (actual time=0.002..0.003 rows=0 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n        ->  Bitmap Index Scan on kots_2026_05_outlet_id_fired_at_idx  (cost=0.00..47.23 rows=3081 width=0) (actual time=0.002..0.002 rows=0 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=3\n  ->  Index Scan using kots_2026_06_outlet_id_fired_at_idx on kots_2026_06 k_12  (cost=8.19..3824.31 rows=1475 width=135) (actual time=0.006..0.007 rows=0 loops=1)\n        Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Buffers: shared hit=3\n  ->  Bitmap Heap Scan on kots_2026_07 k_13  (cost=29.85..1673.51 rows=681 width=135) (actual time=0.298..0.315 rows=84 loops=1)\n        Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n        Filter: (hashed SubPlan 4)\n        Heap Blocks: exact=3\n        Buffers: shared hit=7\n        ->  Bitmap Index Scan on kots_2026_07_outlet_id_fired_at_idx  (cost=0.00..21.92 rows=1362 width=0) (actual time=0.005..0.005 rows=84 loops=1)\n              Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n              Buffers: shared hit=2\n  ->  Seq Scan on kots_2026_08 k_14  (cost=7.77..7.77 rows=1 width=188) (actual time=0.001..0.001 rows=0 loops=1)\n        Filter: ((hashed SubPlan 4) AND (outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n  ->  Seq Scan on kots_2026_09 k_15  (cost=7.77..7.77 rows=1 width=188) (actual time=0.001..0.001 rows=0 loops=1)\n        Filter: ((hashed SubPlan 4) AND (outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\n  ->  Seq Scan on kots_2026_10 k_16  (cost=7.77..7.77 rows=1 width=188) (actual time=0.001..0.001 rows=0 loops=1)\n        Filter: ((hashed SubPlan 4) AND (outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (fired_at > ($2 - '04:00:00'::interval)))\nPlanning:\n  Buffers: shared hit=36\nPlanning Time: 1.501 ms\nExecution Time: 1.353 ms",
+    "Q4 Floor map: table sessions for an outlet, one business_date": "Bitmap Heap Scan on table_sessions ts  (cost=23.67..1131.95 rows=74 width=155) (actual time=0.605..0.885 rows=301 loops=1)\n  Recheck Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (opened_at >= '2026-07-12 18:30:00+00'::timestamp with time zone) AND (opened_at < '2026-07-13 18:30:00+00'::timestamp with time zone))\n  Filter: ((hashed SubPlan 1) AND (hashed SubPlan 2))\n  Heap Blocks: exact=301\n  Buffers: shared hit=314\n  ->  Bitmap Index Scan on table_sessions_outlet_opened_idx  (cost=0.00..8.12 rows=295 width=0) (actual time=0.024..0.024 rows=301 loops=1)\n        Index Cond: ((outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (opened_at >= '2026-07-12 18:30:00+00'::timestamp with time zone) AND (opened_at < '2026-07-13 18:30:00+00'::timestamp with time zone))\n        Buffers: shared hit=4\n  SubPlan 1\n    ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.231..0.241 rows=1 loops=1)\n          Buffers: shared hit=2\n          ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\n  SubPlan 2\n    ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.243..0.301 rows=1 loops=1)\n          Buffers: shared hit=7\n          ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)\nPlanning Time: 0.073 ms\nExecution Time: 0.921 ms",
+    "Q6 Report: day-end summary for one outlet, one business_date": "Aggregate  (cost=3585.11..3585.12 rows=1 width=72) (actual time=9.497..9.498 rows=1 loops=1)\n  Buffers: shared hit=1992\n  ->  Seq Scan on bills_2026_07 bills  (cost=15.53..3584.53 rows=76 width=16) (actual time=8.961..9.476 rows=301 loops=1)\n        Filter: ((hashed SubPlan 1) AND (hashed SubPlan 2) AND (outlet_id = 'e4abc8b1-7727-42a4-a877-c8b2191d3e09'::uuid) AND (business_date = '2026-07-13'::date))\n        Rows Removed by Filter: 77959\n        Buffers: shared hit=1992\n        SubPlan 1\n          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.234..0.245 rows=1 loops=1)\n                Buffers: shared hit=2\n                ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)\n        SubPlan 2\n          ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.328..0.342 rows=1 loops=1)\n                Buffers: shared hit=7\n                ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\nPlanning Time: 0.143 ms\nExecution Time: 9.538 ms",
+    "Q7 Cluster report: 30-day summary across a cluster's outlets (live agg, no rollup table in Phase 1)": "HashAggregate  (cost=11445.29..11445.54 rows=20 width=56) (actual time=0.487..0.491 rows=0 loops=1)\n  Group Key: o.outlet_id\n  Batches: 1  Memory Usage: 24kB\n  Buffers: shared hit=6\n  InitPlan 3 (returns $2)\n    ->  Seq Scan on memberships  (cost=7.79..9.98 rows=1 width=16) (actual time=0.214..0.214 rows=0 loops=1)\n          Filter: ((role = 'cluster_manager'::text) AND (user_id = '558e19ee-fd05-465f-b90f-8b43df669b4a'::uuid) AND ((user_id = $0) OR (hashed SubPlan 2)))\n          Rows Removed by Filter: 60\n          Buffers: shared hit=3\n          InitPlan 1 (returns $0)\n            ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual time=0.001..0.002 rows=1 loops=1)\n          SubPlan 2\n            ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.190..0.200 rows=1 loops=1)\n                  Buffers: shared hit=2\n                  ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\n  ->  Hash Join  (cost=24.72..11398.85 rows=4861 width=24) (actual time=0.485..0.489 rows=0 loops=1)\n        Hash Cond: (o.outlet_id = ogm.outlet_id)\n        Buffers: shared hit=6\n        ->  Append  (cost=15.53..11286.35 rows=32490 width=24) (never executed)\n              ->  Seq Scan on bills_2026_06 o_1  (cost=15.53..7691.03 rows=22575 width=24) (never executed)\n                    Filter: ((hashed SubPlan 4) AND (hashed SubPlan 5) AND (business_date > '2026-06-13 00:00:00'::timestamp without time zone))\n                    SubPlan 4\n                      ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (never executed)\n                            ->  Result  (cost=0.00..0.01 rows=1 width=0) (never executed)\n                    SubPlan 5\n                      ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (never executed)\n                            ->  Result  (cost=0.00..0.01 rows=1 width=0) (never executed)\n              ->  Seq Scan on bills_2026_07 o_2  (cost=15.53..3386.28 rows=9912 width=24) (never executed)\n                    Filter: ((hashed SubPlan 4) AND (hashed SubPlan 5) AND (business_date > '2026-06-13 00:00:00'::timestamp without time zone))\n              ->  Seq Scan on bills_2026_08 o_3  (cost=15.53..15.53 rows=1 width=24) (never executed)\n                    Filter: ((hashed SubPlan 4) AND (hashed SubPlan 5) AND (business_date > '2026-06-13 00:00:00'::timestamp without time zone))\n              ->  Seq Scan on bills_2026_09 o_4  (cost=15.53..15.53 rows=1 width=24) (never executed)\n                    Filter: ((hashed SubPlan 4) AND (hashed SubPlan 5) AND (business_date > '2026-06-13 00:00:00'::timestamp without time zone))\n              ->  Seq Scan on bills_2026_10 o_5  (cost=15.53..15.53 rows=1 width=24) (never executed)\n                    Filter: ((hashed SubPlan 4) AND (hashed SubPlan 5) AND (business_date > '2026-06-13 00:00:00'::timestamp without time zone))\n        ->  Hash  (cost=9.16..9.16 rows=3 width=16) (actual time=0.483..0.483 rows=0 loops=1)\n              Buckets: 1024  Batches: 1  Memory Usage: 8kB\n              Buffers: shared hit=6\n              ->  Seq Scan on outlet_group_members ogm  (cost=7.77..9.16 rows=3 width=16) (actual time=0.482..0.483 rows=0 loops=1)\n                    Filter: ((hashed SubPlan 6) AND (outlet_group_id = $2))\n                    Rows Removed by Filter: 26\n                    Buffers: shared hit=6\n                    SubPlan 6\n                      ->  ProjectSet  (cost=0.00..5.27 rows=1000 width=16) (actual time=0.240..0.253 rows=1 loops=1)\n                            Buffers: shared hit=2\n                            ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)\nPlanning:\n  Buffers: shared hit=10\nPlanning Time: 0.439 ms\nExecution Time: 0.596 ms"
+  },
+  "generatedAt": "2026-07-14T10:46:21.649Z"
+}

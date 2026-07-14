@@ -10,6 +10,7 @@ import {
   jsonb,
   unique,
   uniqueIndex,
+  index,
   check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -89,6 +90,10 @@ export const tableSessions = pgTable(
       "abandoned_reason_required",
       sql`(${t.status} = 'abandoned' and ${t.abandonedReason} is not null) or (${t.status} != 'abandoned')`,
     ),
+    // BENCH-01 Q4 (floor map) found this table had NO index beyond its PK
+    // — every "sessions for outlet X, today" query was a full sequential
+    // scan, p95 up to 43x over threshold even with RLS bypassed entirely.
+    index("table_sessions_outlet_opened_idx").on(t.outletId, t.openedAt),
   ],
 );
 
@@ -181,27 +186,39 @@ export const orderItemVoids = pgTable("order_item_voids", {
   voidedAt: timestamp("voided_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const kots = pgTable("kots", {
-  id: uuid("id").notNull(),
-  businessDate: date("business_date").notNull(),
-  outletId: uuid("outlet_id")
-    .notNull()
-    .references(() => outlets.id), // KOTs are OUTLET-scoped — a shared kitchen shows every store's tickets
-  storeId: uuid("store_id")
-    .notNull()
-    .references(() => stores.id), // informational: which brand this ticket belongs to (display tagging only)
-  tableSessionId: uuid("table_session_id")
-    .notNull()
-    .references(() => tableSessions.id),
-  orderId: uuid("order_id").notNull(), // composite FK -> orders(id, business_date)
-  kitchenSection: text("kitchen_section").notNull(),
-  kotNumber: integer("kot_number").notNull(), // per outlet, per business day, resets daily
-  status: text("status").notNull(),
-  reprintCount: integer("reprint_count").notNull().default(0),
-  firedAt: timestamp("fired_at", { withTimezone: true }).notNull().defaultNow(), // ticket-age clock (DOMAIN.md §3.3)
-  bumpedAt: timestamp("bumped_at", { withTimezone: true }),
-  idempotencyKey: uuid("idempotency_key").notNull(),
-});
+export const kots = pgTable(
+  "kots",
+  {
+    id: uuid("id").notNull(),
+    businessDate: date("business_date").notNull(),
+    outletId: uuid("outlet_id")
+      .notNull()
+      .references(() => outlets.id), // KOTs are OUTLET-scoped — a shared kitchen shows every store's tickets
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id), // informational: which brand this ticket belongs to (display tagging only)
+    tableSessionId: uuid("table_session_id")
+      .notNull()
+      .references(() => tableSessions.id),
+    orderId: uuid("order_id").notNull(), // composite FK -> orders(id, business_date)
+    kitchenSection: text("kitchen_section").notNull(),
+    kotNumber: integer("kot_number").notNull(), // per outlet, per business day, resets daily
+    status: text("status").notNull(),
+    reprintCount: integer("reprint_count").notNull().default(0),
+    firedAt: timestamp("fired_at", { withTimezone: true }).notNull().defaultNow(), // ticket-age clock (DOMAIN.md §3.3)
+    bumpedAt: timestamp("bumped_at", { withTimezone: true }),
+    idempotencyKey: uuid("idempotency_key").notNull(),
+  },
+  (t) => [
+    // BENCH-01 Q3 (KDS): "active KOTs for an outlet, last 4h" had no
+    // index on fired_at at all — p95 ~200ms against a 30ms threshold,
+    // even with RLS bypassed. A plain btree index on a partitioned
+    // PARENT propagates automatically to every child partition, including
+    // ones created later by create_partitions_ahead() — unlike RLS's
+    // relrowsecurity flag, which does not (see drizzle/0003).
+    index("kots_outlet_fired_idx").on(t.outletId, t.firedAt),
+  ],
+);
 
 export const kotItems = pgTable("kot_items", {
   id: uuid("id").notNull(),

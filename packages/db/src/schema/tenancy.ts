@@ -9,6 +9,7 @@ import {
   unique,
   check,
   primaryKey,
+  index,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -169,5 +170,12 @@ export const outletGroupMembers = pgTable(
       .notNull()
       .references(() => outlets.id),
   },
-  (t) => [primaryKey({ columns: [t.outletGroupId, t.outletId] })],
+  (t) => [
+    primaryKey({ columns: [t.outletGroupId, t.outletId] }),
+    // BENCHMARKS.md's own escalation-ladder step 1, applied proactively:
+    // accessible_outlet_ids()'s outlet_group branch looks this table up by
+    // outlet_id, but the composite PK leads with outlet_group_id — an
+    // outlet_id-first index is what actually serves that lookup.
+    index("outlet_group_members_outlet_id_idx").on(t.outletId),
+  ],
 );
