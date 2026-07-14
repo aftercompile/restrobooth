@@ -4,6 +4,26 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-14 — Phase 2 checkpoint: menu catalog + governance capability layer (A6, A9 un-skipped)
+
+**Decided by:** Mohammed, via an approved plan (`/plan`), executed to the checkpoint boundary.
+
+**What shipped:** the menu catalog schema (`categories`, `option_groups`, `option_items`, `menu_audit_log`; `menu_items.category_id`) and the role-capability layer Phase 1 deliberately deferred — un-skipping RLS suite cases **A6** ("cashier cannot change a price, but can still 86 an item") and **A9** ("kitchen role has no financial read"). Full console UI: `/menu` (category → item list), `/menu/new`, `/menu/[id]` (edit item, manage variants/add-ons, publish a store price, 86/un-86, audit trail).
+
+**Scope calls made explicitly during planning** (not assumed): governance is simplified to one `publish` action for privileged roles, fully audited — not the full propose→approve/reject ceremony; catalog scope is categories + variants + add-ons only (images and bulk CSV import deferred); a variant's price is **absolute, not a delta** from the base item (matches how DOMAIN.md already treats add-ons); staged rollout to an outlet group and order-line variant/add-on selection are out of scope (no writer exists yet for either).
+
+**Design: A6 is a trigger, not RLS.** The rule is column-scoped (`price_paise` vs `is_available` on the *same* `menu_item_overrides` row) — plain `USING`/`WITH CHECK` can't express that. `can_set_menu_price(brand_id)` (`SECURITY DEFINER`, mirrors `accessible_*_ids()`'s scope resolution) backs a `BEFORE INSERT OR UPDATE OF price_paise` trigger. **A9 is RESTRICTIVE RLS** — a role predicate ANDed onto `bills`/`bill_tax_lines`/`payments`' existing scope policy, not a new permissive one. BENCH-01 was re-run after the A9 change (a hot-policy edit is exactly the kind of thing this project re-benchmarks rather than assumes safe) — still passes everywhere, `EXPLAIN` confirms the new predicate is still InitPlan-hoisted (`loops=1`).
+
+**Four real bugs found and fixed while building this, not before:**
+1. `packages/db`'s CLI entrypoint guard (`import.meta.url === `file://${process.argv[1]}``) never matched on Windows (backslash path vs. properly-encoded `file:///C:/...` URI) — **`pnpm seed` had been silently no-op'ing every direct invocation on this machine.** The test suite never caught it because it imports `seedBelievableChain()` directly, bypassing the guard entirely. Fixed with `path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)`.
+2. The new price-capability trigger fires for **every** insert/update on `menu_item_overrides`, including trusted server-side paths with no JWT claim set (the seed script's superuser connection, the override precedence test suite's fixture helper) — both were silently relying on RLS bypass that the trigger doesn't grant. Fixed by having both act as a real privileged user (`withUser`) for the specific inserts that set a price, which is also more honest: a "published" override implies someone with the right role published it.
+3. Drizzle wraps every driver-level failure in `DrizzleQueryError`, whose own `.message` is `"Failed query: <sql>"` — the actual Postgres error (our trigger's `RAISE EXCEPTION` text) lives in `.cause.message`. `item-actions.ts`'s friendly-error substitution (`message.includes("insufficient privilege")`) was checking the wrong field and **would never have fired in the real app** — a cashier would have seen a raw SQL dump instead of "ask an owner or brand manager." Caught by the checkpoint's own end-to-end verification script, not by typecheck or lint.
+4. `packages/db` needed an actual build step (`tsconfig.build.json` → `dist/`) to be consumable by Turbopack at all — see the Phase 2 auth-slice entry below; this checkpoint is the first one that exercises it for schema changes, confirming the fix holds.
+
+**Verification approach, and its limit, stated plainly:** Server Actions require Next's request-scoped `cookies()`, so they can't be invoked standalone outside a real HTTP request. Verified instead via `packages/db/scripts/verify-menu-capability.ts` (a manual checkpoint script, not part of the suite) driving the exact same `withUser()` primitive the Server Actions use — full lifecycle: create item → add variant/add-on → owner publishes a price → `resolve_menu()` reflects it immediately → cashier's price attempt rejected → cashier's 86 succeeds → price still shows post-86 (fields resolve independently) → audit trail correct. Combined with a clean `next build` and real HTTP checks of the unauthenticated-redirect path. **What is NOT verified: the actual browser form-submission flow and any visual review** — no browser/screenshot tool exists in this environment, same gap as `/style-guide` in Phase 1.
+
+---
+
 ## 2026-07-14 — Phase 1 closed. Both provisional ADRs **CONFIRMED**; RLS/override suites, benchmarks, design tokens, and CI all shipped.
 
 **Decided by:** Mohammed (session directive: "proceed till end of this phase").

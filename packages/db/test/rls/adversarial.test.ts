@@ -6,12 +6,12 @@
  * auth.uid() — see fixtures.ts for why.
  *
  * A6, A7, A9, A14 are ROLE-CAPABILITY or token-layer concerns, not tenant-
- * scope ones — ROADMAP.md explicitly scopes "a cashier cannot change a
- * price" to Phase 2's acceptance criteria (the override matrix phase),
- * matching this project's own Phase 1 RLS design decision: enforce tenant
- * ISOLATION now, layer the CAPABILITY matrix on top as each write
- * endpoint ships. These three are `test.skip`, not deleted or faked —
- * the gap is real and documented, not hidden.
+ * scope ones. Phase 1 deliberately enforced tenant ISOLATION only and left
+ * the CAPABILITY matrix for Phase 2. A6 and A9 are now built (Phase 2's
+ * menu-capability migration, drizzle/0012_menu_capability.sql) and
+ * un-skipped below. A7 (captain can't create a bill) and A14 (QR token
+ * replay) still legitimately `test.skip` — no bill-creation or
+ * token-minting code path exists yet to enforce a rule against.
  */
 import { beforeAll, describe, expect, test } from "vitest";
 import type pg from "pg";
@@ -71,16 +71,54 @@ test("A5: outlet_manager @ AMD reading memberships of a MUM user returns 0 rows"
 });
 
 // docs/TENANCY.md: "cashier attempts a price update -> denied (capability,
-// not scope)". Phase 1's RLS policies enforce tenant ISOLATION only; the
-// role-capability matrix (ROADMAP.md Phase 2 acceptance: "a cashier cannot
-// change a price") is deliberately not yet built. A cashier scoped to
-// AMD, updating an override for AMD's own store, is currently ALLOWED by
-// scope — correctly so, since no capability layer exists yet to deny it
-// on role grounds. This is the honest state, not an oversight.
-test.skip("A6: cashier cannot change a price (capability, not scope) — Phase 2 work, not yet enforced", () => {});
+// not scope)". Enforced by a trigger, not RLS — the rule is column-scoped
+// (price_paise vs is_available on the SAME menu_item_overrides row), which
+// plain USING/WITH CHECK can't express. See can_set_menu_price() and
+// check_menu_item_override_price_capability() in
+// drizzle/0012_menu_capability.sql.
+describe("A6: cashier cannot change a price, but CAN 86 an item (capability, not scope)", () => {
+  test("A6: cashier setting price_paise is rejected", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      const item = await c.query("select id from menu_items where status = 'published' limit 1");
+      await expect(
+        c.query(
+          "insert into menu_item_overrides (id, menu_item_id, price_paise, effective_from, status) values (gen_random_uuid(), $1, 999, now(), 'draft')",
+          [item.rows[0].id],
+        ),
+      ).rejects.toThrow(/insufficient privilege/);
+    });
+  });
 
-// Same reasoning: "captain inserts a bill" is a role-capability question.
-test.skip("A7: captain cannot create a bill (capability, not scope) — Phase 2/3a work, not yet enforced", () => {});
+  test("A6b: the SAME cashier setting only is_available succeeds (positive control)", async () => {
+    // Without this, A6's denial is meaningless — it could be blocking
+    // every write, not just price. A cashier must still be able to 86 an
+    // item; that's the entire point of the rule being column-scoped.
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      const item = await c.query("select id from menu_items where status = 'published' limit 1");
+      const r = await c.query(
+        "insert into menu_item_overrides (id, menu_item_id, is_available, effective_from, status) values (gen_random_uuid(), $1, false, now(), 'draft')",
+        [item.rows[0].id],
+      );
+      expect(r.rowCount).toBe(1);
+    });
+  });
+
+  test("A6c: org_owner setting price_paise succeeds (positive control)", async () => {
+    await asUser(client, id.USER_ORG1_OWNER, async (c) => {
+      const item = await c.query("select id from menu_items where status = 'published' limit 1");
+      const r = await c.query(
+        "insert into menu_item_overrides (id, menu_item_id, price_paise, effective_from, status) values (gen_random_uuid(), $1, 999, now(), 'draft')",
+        [item.rows[0].id],
+      );
+      expect(r.rowCount).toBe(1);
+    });
+  });
+});
+
+// "captain inserts a bill" is a role-capability question, same shape as
+// A6/A9 — but no bill-creation code path exists yet (that's Phase 3a's
+// ordering/billing work), so there is nothing to enforce a rule against.
+test.skip("A7: captain cannot create a bill (capability, not scope) — Phase 3a work, not yet enforced", () => {});
 
 test("A8: brand_manager @ Brand A cannot read Brand B's orders at the SAME shared outlet", async () => {
   // The case that catches a naive implementation: Surat is one outlet
@@ -93,14 +131,28 @@ test("A8: brand_manager @ Brand A cannot read Brand B's orders at the SAME share
 });
 
 // TENANCY.md: "kitchen @ outlet:AMD-1 -> select * from bills -> 0 rows —
-// kitchen has no financial read." Same shape as A6/A7/A14: a ROLE
-// CAPABILITY restriction, not tenant scope. Phase 1's RLS policies (see
-// the header comment in drizzle/0005_rls_policies.sql) deliberately
-// enforce outlet+store ISOLATION only — a kitchen-role membership scoped
-// to outlet:AMD currently reads AMD's own bills same as any other AMD
-// staff, which is correct under the scope the policy actually encodes.
-// The role-capability matrix is Phase 2 work, matching ROADMAP.md.
-test.skip("A9: kitchen role has no financial read (capability, not scope) — Phase 2 work, not yet enforced", () => {});
+// kitchen has no financial read." Enforced by RESTRICTIVE policies on
+// bills/bill_tax_lines/payments (drizzle/0012_menu_capability.sql) that
+// AND a role check onto the existing scope-based permissive policy.
+describe("A9: kitchen role has no financial read (capability, not scope)", () => {
+  test("A9: kitchen reads zero rows from bills", async () => {
+    const rows = await asUser(client, id.USER_AMD_KITCHEN, async (c) => {
+      const r = await c.query("select * from bills");
+      return r.rows;
+    });
+    expect(rows).toHaveLength(0);
+  });
+
+  test("A9b: the same outlet's cashier still reads bills (positive control)", async () => {
+    // Proves the restrictive policy discriminates by ROLE, not by
+    // accident denying every read at AMD.
+    const rows = await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      const r = await c.query("select * from bills");
+      return r.rows;
+    });
+    expect(rows.length).toBeGreaterThan(0);
+  });
+});
 
 test("A10: a franchisee (org2) user reads 0 rows of org1", async () => {
   const rows = await asUser(client, id.USER_ORG2_OWNER, async (c) => {

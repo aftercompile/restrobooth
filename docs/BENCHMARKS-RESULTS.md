@@ -123,3 +123,23 @@ R1 passes with a 17x margin. No caching, no materialised view. ADR-0006's "one c
 
 - [adr/0006-override-resolution.md](adr/0006-override-resolution.md): PROVISIONAL → **CONFIRMED**.
 - [TENANCY.md](TENANCY.md) §4: the RLS mechanism's open question → **CONFIRMED**, linking here.
+
+---
+
+## Phase 2 re-run (2026-07-14): A9's `bills` policy change
+
+Phase 2 added a `RESTRICTIVE` policy to `bills`/`bill_tax_lines`/`payments` (un-skipping RLS suite case A9 — "kitchen role has no financial read"), which touches exactly the tables Q5/Q6/Q7 exercise. Per this doc's own methodology, a hot-policy change gets re-benchmarked, not assumed safe.
+
+**Result: still passes everywhere, with expected margin.** Every query's worst-case p95 across all four roles:
+
+| # | Phase 1 p95 | Phase 2 p95 | Threshold | Verdict |
+|---|---|---|---|---|
+| Q1 | 2.1ms | 4.0ms | 20ms | PASS |
+| Q2 | 5.5ms | 5.5ms | 50ms | PASS |
+| Q3 | 5.8ms | 9.3ms | 30ms | PASS |
+| Q4 | 4.9ms | 7.6ms | 20ms | PASS |
+| Q5 | 3.5ms | 6.7ms | 100ms | PASS |
+| Q6 | 16.2ms | 11.4ms | 200ms | PASS |
+| Q7 | 57.0ms | 68.0ms | 500ms | PASS |
+
+The modest, uniform increase (roughly 1.2-2x on several queries, likely session/cache variance across separate runs more than a structural cost — Q6 actually improved) is consistent with "one more cheap `EXISTS` predicate," not an InitPlan-hoist regression. Confirmed directly: `EXPLAIN` on Q6 shows the new policy's `memberships` lookup as `InitPlan 4`, `loops=1` — evaluated once per statement, same discipline as every other access-control check in this system, not once per row.

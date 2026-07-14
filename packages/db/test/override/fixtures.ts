@@ -12,6 +12,7 @@ import { config } from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDbClient, type Database } from "../../src/client.js";
+import { withUser } from "../../src/rls.js";
 import * as schema from "../../src/schema/index.js";
 import * as fixtureId from "../../scripts/data/fixture-ids.js";
 
@@ -81,25 +82,35 @@ export type OverrideRow = {
   publishedAt?: Date;
 };
 
-/** Replaces the test item's overrides with EXACTLY the given set. */
+/**
+ * Replaces the test item's overrides with EXACTLY the given set. Runs as
+ * USER_ORG1_OWNER (via withUser), not the raw superuser connection this
+ * file otherwise uses: menu_item_overrides.price_paise is capability-gated
+ * by a trigger (Phase 2, drizzle/0012_menu_capability.sql) that checks
+ * auth.uid() against memberships regardless of caller — a superuser
+ * session has no JWT claim set at all, so an unwrapped insert would fail
+ * the same check a real anonymous request would.
+ */
 export async function setOverrides(rows: OverrideRow[]): Promise<void> {
   const database = getDb();
   await database.execute(`delete from menu_item_overrides where menu_item_id = '${TEST_ITEM}'`);
   if (rows.length === 0) return;
-  await database.insert(schema.menuItemOverrides).values(
-    rows.map((r) => ({
-      id: crypto.randomUUID(),
-      menuItemId: TEST_ITEM,
-      storeId: r.store ? STORE_AMD1 : null,
-      channelCode: r.channel ?? null,
-      daypartId: r.daypart ? TEST_DAYPART_HAPPY_HOUR : null,
-      promoId: r.promo === "A" ? TEST_PROMO_MONSOON20 : r.promo === "B" ? TEST_PROMO_MONSOON20_B : null,
-      pricePaise: r.price !== undefined ? BigInt(r.price * 100) : null,
-      isAvailable: r.available ?? null,
-      effectiveFrom: r.effectiveFrom ?? new Date(Date.now() - 86400000),
-      status: "published" as const,
-      publishedAt: r.publishedAt ?? new Date(),
-    })),
+  await withUser(database, fixtureId.USER_ORG1_OWNER, (tx) =>
+    tx.insert(schema.menuItemOverrides).values(
+      rows.map((r) => ({
+        id: crypto.randomUUID(),
+        menuItemId: TEST_ITEM,
+        storeId: r.store ? STORE_AMD1 : null,
+        channelCode: r.channel ?? null,
+        daypartId: r.daypart ? TEST_DAYPART_HAPPY_HOUR : null,
+        promoId: r.promo === "A" ? TEST_PROMO_MONSOON20 : r.promo === "B" ? TEST_PROMO_MONSOON20_B : null,
+        pricePaise: r.price !== undefined ? BigInt(r.price * 100) : null,
+        isAvailable: r.available ?? null,
+        effectiveFrom: r.effectiveFrom ?? new Date(Date.now() - 86400000),
+        status: "published" as const,
+        publishedAt: r.publishedAt ?? new Date(),
+      })),
+    ),
   );
 }
 

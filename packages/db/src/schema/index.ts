@@ -1,6 +1,7 @@
 export * from "./tenancy.js";
 export * from "./access.js";
 export * from "./menu.js";
+export * from "./catalog.js";
 export * from "./operations.js";
 export * from "./invoicing.js";
 export * from "./idempotency.js";

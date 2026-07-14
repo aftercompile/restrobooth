@@ -78,6 +78,20 @@
       "when": 1784025273108,
       "tag": "0010_bench01_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784042565357,
+      "tag": "0011_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784042768787,
+      "tag": "0012_menu_capability",
+      "breakpoints": true
     }
   ]
 }

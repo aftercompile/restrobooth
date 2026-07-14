@@ -10,10 +10,12 @@ import {
   unique,
   check,
   index,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { organizations, brands } from "./tenancy.js";
 import { stores } from "./tenancy.js";
+import { categories } from "./catalog.js";
 
 export const taxClasses = pgTable(
   "tax_classes",
@@ -80,6 +82,13 @@ export const menuItems = pgTable(
     brandId: uuid("brand_id")
       .notNull()
       .references(() => brands.id),
+    // categories lives in catalog.ts, which itself imports menuItems (for
+    // optionGroups.menuItemId) — a genuine circular import between the two
+    // files. Safe here: .references() takes a thunk specifically so
+    // Drizzle can resolve it lazily, after both modules finish
+    // initializing, not at pgTable()-construction time. Nullable: not
+    // every item needs a category on day one.
+    categoryId: uuid("category_id").references((): AnyPgColumn => categories.id),
     name: text("name").notNull(),
     description: text("description"),
     basePricePaise: bigint("base_price_paise", { mode: "bigint" }).notNull(),

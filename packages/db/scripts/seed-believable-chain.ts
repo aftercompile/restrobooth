@@ -18,6 +18,7 @@ import { config } from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDbClient, type Database } from "../src/client.js";
+import { withUser } from "../src/rls.js";
 import * as schema from "../src/schema/index.js";
 import { menuItems as fullMenu, type SeedMenuItem } from "./data/menu-items.js";
 import * as id from "./data/fixture-ids.js";
@@ -233,13 +234,22 @@ export async function seedBelievableChain(db: Database) {
 
   // A single, real override: Ahmedabad charges more for its best-seller than
   // the brand default — the exact scenario TENANCY.md §7.4 opens with.
+  // Inserted as the org owner (withUser), not the raw superuser connection
+  // this script otherwise uses: menu_item_overrides.price_paise is now
+  // capability-gated by a trigger (Phase 2, un-skips A6) that checks
+  // auth.uid() against memberships regardless of caller — a superuser
+  // session has no JWT claim set at all, so it would fail the same check
+  // a real anonymous request would. This is also just more honest: a
+  // "published" override implies someone with the right role published it.
   const butterChickenId = brandAItemIds.get("Butter Chicken")!;
-  await db.insert(schema.menuItemOverrides).values([
-    {
-      id: crypto.randomUUID(), menuItemId: butterChickenId, storeId: id.STORE_AMD_A,
-      pricePaise: 40000n, effectiveFrom: new Date(Date.now() - 86400000), status: "published", publishedAt: new Date(),
-    },
-  ]);
+  await withUser(db, id.USER_ORG1_OWNER, (tx) =>
+    tx.insert(schema.menuItemOverrides).values([
+      {
+        id: crypto.randomUUID(), menuItemId: butterChickenId, storeId: id.STORE_AMD_A,
+        pricePaise: 40000n, effectiveFrom: new Date(Date.now() - 86400000), status: "published", publishedAt: new Date(),
+      },
+    ]),
+  );
 
   console.log("Business days (open)...");
   await db.insert(schema.businessDays).values([
@@ -444,7 +454,16 @@ async function cliMain() {
   await seedBelievableChain(createDbClient(url));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Naive `file://${process.argv[1]}` string-building never matches on
+// Windows: import.meta.url is a properly-encoded URI
+// ("file:///C:/Users/...", forward slashes, triple slash before the drive
+// letter) while process.argv[1] is a raw OS path ("C:\Users\...",
+// backslashes) — confirmed empirically, this silently no-op'd every
+// `pnpm seed` CLI invocation on this machine (never caught by the test
+// suite, which imports seedBelievableChain() directly and never hits this
+// guard at all). Normalizing both sides through the filesystem-path
+// representation is what actually works cross-platform.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   cliMain()
     .then(() => process.exit(0))
     .catch((err) => {

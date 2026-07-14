@@ -30,12 +30,17 @@ function getDb(): Database {
  * auth (the middleware redirects unauthenticated requests to /login), so a
  * missing session here means the caller is a route that middleware doesn't
  * cover, which is a bug, not a normal path.
+ *
+ * Passes the resolved userId to `fn` too — every mutation that writes an
+ * audit-log row (lib/audit.ts) needs it as `actorUserId`, and re-deriving
+ * it via a second `auth.getUser()` call in every Server Action would just
+ * be the same lookup done twice.
  */
-export async function queryAsCurrentUser<T>(fn: (tx: RlsTx) => Promise<T>): Promise<T> {
+export async function queryAsCurrentUser<T>(fn: (tx: RlsTx, userId: string) => Promise<T>): Promise<T> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("queryAsCurrentUser called without a session");
-  return withUser(getDb(), user.id, fn);
+  return withUser(getDb(), user.id, (tx) => fn(tx, user.id));
 }
