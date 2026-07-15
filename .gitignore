@@ -29,3 +29,7 @@ drizzle/meta/_journal.json.bak
 # misc
 *.tsbuildinfo
 coverage/
+
+# self-inspection tool output (screenshots, saved auth state)
+tools/out/
+tools/.auth/
