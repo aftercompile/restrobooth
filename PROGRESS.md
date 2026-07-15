@@ -4,9 +4,20 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-14, mid Phase 2
+## Where things stand — 2026-07-15, Phase 2 feature-complete (pending push/CI)
 
-**Phase 1 is done and pushed** (`origin/main`, CI green — verified via a real GitHub Actions run, not just local checks). **Phase 2 is in progress**, past its second checkpoint (auth slice, then the menu catalog + capability layer). Not yet pushed.
+**Phase 1 is done and pushed** (`origin/main`, CI green). **Phase 2 is functionally complete against its own plan checklist** — auth, menu catalog, capability layer (A6/A9), the full console UI with the real design system, and now the two remaining unit tests (money entry, audit log). Every checklist item is met **except the last: "CI green on push"** — the Phase 2 commits are local-only, so CI hasn't run on them yet. Nothing is pushed since Phase 1.
+
+### Phase 2 plan checklist — final status
+- [x] typecheck / lint / build clean across the workspace
+- [x] New migrations (`0011_catalog`, `0012_menu_capability`) apply cleanly to both local DBs
+- [x] A6 + A9 un-skipped and passing; A7/A14 comments corrected to their real phases
+- [x] New audit-log + money-entry tests pass (`test/audit/audit.test.ts`, `packages/ui/src/components/money.test.ts`)
+- [x] BENCH-01 re-run clean after the A9 `bills` policy change (see `docs/BENCHMARKS-RESULTS.md` "Phase 2 re-run")
+- [x] End-to-end walkthrough via real code paths (`scripts/verify-menu-capability.ts`)
+- [ ] **CI green on push** — not done; needs a push (ask first, per standing rule)
+
+Beyond the plan, this phase also did a full **design-system pass** (unplanned, requested mid-phase): self-hosted fonts, the app shell, the state rail wired through `/menu`, and Framer Motion with a structural POS/KDS zero-motion guard. See DECISIONS.md.
 
 ### What exists and works right now
 
@@ -32,14 +43,16 @@ Maintained at the end of every session so the next one starts warm. Current stat
 2. **The Server Action / real-browser-form flow has not been driven end-to-end.** Verified instead via `packages/db/scripts/verify-menu-capability.ts`, which calls the same `withUser()` primitive the Server Actions use, bypassing Next's request-scoped `cookies()` (which can't be invoked outside a real HTTP request). This proved the full lifecycle (create → options → publish price → resolve_menu reflects it → cashier rejected → cashier 86's → audit trail correct) at the data layer. The literal "open a browser, fill in the form, click submit" path has not been exercised.
 3. **A7 (captain can't create a bill) and A14 (QR token replay) are still `test.skip`**, correctly — no bill-creation or token-minting code exists yet (Phase 3a / Phase 5 respectively).
 4. **Two BENCH-02 fixture gaps**, documented in `docs/BENCHMARKS-RESULTS.md`: bench overrides don't vary by channel or reference dayparts/promos, so R2/R3 don't fully exercise what their names claim.
-5. **Categories are never created by any seed or UI flow yet** — `/menu` groups items by category, but there's no "create category" screen. New items land in "Uncategorised" until one exists. Small, but worth knowing before a demo.
+5. **No "create category" UI.** Categories exist and `/menu` groups by them, but they're only created by `pnpm --filter @restrobooth/db seed:categories` (a dev script that keyword-buckets the seeded items). A create-category screen is deferred — not in the Phase 2 plan's scope, and the pilot menu can be categorised by the seed for now. New items with no category land in "Uncategorised", which renders fine.
+
+### Local dev fixtures — restore ritual after any test run
+The test suite's `globalSetup` truncates and reseeds the believable chain, which drops the GoTrue-linked memberships and the categories. After running `pnpm test`, restore the app's dev state with: `pnpm --filter @restrobooth/db seed:auth && pnpm --filter @restrobooth/db seed:categories`. Both are idempotent. (Docker on this machine also keeps stopping on its own — if the DB is unreachable, restart Docker Desktop, wait ~20s, containers self-recover with data intact.)
 
 ### Not yet pushed
-
-Phase 2's work (auth slice + menu catalog/capability checkpoint) is committed to `main` locally, not yet pushed. Ask before pushing, per standing instruction.
+All Phase 2 work is committed to `main` locally (`539bbc2` auth · `4a3741e` catalog+capability · `e007687` design system · plus the tests commit). **Nothing pushed since Phase 1.** The only unmet checklist item ("CI green on push") needs this. Ask before pushing, per standing instruction.
 
 ---
 
-## Next up: menu governance UI polish, then Phase 2's remaining acceptance items
+## Next up: Phase 3a — ordering, tables, KOT
 
-Re-read the plan file this session worked from (`docs/ROADMAP.md` §2 + the approved Phase 2 plan) before continuing. Remaining before Phase 2 can be called done: a "create category" flow, and a final walkthrough against the plan's own verification checklist (the 21-row precedence table already passes from Phase 1; what's new here is confirming the UI actually surfaces it correctly end-to-end).
+Phase 2 is feature-complete pending the push. Next on the pilot path (ROADMAP.md §2) is **Phase 3a: ordering, tables, KOT** — the first phase that writes `orders`/`order_items`/`kots` for real, and where A7 ("captain can't create a bill") finally gets a code path to enforce against. Re-read ROADMAP.md §2 and DOMAIN.md's state machines at the start of that session.

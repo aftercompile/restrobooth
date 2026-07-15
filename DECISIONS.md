@@ -4,6 +4,19 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-15 — Phase 2 closed out: the two remaining unit tests, one deliberate refinement
+
+**Decided by:** Mohammed ("proceed with the plan for this phase").
+
+Wrote the two tests the Phase 2 plan's §4 listed but that hadn't been written yet, completing every checklist item except "CI green on push" (which needs a push):
+
+- **Money entry** (`packages/ui/src/components/money.test.ts`). To make it testable, `parseRupeesToPaise`/`formatPaiseAsRupees` were extracted from `MoneyInput.tsx` (a `"use client"` component importing CSS) into a plain `money.ts`. Money math has no business living inside a rendering component anyway.
+- **Audit log** (`packages/db/test/audit/audit.test.ts`). Verifies a publish writes exactly one correct row (entity/actor/action/old→new) AND that the rows are RLS-isolated across orgs — the latter is the part that actually "breaks" (an audit trail that leaks across tenants is a confidentiality breach). Writes go through the real `withUser()` path the Server Action uses.
+
+**One deliberate refinement of the plan, recorded so it isn't re-litigated:** the plan's §4 described money entry as "rejects fractional paise **and rounds half-up**." The implementation does NOT round — it *rejects* a third decimal place outright (`180.505` → validation error, not `180.51`). Reasoning: the domain-wide half-up rule (DOMAIN.md §5) is for values *computed* from others (tax), where fractional paise are unavoidable. Direct price *entry* is different — a human typing a price should get exactly what they typed or an error, never a number silently adjusted under them. The test pins the reject behaviour; `money.ts`'s header carries the reasoning.
+
+---
+
 ## 2026-07-14 — Phase 2 checkpoint: menu catalog + governance capability layer (A6, A9 un-skipped)
 
 **Decided by:** Mohammed, via an approved plan (`/plan`), executed to the checkpoint boundary.
