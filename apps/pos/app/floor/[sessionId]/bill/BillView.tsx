@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Card, CardHeader } from "@restrobooth/ui";
-import { finalizeBill, settleBill, splitBillByAmount, splitBillByItems, voidBill, type ActionState } from "./actions";
+import { finalizeBill, refundBill, settleBill, splitBillByAmount, splitBillByItems, voidBill, type ActionState } from "./actions";
 import type { BillPreview, ExistingBill } from "./queries";
 import styles from "./page.module.css";
 
@@ -25,10 +25,10 @@ export function BillView({ sessionId, preview, bills }: { sessionId: string; pre
 
   return (
     <div className={styles.billList}>
-      {bills.map((bill) =>
-        bill.status === "finalised" ? (
-          <SettleView key={bill.billId} sessionId={sessionId} bill={bill} />
-        ) : (
+      {bills.map((bill) => {
+        if (bill.status === "finalised") return <SettleView key={bill.billId} sessionId={sessionId} bill={bill} />;
+        if (bill.status === "settled") return <SettledView key={bill.billId} sessionId={sessionId} bill={bill} />;
+        return (
           <Card padded key={bill.billId}>
             <p>
               Invoice <strong>{bill.invoiceNo}</strong> — {bill.status}
@@ -39,8 +39,8 @@ export function BillView({ sessionId, preview, bills }: { sessionId: string; pre
             </p>
             {bill.status !== "voided" && <Link href={`/bill/${bill.billId}`}>View / print invoice</Link>}
           </Card>
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }
@@ -318,6 +318,69 @@ function SettleView({ sessionId, bill }: { sessionId: string; bill: ExistingBill
       </form>
 
       {remainingPaise <= 0n && <Badge tone="live">settled</Badge>}
+    </Card>
+  );
+}
+
+const REFUND_REASONS = [
+  { value: "guest_dispute", label: "Guest dispute" },
+  { value: "billing_error", label: "Billing error" },
+  { value: "duplicate_payment", label: "Duplicate payment" },
+  { value: "goodwill_gesture", label: "Goodwill gesture" },
+];
+
+function SettledView({ sessionId, bill }: { sessionId: string; bill: ExistingBill }) {
+  const [state, formAction, pending] = useActionState(refundBill, INITIAL);
+  const [mode, setMode] = useState<"full" | "partial">("full");
+  const [showRefund, setShowRefund] = useState(false);
+
+  return (
+    <Card padded>
+      <p>
+        Invoice <strong>{bill.invoiceNo}</strong> — settled
+      </p>
+      <div className={styles.totalsRow}>
+        <span>Payable</span>
+        <span className={styles.lineAmount}>{formatRupees(bill.payablePaise)}</span>
+      </div>
+      <div className={styles.controls}>
+        <Link href={`/bill/${bill.billId}`}>View / print invoice</Link>
+        <Button type="button" variant="secondary" onClick={() => setShowRefund((v) => !v)}>
+          {showRefund ? "Cancel refund" : "Refund…"}
+        </Button>
+      </div>
+
+      {showRefund && (
+        <form action={formAction} className={styles.controls}>
+          <input type="hidden" name="billId" value={bill.billId} />
+          <input type="hidden" name="sessionId" value={sessionId} />
+          <label>
+            Amount
+            <select name="mode" className={styles.select} value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
+              <option value="full">Full refund</option>
+              <option value="partial">Partial</option>
+            </select>
+          </label>
+          {mode === "partial" && (
+            <input type="number" name="amount" step="0.01" min={0} className={styles.narrowInput} placeholder="Amount ₹" />
+          )}
+          <label>
+            Reason
+            <select name="reasonCode" className={styles.select} defaultValue={REFUND_REASONS[0]!.value}>
+              {REFUND_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input type="text" name="note" placeholder="Note (optional)" className={styles.select} />
+          <Button type="submit" variant="danger" disabled={pending}>
+            {pending ? "Issuing…" : "Issue credit note"}
+          </Button>
+          {state.error && <p className={styles.error}>{state.error}</p>}
+        </form>
+      )}
     </Card>
   );
 }

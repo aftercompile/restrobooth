@@ -43,6 +43,12 @@ const METHOD_LABEL: Record<string, string> = {
   wallet: "Wallet",
   pending_dues: "Pending dues",
 };
+const REASON_LABEL: Record<string, string> = {
+  guest_dispute: "Guest dispute",
+  billing_error: "Billing error",
+  duplicate_payment: "Duplicate payment",
+  goodwill_gesture: "Goodwill gesture",
+};
 
 export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
   const isDraft = invoice.status === "draft" || invoice.status === "discarded";
@@ -154,6 +160,20 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
                   {METHOD_LABEL[p.method] ?? p.method} · {formatDateTimeIST(p.createdAt)}
                 </span>
                 <span>{formatRupees(p.amountPaise)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {invoice.creditNotes.length > 0 && (
+          <div className={styles.payments}>
+            <p className={styles.sectionLabel}>Credit notes</p>
+            {invoice.creditNotes.map((c, i) => (
+              <div className={styles.totalsRow} key={i}>
+                <span>
+                  {c.creditNoteNo} · {REASON_LABEL[c.reasonCode] ?? c.reasonCode} · {formatDateTimeIST(c.issuedAt)}
+                </span>
+                <span>-{formatRupees(c.amountPaise)}</span>
               </div>
             ))}
           </div>

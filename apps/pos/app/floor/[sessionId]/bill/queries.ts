@@ -312,6 +312,7 @@ export interface InvoiceData {
   lines: InvoiceLine[];
   taxLines: InvoiceTaxLine[];
   payments: InvoicePayment[];
+  creditNotes: { creditNoteNo: string; amountPaise: string; reasonCode: string; issuedAt: string }[];
 }
 
 /** The billed-at-the-time record for a finalised+ bill — reads the
@@ -382,6 +383,15 @@ export async function getInvoiceData(tx: RlsTx, billId: string): Promise<Invoice
   }>(sql`
     select method, amount_paise, created_at from payments where bill_id = ${billId} and status = 'captured' order by created_at
   `);
+  const creditNotesResult = await tx.execute<{
+    [key: string]: unknown;
+    credit_note_no: string;
+    amount_paise: string;
+    reason_code: string;
+    issued_at: string;
+  }>(sql`
+    select credit_note_no, amount_paise, reason_code, issued_at from credit_notes where bill_id = ${billId} order by issued_at
+  `);
 
   return {
     billId: row.bill_id,
@@ -410,5 +420,11 @@ export async function getInvoiceData(tx: RlsTx, billId: string): Promise<Invoice
       amountPaise: r.amount_paise,
     })),
     payments: paymentsResult.rows.map((r) => ({ method: r.method, amountPaise: r.amount_paise, createdAt: r.created_at })),
+    creditNotes: creditNotesResult.rows.map((r) => ({
+      creditNoteNo: r.credit_note_no,
+      amountPaise: r.amount_paise,
+      reasonCode: r.reason_code,
+      issuedAt: r.issued_at,
+    })),
   };
 }

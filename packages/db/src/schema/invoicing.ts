@@ -204,6 +204,48 @@ export const billLines = pgTable(
   ],
 );
 
+// DOMAIN.md §3.4: reversing a SETTLED bill never edits or deletes it — it
+// issues a credit note against the CN series (its own numbering universe,
+// §6.2) and moves the bill to refunded_partial/refunded_full. The
+// original bill's invoice number and content stay exactly as printed.
+export const creditNotes = pgTable(
+  "credit_notes",
+  {
+    id: uuid("id").notNull(),
+    businessDate: date("business_date").notNull(),
+    billId: uuid("bill_id").notNull(), // composite FK -> bills(id, business_date)
+    outletId: uuid("outlet_id")
+      .notNull()
+      .references(() => outlets.id),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id),
+    gstRegistrationId: uuid("gst_registration_id")
+      .notNull()
+      .references(() => gstRegistrations.id),
+    terminalId: uuid("terminal_id")
+      .notNull()
+      .references(() => terminals.id),
+    creditNoteNo: text("credit_note_no").notNull(), // assigned atomically at issue — no draft state
+    reasonCode: text("reason_code").notNull(),
+    note: text("note"),
+    amountPaise: bigint("amount_paise", { mode: "bigint" }).notNull(),
+    issuedBy: uuid("issued_by").notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("credit_note_amount_positive", sql`${t.amountPaise} > 0`),
+    check(
+      "credit_note_no_legal", // same CGST Rule 46(b) shape as bills.invoice_no
+      sql`length(${t.creditNoteNo}) <= 16 and ${t.creditNoteNo} ~ '^[A-Za-z0-9/-]+$'`,
+    ),
+    check(
+      "credit_note_reason_valid",
+      sql`${t.reasonCode} in ('guest_dispute','billing_error','duplicate_payment','goodwill_gesture')`,
+    ),
+  ],
+);
+
 export const payments = pgTable(
   "payments",
   {

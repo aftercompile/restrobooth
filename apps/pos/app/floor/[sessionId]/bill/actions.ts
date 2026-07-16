@@ -60,6 +60,19 @@ async function drawInvoiceNumber(tx: RlsTx, session: BillableSession): Promise<s
   return formatInvoiceNumber(DEFAULT_SERIES_CODE, fy, seq);
 }
 
+const CREDIT_NOTE_SERIES_CODE = "A1CN"; // DOMAIN.md §6.2's own worked example — a separate numbering universe from A1.
+
+/** Draws the next credit-note number — its own series, own sequence,
+ *  never reused, never mixed with the bill series it reverses. */
+async function drawCreditNoteNumber(tx: RlsTx, session: BillableSession): Promise<string> {
+  const fy = financialYearFor(session.businessDate);
+  const seqResult = await tx.execute<{ [key: string]: unknown; seq: string }>(sql`
+    select next_invoice_seq(${session.terminalId}, ${session.gstRegistrationId}, ${session.outletId}, ${CREDIT_NOTE_SERIES_CODE}, ${fy}) as seq
+  `);
+  const seq = BigInt(seqResult.rows[0]!.seq);
+  return formatInvoiceNumber(CREDIT_NOTE_SERIES_CODE, fy, seq, 5);
+}
+
 /**
  * DOMAIN.md §3.4: the invoice number is assigned at finalise, not before —
  * a discarded draft burns no number. Computes via the exact same
@@ -518,4 +531,64 @@ export async function splitBillByAmount(_prev: ActionState, formData: FormData):
 
   revalidatePath(`/floor/${sessionId}`);
   redirect(`/floor/${sessionId}/bill`);
+}
+
+/**
+ * DOMAIN.md §3.4: a SETTLED bill is never edited or un-settled — reversing
+ * it issues a credit note (its own series, §6.2) and moves the bill to
+ * refunded_partial/refunded_full. The original invoice's number and
+ * content never change; this is the ONLY path to correct a paid bill.
+ * Manager-gated at the DB (drizzle/0021's credit_note_issue_capability +
+ * bill_void_refund_capability, both keyed on can_manage_business_day) —
+ * not just hidden in the UI.
+ */
+export async function refundBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const billId = String(formData.get("billId") ?? "");
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const mode = String(formData.get("mode") ?? "full");
+  const amountRupees = String(formData.get("amount") ?? "");
+  const reasonCode = String(formData.get("reasonCode") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+  if (!billId || !sessionId) return { error: "Missing bill." };
+  if (!reasonCode) return { error: "A reason is required." };
+
+  try {
+    await queryAsCurrentUser(async (tx, userId) => {
+      const session = await getBillableSession(tx, sessionId);
+      if (!session) throw new Error("session not found");
+      const bill = (await tx.select().from(schema.bills).where(eq(schema.bills.id, billId)))[0];
+      if (!bill) throw new Error("bill not found");
+      if (bill.status !== "settled") throw new Error(`cannot refund — bill is '${bill.status}' (only a settled bill can be refunded)`);
+
+      const amountPaise = mode === "full" ? bill.payablePaise : BigInt(Math.round(Number(amountRupees) * 100));
+      if (mode === "partial" && (!Number.isFinite(Number(amountRupees)) || amountPaise <= 0n)) {
+        throw new Error("refund amount must be positive");
+      }
+      if (amountPaise > bill.payablePaise) throw new Error("refund amount cannot exceed the bill's payable amount");
+
+      const newStatus = amountPaise === bill.payablePaise ? "refunded_full" : "refunded_partial";
+      await tx.update(schema.bills).set({ status: newStatus }).where(eq(schema.bills.id, billId));
+
+      const creditNoteNo = await drawCreditNoteNumber(tx, session);
+      await tx.insert(schema.creditNotes).values({
+        id: crypto.randomUUID(),
+        businessDate: bill.businessDate,
+        billId,
+        outletId: bill.outletId,
+        storeId: bill.storeId,
+        gstRegistrationId: bill.gstRegistrationId,
+        terminalId: bill.terminalId,
+        creditNoteNo,
+        reasonCode,
+        ...(note !== "" ? { note } : {}),
+        amountPaise,
+        issuedBy: userId,
+      });
+    });
+  } catch (err) {
+    return { error: fullErrorMessage(err) || "Could not issue the refund." };
+  }
+
+  revalidatePath(`/floor/${sessionId}/bill`);
+  return OK;
 }

@@ -148,6 +148,13 @@
       "when": 1784203920664,
       "tag": "0020_bill_lines",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1784205406431,
+      "tag": "0021_credit_notes",
+      "breakpoints": true
     }
   ]
 }
