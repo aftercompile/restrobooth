@@ -231,6 +231,46 @@ export async function getLatestBill(tx: RlsTx, sessionId: string): Promise<Exist
   };
 }
 
+/** All bills a session has ever had, oldest first — a session normally
+ *  has at most one non-voided bill in flight, but split-bill (item/guest
+ *  or amount) produces several independent bills against the SAME
+ *  session, a real one-to-many (see 0020's header note on bills.table_session_id). */
+export async function getSessionBills(tx: RlsTx, sessionId: string): Promise<ExistingBill[]> {
+  const result = await tx.execute<{
+    [key: string]: unknown;
+    bill_id: string;
+    invoice_no: string | null;
+    status: string;
+    subtotal_paise: string;
+    discount_paise: string;
+    charges_paise: string;
+    tax_paise: string;
+    round_off_paise: string;
+    payable_paise: string;
+    paid_paise: string;
+  }>(sql`
+    select
+      b.id as bill_id, b.invoice_no, b.status, b.subtotal_paise, b.discount_paise,
+      b.charges_paise, b.tax_paise, b.round_off_paise, b.payable_paise,
+      coalesce((select sum(amount_paise) from payments p where p.bill_id = b.id and p.status = 'captured'), 0) as paid_paise
+    from bills b
+    where b.table_session_id = ${sessionId}
+    order by b.finalised_at asc nulls last
+  `);
+  return result.rows.map((row) => ({
+    billId: row.bill_id,
+    invoiceNo: row.invoice_no,
+    status: row.status,
+    subtotalPaise: row.subtotal_paise,
+    discountPaise: row.discount_paise,
+    chargesPaise: row.charges_paise,
+    taxPaise: row.tax_paise,
+    roundOffPaise: row.round_off_paise,
+    payablePaise: row.payable_paise,
+    paidPaise: row.paid_paise,
+  }));
+}
+
 export interface InvoiceLine {
   name: string;
   quantity: number;

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PosShell } from "../../../PosShell";
 import { queryAsCurrentUser } from "../../../../lib/db";
-import { getBillableSession, computeBillPreview, getLatestBill } from "./queries";
+import { getBillableSession, computeBillPreview, getSessionBills } from "./queries";
 import { BillView } from "./BillView";
 import styles from "./page.module.css";
 
@@ -11,9 +11,10 @@ export default async function BillPage({ params }: { params: Promise<{ sessionId
   const data = await queryAsCurrentUser(async (tx) => {
     const session = await getBillableSession(tx, sessionId);
     if (!session) return null;
-    const existingBill = await getLatestBill(tx, sessionId);
-    const preview = existingBill && existingBill.status !== "voided" ? null : await computeBillPreview(tx, sessionId);
-    return { session, existingBill, preview };
+    const bills = await getSessionBills(tx, sessionId);
+    const hasActiveBill = bills.some((b) => b.status !== "voided");
+    const preview = hasActiveBill ? null : await computeBillPreview(tx, sessionId);
+    return { session, bills, preview };
   });
 
   if (!data) notFound();
@@ -29,7 +30,7 @@ export default async function BillPage({ params }: { params: Promise<{ sessionId
       <BillView
         sessionId={sessionId}
         preview={data.preview ?? { lines: [], computed: { lines: [], subtotalPaise: 0n, billDiscountPaise: 0n, chargesPaise: 0n, taxLines: [], taxTotalPaise: 0n, grossPaise: 0n, roundOffPaise: 0n, payablePaise: 0n } }}
-        existingBill={data.existingBill}
+        bills={data.bills}
       />
     </PosShell>
   );

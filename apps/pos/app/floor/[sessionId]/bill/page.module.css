@@ -81,3 +81,37 @@
   padding: 8px 12px;
   font-size: var(--text-sm);
 }
+
+.billList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.modeTabs {
+  display: flex;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.splitTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.splitTable th,
+.splitTable td {
+  padding: 6px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--ink-900);
+}
+
+.splitItemHead {
+  text-align: left !important;
+}
+
+.splitTable input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
