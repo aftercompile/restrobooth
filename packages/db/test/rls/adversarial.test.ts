@@ -7,11 +7,20 @@
  *
  * A6, A7, A9, A14 are ROLE-CAPABILITY or token-layer concerns, not tenant-
  * scope ones. Phase 1 deliberately enforced tenant ISOLATION only and left
- * the CAPABILITY matrix for Phase 2. A6 and A9 are now built (Phase 2's
+ * the CAPABILITY matrix for Phase 2/3a. A6 and A9 are built (Phase 2's
  * menu-capability migration, drizzle/0012_menu_capability.sql) and
- * un-skipped below. A7 (captain can't create a bill) and A14 (QR token
- * replay) still legitimately `test.skip` — no bill-creation or
- * token-minting code path exists yet to enforce a rule against.
+ * un-skipped below.
+ *
+ * A7 ("captain cannot create a BILL") is still correctly `test.skip` —
+ * bills are Phase 3b (Billing) work; Phase 3a only writes orders/order_
+ * items/kots. Do not un-skip A7 against an orders-table insert — that
+ * would be testing a different rule than the one TENANCY.md names. The
+ * order/order_item/kot capability equivalents A7 is adjacent to (§4's
+ * "take an order" and "void a fired KOT item" rows) are covered below as
+ * Phase 3a additions, same shape as A6/A9 but not literally A7.
+ *
+ * A14 (QR token replay) still legitimately `test.skip` — no token-minting
+ * code path exists yet (Phase 5, Booth).
  */
 import { beforeAll, describe, expect, test } from "vitest";
 import type pg from "pg";
@@ -116,9 +125,12 @@ describe("A6: cashier cannot change a price, but CAN 86 an item (capability, not
 });
 
 // "captain inserts a bill" is a role-capability question, same shape as
-// A6/A9 — but no bill-creation code path exists yet (that's Phase 3a's
-// ordering/billing work), so there is nothing to enforce a rule against.
-test.skip("A7: captain cannot create a bill (capability, not scope) — Phase 3a work, not yet enforced", () => {});
+// A6/A9 — but no bill-creation code path exists yet (that's Phase 3b's
+// billing work, ROADMAP.md §3), so there is nothing to enforce a rule
+// against. Phase 3a's own order/order_item/kot capability rules (the "take
+// an order" and "void a fired KOT item" rows of TENANCY.md §4) are covered
+// below — they are A7's siblings, not a resolution of A7 itself.
+test.skip("A7: captain cannot create a bill (capability, not scope) — Phase 3b work, not yet enforced", () => {});
 
 test("A8: brand_manager @ Brand A cannot read Brand B's orders at the SAME shared outlet", async () => {
   // The case that catches a naive implementation: Surat is one outlet
@@ -224,5 +236,162 @@ test("A15: accessible_outlet_ids() takes no argument — cannot be used as a loo
   // not return another user's data.
   await asUser(client, id.USER_AMD_CASHIER, async (c) => {
     await expect(c.query("select accessible_outlet_ids($1)", [id.USER_ORG1_OWNER])).rejects.toThrow();
+  });
+});
+
+// =============================================================================
+// Phase 3a additions — TENANCY.md §4's capability matrix, "Take an order"
+// and "Void a fired KOT item" rows, plus DOMAIN.md §3.1's cross-store merge
+// guard. Same capability-vs-scope shape as A6/A9 (drizzle/0012), enforced by
+// drizzle/0014_ordering_capability.sql. A7 itself stays skipped (see the
+// header comment) — these are its siblings, not its resolution.
+// =============================================================================
+
+describe("Phase 3a — 'take an order' is a role capability (TENANCY.md §4)", () => {
+  const attemptOrderInsert = (c: pg.Client) =>
+    c.query(
+      "insert into orders (id, business_date, outlet_id, store_id, business_day_id, status, idempotency_key) values (gen_random_uuid(), current_date, $1, $2, $3, 'open', gen_random_uuid())",
+      [id.OUTLET_AMD, id.STORE_AMD_A, id.BIZDAY_AMD],
+    );
+
+  test("kitchen cannot take an order", async () => {
+    await asUser(client, id.USER_AMD_KITCHEN, async (c) => {
+      await expect(attemptOrderInsert(c)).rejects.toThrow(/row-level security/);
+    });
+  });
+
+  test("brand_manager cannot take an order (they manage the menu, not the floor)", async () => {
+    await asUser(client, id.USER_BRANDA_MGR, async (c) => {
+      await expect(attemptOrderInsert(c)).rejects.toThrow(/row-level security/);
+    });
+  });
+
+  test("cashier CAN take an order (positive control)", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      const r = await attemptOrderInsert(c);
+      expect(r.rowCount).toBe(1);
+    });
+  });
+
+  test("captain CAN take an order (positive control)", async () => {
+    await asUser(client, id.USER_AMD_CAPTAIN, async (c) => {
+      const r = await attemptOrderInsert(c);
+      expect(r.rowCount).toBe(1);
+    });
+  });
+});
+
+describe("Phase 3a — a post-fire void requires manager auth (DOMAIN.md §3.2)", () => {
+  // A pre-fire (pending) item voids for free; a post-fire void needs
+  // org_owner / cluster_manager / outlet_manager — never cashier, never
+  // captain (TENANCY.md §4: "Void a fired KOT item"). authorized_by is
+  // stamped server-side by the trigger from auth.uid(), never trusted from
+  // the client — these inserts don't set it.
+  const attemptPostFireVoid = (c: pg.Client, orderItemId: string) =>
+    c.query(
+      `insert into order_item_voids
+         (id, business_date, order_item_id, outlet_id, store_id, quantity_voided, reason_code, requires_auth, voided_by)
+       values (gen_random_uuid(), current_date, $1, $2, $3, 1, 'staff_error', true, gen_random_uuid())`,
+      [orderItemId, id.OUTLET_AMD, id.STORE_AMD_A],
+    );
+
+  async function aFiredOrderItemId(c: pg.Client): Promise<string> {
+    const r = await c.query("select id from order_items where order_id = $1 limit 1", [id.ORDER_AMD_1]);
+    return r.rows[0].id as string;
+  }
+
+  test("cashier cannot authorize a post-fire void", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      const itemId = await aFiredOrderItemId(c);
+      await expect(attemptPostFireVoid(c, itemId)).rejects.toThrow(/insufficient privilege/);
+    });
+  });
+
+  test("captain cannot authorize a post-fire void", async () => {
+    await asUser(client, id.USER_AMD_CAPTAIN, async (c) => {
+      const itemId = await aFiredOrderItemId(c);
+      await expect(attemptPostFireVoid(c, itemId)).rejects.toThrow(/insufficient privilege/);
+    });
+  });
+
+  test("outlet_manager CAN authorize a post-fire void (positive control)", async () => {
+    await asUser(client, id.USER_AMD_MGR, async (c) => {
+      const itemId = await aFiredOrderItemId(c);
+      const r = await attemptPostFireVoid(c, itemId);
+      expect(r.rowCount).toBe(1);
+    });
+  });
+
+  test("a pre-fire (pending) void needs no auth, for anyone who can take an order", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      // A cashier can insert a pending item (the "take an order" capability
+      // above) and free-void it in the same transaction — nothing here
+      // should touch can_authorize_void() at all, since requires_auth=false.
+      const menuItem = await c.query("select id, tax_class_id from menu_items where brand_id = $1 limit 1", [
+        id.BRAND_A,
+      ]);
+      const pending = await c.query(
+        `insert into order_items
+           (id, business_date, order_id, outlet_id, store_id, menu_item_id, quantity, unit_price_paise, tax_class_id, status, client_line_id, idempotency_key)
+         values (gen_random_uuid(), current_date, $1, $2, $3, $4, 1, 10000, $5, 'pending', gen_random_uuid(), gen_random_uuid())
+         returning id`,
+        [id.ORDER_AMD_1, id.OUTLET_AMD, id.STORE_AMD_A, menuItem.rows[0].id, menuItem.rows[0].tax_class_id],
+      );
+      const r = await c.query(
+        `insert into order_item_voids
+           (id, business_date, order_item_id, outlet_id, store_id, quantity_voided, reason_code, requires_auth, voided_by)
+         values (gen_random_uuid(), current_date, $1, $2, $3, 1, 'guest_changed_mind', false, gen_random_uuid())`,
+        [pending.rows[0].id, id.OUTLET_AMD, id.STORE_AMD_A],
+      );
+      expect(r.rowCount).toBe(1);
+    });
+  });
+});
+
+describe("Phase 3a — a table_session merge is blocked across stores (DOMAIN.md §3.1)", () => {
+  // Surat is the shared cloud kitchen (TENANCY.md's A8 case): Brand A and
+  // Brand B both operate out of the same physical outlet but are different
+  // stores. Folding one brand's session into the other's would mix two
+  // brands' orders into one eventual bill — exactly what the trigger exists
+  // to prevent, and outlet-scoping alone would NOT catch it.
+  test("merging a Surat Brand A session into a Surat Brand B session is rejected", async () => {
+    await asUser(client, id.USER_SURAT_MGR, async (c) => {
+      const a = await c.query(
+        `insert into table_sessions (id, outlet_id, store_id, business_day_id, status, idempotency_key)
+         values (gen_random_uuid(), $1, $2, $3, 'open', gen_random_uuid()) returning id`,
+        [id.OUTLET_SURAT, id.STORE_SURAT_A, id.BIZDAY_SURAT],
+      );
+      const b = await c.query(
+        `insert into table_sessions (id, outlet_id, store_id, business_day_id, status, idempotency_key)
+         values (gen_random_uuid(), $1, $2, $3, 'open', gen_random_uuid()) returning id`,
+        [id.OUTLET_SURAT, id.STORE_SURAT_B, id.BIZDAY_SURAT],
+      );
+      await expect(
+        c.query("update table_sessions set status = 'merged_into', merged_into_session_id = $1 where id = $2", [
+          b.rows[0].id,
+          a.rows[0].id,
+        ]),
+      ).rejects.toThrow(/different stores/);
+    });
+  });
+
+  test("merging two same-store sessions succeeds (positive control)", async () => {
+    await asUser(client, id.USER_SURAT_MGR, async (c) => {
+      const a = await c.query(
+        `insert into table_sessions (id, outlet_id, store_id, business_day_id, status, idempotency_key)
+         values (gen_random_uuid(), $1, $2, $3, 'open', gen_random_uuid()) returning id`,
+        [id.OUTLET_SURAT, id.STORE_SURAT_A, id.BIZDAY_SURAT],
+      );
+      const b = await c.query(
+        `insert into table_sessions (id, outlet_id, store_id, business_day_id, status, idempotency_key)
+         values (gen_random_uuid(), $1, $2, $3, 'open', gen_random_uuid()) returning id`,
+        [id.OUTLET_SURAT, id.STORE_SURAT_A, id.BIZDAY_SURAT],
+      );
+      const r = await c.query(
+        "update table_sessions set status = 'merged_into', merged_into_session_id = $1 where id = $2",
+        [b.rows[0].id, a.rows[0].id],
+      );
+      expect(r.rowCount).toBe(1);
+    });
   });
 });

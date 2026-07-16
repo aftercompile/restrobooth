@@ -1,0 +1,2 @@
+ALTER TABLE "menu_items" ADD COLUMN "kitchen_section" text DEFAULT 'hot' NOT NULL;--> statement-breakpoint
+ALTER TABLE "menu_items" ADD CONSTRAINT "kitchen_section_valid" CHECK ("menu_items"."kitchen_section" in ('hot','cold','bar'));

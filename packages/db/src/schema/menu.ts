@@ -101,11 +101,18 @@ export const menuItems = pgTable(
       .notNull()
       .default(sql`'{}'`),
     status: text("status").notNull().default("draft"),
+    // Which kitchen line cooks this item — decides KOT routing at fire time
+    // (DOMAIN.md §3.3, Phase 3a). A single "fire" produces one KOT per
+    // distinct section the order touches. Defaults to 'hot': the common
+    // case, and a safe fallback for an unclassified item (it prints
+    // somewhere a human sees it rather than vanishing).
+    kitchenSection: text("kitchen_section").notNull().default("hot"),
   },
   (t) => [
     check("base_price_non_negative", sql`${t.basePricePaise} >= 0`),
     check("diet_valid", sql`${t.diet} is null or ${t.diet} in ('veg','non_veg','egg','jain')`),
     check("menu_item_status_valid", sql`${t.status} in ('draft','published','archived')`),
+    check("kitchen_section_valid", sql`${t.kitchenSection} in ('hot','cold','bar')`),
   ],
 );
 

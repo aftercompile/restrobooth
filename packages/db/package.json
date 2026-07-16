@@ -17,7 +17,8 @@
     "db:check-partitions": "tsx scripts/check-partitions-ahead.ts",
     "seed": "tsx scripts/seed-believable-chain.ts",
     "seed:auth": "tsx scripts/seed-auth-users.ts",
-    "seed:categories": "tsx scripts/seed-categories.ts"
+    "seed:categories": "tsx scripts/seed-categories.ts",
+    "seed:kitchen-sections": "tsx scripts/seed-kitchen-sections.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
