@@ -1,0 +1,69 @@
+.outlet {
+  margin-bottom: var(--space-3);
+}
+
+.outletName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--chalk-400);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--space-1) 0;
+}
+
+.area {
+  margin-bottom: var(--space-2);
+}
+
+.areaName {
+  font-size: var(--text-sm);
+  color: var(--chalk-400);
+  margin: 0 0 8px 0;
+}
+
+/* Single column, phone-first — the point of this list over apps/pos's
+   grid is that it's a thumb-scrollable list on a narrow screen, not a
+   floor plan to scan at a glance from a fixed terminal. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tableButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+  background: var(--ink-700);
+  border: 1px solid var(--ink-500);
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-height: 56px;
+  padding: 12px 14px;
+  color: var(--chalk-50);
+  font: inherit;
+}
+
+.tableLabel {
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+.tableMeta {
+  font-size: var(--text-sm);
+  color: var(--chalk-400);
+  text-align: right;
+}
+
+.tableTimer {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  color: var(--chalk-400);
+}

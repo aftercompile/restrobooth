@@ -13,13 +13,18 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@restrobooth/db": "workspace:*",
+    "@restrobooth/domain": "workspace:*",
+    "@restrobooth/ui": "workspace:*",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.110.3",
     "next": "^16.2.10",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@restrobooth/config": "workspace:*",
-    "@restrobooth/ui": "workspace:*",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

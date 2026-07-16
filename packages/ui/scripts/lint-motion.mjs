@@ -18,8 +18,12 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../../..");
 
-// The two surfaces where motion is banned outright.
-const BANNED_IN = ["apps/pos", "apps/kds"];
+// The surfaces where motion is banned outright — every app on POS density
+// (data-density="pos"), not just the two the rule was first written for.
+// apps/captain joined this list in Phase 3a: PRD.md's "dense, touch-first"
+// captain app deliberately shares POS's zero-motion density rather than
+// getting its own, so the same guard has to cover it.
+const BANNED_IN = ["apps/pos", "apps/kds", "apps/captain"];
 
 function walk(dir) {
   const out = [];
@@ -54,4 +58,4 @@ if (violations.length > 0) {
   );
   process.exit(1);
 }
-console.log("motion-lint: OK — no framer-motion in apps/pos or apps/kds");
+console.log(`motion-lint: OK — no framer-motion in ${BANNED_IN.join(", ")}`);

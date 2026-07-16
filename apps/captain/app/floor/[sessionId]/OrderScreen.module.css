@@ -1,0 +1,91 @@
+.header {
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.sub {
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+  margin: 2px 0 0 0;
+}
+
+.total {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.sectionTitle {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--chalk-400);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: var(--space-2) 0 6px 0;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+
+.itemName {
+  flex: 1;
+  font-size: var(--text-base);
+}
+
+.itemQty {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+  min-width: 24px;
+}
+
+.itemPrice {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  min-width: 64px;
+  text-align: right;
+}
+
+.smallButton {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: var(--text-sm);
+}
+
+.kotRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+}
+
+.fireBar {
+  margin: var(--space-2) 0;
+}
+
+.fireButton {
+  width: 100%;
+}
+
+.billBar {
+  margin: var(--space-3) 0;
+}
+
+.billButton {
+  width: 100%;
+}

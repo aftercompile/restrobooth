@@ -9,15 +9,7 @@ import { mockPrinterBridge } from "../../../lib/printerBridge";
 export type ActionState = { error: string | null };
 const OK: ActionState = { error: null };
 
-/**
- * Walks DrizzleQueryError's .cause chain to find the real Postgres error
- * (its own .message is just "Failed query: <sql>" — apps/console hit this
- * exact trap in item-actions.ts). That wrapper message is dropped here,
- * not just walked past: joining it in would show a cashier a raw SQL dump
- * (query text, $1/$2 placeholders) instead of "insufficient privilege:
- * only org_owner... may authorize a post-fire void" — which is the whole
- * point of a friendly rejection message.
- */
+/** See apps/pos's identical, more fully-commented helper — same fix. */
 function fullErrorMessage(err: unknown): string {
   const parts: string[] = [];
   let current: unknown = err;
@@ -28,23 +20,13 @@ function fullErrorMessage(err: unknown): string {
   return parts.join(" | ");
 }
 
-/**
- * business_date comes from the outlet's OPEN business_day row, never from
- * a clock (CLAUDE.md standing rule — Asia/Kolkata's business-day boundary
- * doesn't line up with a UTC/server "today" anyway).
- */
 async function getBusinessDate(tx: RlsTx, businessDayId: string): Promise<string> {
   const row = (await tx.select().from(schema.businessDays).where(eq(schema.businessDays.id, businessDayId)))[0];
   if (!row) throw new Error("business day not found");
   return row.businessDate;
 }
 
-/**
- * Adds one item to the session's running order, creating the order itself
- * on first add (DOMAIN.md §1: one order per party, not one per round).
- * Price and tax class are re-resolved from resolve_menu() here — never
- * trusted from the client — so a stale picker never bills the wrong price.
- */
+/** Same logic as apps/pos's addOrderItem. */
 export async function addOrderItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const sessionId = String(formData.get("sessionId") ?? "");
   const menuItemId = String(formData.get("menuItemId") ?? "");
@@ -57,13 +39,10 @@ export async function addOrderItem(_prev: ActionState, formData: FormData): Prom
     await queryAsCurrentUser(async (tx) => {
       const session = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
       if (!session) throw new Error("session not found");
-      // DOMAIN.md §3.1: "Menu is frozen for this session" once a bill has
-      // been requested — an item added after the bill was asked for is
-      // exactly the bug this rule exists to prevent. Un-freezing (back to
-      // 'dining') is a deliberate, separate recovery action, not implied
-      // by adding an item.
+      // DOMAIN.md §3.1: the menu freezes once a bill has been requested —
+      // same fix as apps/pos's addOrderItem, same reason.
       if (session.status !== "open" && session.status !== "ordering" && session.status !== "dining") {
-        throw new Error(`cannot add an item — session is '${session.status}' (menu is frozen; un-freeze it first)`);
+        throw new Error(`cannot add an item — session is '${session.status}' (menu is frozen; ask a manager to un-freeze it)`);
       }
 
       const resolved = await tx.execute<{ [key: string]: unknown; price_paise: string; is_available: boolean }>(sql`
@@ -113,8 +92,6 @@ export async function addOrderItem(_prev: ActionState, formData: FormData): Prom
         idempotencyKey: crypto.randomUUID(),
       });
 
-      // open -> ordering on the FIRST item only; a session already past
-      // 'open' just gets another line, no transition needed.
       if (session.status === "open") {
         assertSessionTransition("open", "ordering");
         await tx.update(schema.tableSessions).set({ status: "ordering" }).where(eq(schema.tableSessions.id, sessionId));
@@ -128,12 +105,7 @@ export async function addOrderItem(_prev: ActionState, formData: FormData): Prom
   return OK;
 }
 
-/**
- * Fires every pending item on the session's order: groups them by kitchen
- * section (DOMAIN.md §3.3 — one KOT per hot/cold/bar line touched),
- * creates a KOT per group, attempts the (mock) print, and transitions the
- * session ordering -> dining on the first fire.
- */
+/** Same logic as apps/pos's fireOrder. */
 export async function fireOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const sessionId = String(formData.get("sessionId") ?? "");
   if (!sessionId) return { error: "Missing session." };
@@ -203,10 +175,6 @@ export async function fireOrder(_prev: ActionState, formData: FormData): Promise
           });
         }
 
-        // The mock printer bridge — see lib/printerBridge.ts. A "queued"
-        // result is left exactly as-is: the client's own 10s-no-ACK timer
-        // (DOMAIN.md §3.3) is what surfaces a stuck ticket, not a server
-        // retry loop.
         const result = await mockPrinterBridge.send();
         if (result === "printed") {
           await tx.execute(sql`update kots set status = 'printed' where id = ${kotId}`);
@@ -232,7 +200,8 @@ export async function fireOrder(_prev: ActionState, formData: FormData): Promise
   return OK;
 }
 
-/** A pre-fire void — free, no manager auth (DOMAIN.md §3.2). */
+/** A pre-fire void — free, no manager auth (DOMAIN.md §3.2). Same logic
+ *  as apps/pos's voidPendingItem. */
 export async function voidPendingItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const orderItemId = String(formData.get("orderItemId") ?? "");
   const sessionId = String(formData.get("sessionId") ?? "");
@@ -243,7 +212,7 @@ export async function voidPendingItem(_prev: ActionState, formData: FormData): P
     await queryAsCurrentUser(async (tx, userId) => {
       const item = (await tx.select().from(schema.orderItems).where(eq(schema.orderItems.id, orderItemId)))[0];
       if (!item) throw new Error("order item not found");
-      if (item.status !== "pending") throw new Error("only a pending item can be voided for free — use requestVoid");
+      if (item.status !== "pending") throw new Error("only a pending item can be voided for free — ask a manager for a fired item");
       assertOrderItemTransition("pending", "voided");
 
       await tx.update(schema.orderItems).set({ status: "voided" }).where(eq(schema.orderItems.id, orderItemId));
@@ -268,8 +237,11 @@ export async function voidPendingItem(_prev: ActionState, formData: FormData): P
 }
 
 /**
- * Requests a void on a FIRED item — moves it to void_requested. Free to
- * request (anyone who can take an order); approving it is the gated step.
+ * Requests a void on a fired item. Unlike apps/pos, the captain app has no
+ * approve/reject UI — TENANCY.md §4 doesn't grant captain the "void a
+ * fired KOT item" capability at all, so approving is a POS/manager action
+ * by design. A captain can flag it (this action); a manager clears it from
+ * the POS.
  */
 export async function requestVoid(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const orderItemId = String(formData.get("orderItemId") ?? "");
@@ -292,85 +264,25 @@ export async function requestVoid(_prev: ActionState, formData: FormData): Promi
 }
 
 /**
- * Approves a requested void — the manager-gated step (DOMAIN.md §3.2,
- * TENANCY.md §4 "Void a fired KOT item"). Anyone can click this button;
- * whether it SUCCEEDS is enforced by the DB trigger
- * (enforce_void_authorization, drizzle/0014), which stamps authorized_by
- * from the caller's own session and rejects unless they hold a
- * void-authorizing role. No PIN pad in this phase — on a shared terminal a
- * manager approves by being the one signed in when they click it.
+ * "Call for bill" (PRD.md's own phrase for the captain's job). DOMAIN.md
+ * §3.1: dining -> bill_requested freezes the menu for this session — an
+ * item can't be added after the bill was asked for without an explicit
+ * un-freeze, which is deliberately not exposed here (that's a POS/cashier
+ * recovery action, not a captain one).
  */
-export async function approveVoid(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const orderItemId = String(formData.get("orderItemId") ?? "");
+export async function callForBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const sessionId = String(formData.get("sessionId") ?? "");
-  const reasonCode = String(formData.get("reasonCode") ?? "staff_error");
-  if (!orderItemId || !sessionId) return { error: "Missing item." };
-
-  try {
-    await queryAsCurrentUser(async (tx, userId) => {
-      const item = (await tx.select().from(schema.orderItems).where(eq(schema.orderItems.id, orderItemId)))[0];
-      if (!item) throw new Error("order item not found");
-      assertOrderItemTransition(item.status as "void_requested", "voided");
-
-      // requires_auth: true — the trigger stamps authorized_by itself and
-      // rejects the whole insert if the caller isn't manager-capable, so a
-      // cashier clicking this gets a clear rejection, not a silent no-op.
-      await tx.insert(schema.orderItemVoids).values({
-        id: crypto.randomUUID(),
-        businessDate: item.businessDate,
-        orderItemId,
-        outletId: item.outletId,
-        storeId: item.storeId,
-        quantityVoided: item.quantity,
-        reasonCode,
-        requiresAuth: true,
-        voidedBy: userId,
-      });
-      await tx.update(schema.orderItems).set({ status: "voided" }).where(eq(schema.orderItems.id, orderItemId));
-    });
-  } catch (err) {
-    return { error: fullErrorMessage(err) || "Could not approve the void." };
-  }
-
-  revalidatePath(`/floor/${sessionId}`);
-  return OK;
-}
-
-/** Rejects a requested void — back to fired, nothing written. */
-export async function rejectVoid(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const orderItemId = String(formData.get("orderItemId") ?? "");
-  const sessionId = String(formData.get("sessionId") ?? "");
-  if (!orderItemId || !sessionId) return { error: "Missing item." };
+  if (!sessionId) return { error: "Missing session." };
 
   try {
     await queryAsCurrentUser(async (tx) => {
-      const item = (await tx.select().from(schema.orderItems).where(eq(schema.orderItems.id, orderItemId)))[0];
-      if (!item) throw new Error("order item not found");
-      assertOrderItemTransition(item.status as "void_requested", "fired");
-      await tx.update(schema.orderItems).set({ status: "fired" }).where(eq(schema.orderItems.id, orderItemId));
+      const session = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
+      if (!session) throw new Error("session not found");
+      assertSessionTransition(session.status as "dining", "bill_requested");
+      await tx.update(schema.tableSessions).set({ status: "bill_requested" }).where(eq(schema.tableSessions.id, sessionId));
     });
   } catch (err) {
-    return { error: fullErrorMessage(err) || "Could not reject the void." };
-  }
-
-  revalidatePath(`/floor/${sessionId}`);
-  return OK;
-}
-
-/** A reprint increments reprint_count — it never creates a second KOT
- *  (DOMAIN.md §2, the "KOT printed twice" bug this schema exists to prevent). */
-export async function reprintKot(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const kotId = String(formData.get("kotId") ?? "");
-  const sessionId = String(formData.get("sessionId") ?? "");
-  if (!kotId || !sessionId) return { error: "Missing KOT." };
-
-  try {
-    await queryAsCurrentUser(async (tx) => {
-      const result = await tx.execute(sql`update kots set reprint_count = reprint_count + 1 where id = ${kotId}`);
-      if (result.rowCount === 0) throw new Error("KOT not found");
-    });
-  } catch (err) {
-    return { error: fullErrorMessage(err) || "Could not reprint." };
+    return { error: fullErrorMessage(err) || "Could not call for the bill." };
   }
 
   revalidatePath(`/floor/${sessionId}`);
