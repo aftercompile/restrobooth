@@ -1,0 +1,149 @@
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.sub {
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+  margin: 2px 0 0 0;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+@media (width <= 900px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sectionTitle {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--chalk-400);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: var(--space-2) 0 6px 0;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 8px 10px;
+}
+
+.itemName {
+  flex: 1;
+  font-size: var(--text-sm);
+}
+
+.itemQty {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+  min-width: 24px;
+}
+
+.itemPrice {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  min-width: 64px;
+  text-align: right;
+}
+
+.voidForm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reasonSelect {
+  font-size: var(--text-sm);
+  background: var(--ink-900);
+  color: var(--chalk-50);
+  border: 1px solid var(--ink-500);
+  border-radius: var(--radius);
+  min-height: 36px;
+  padding: 0 6px;
+}
+
+.smallButton {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: var(--text-sm);
+}
+
+.kotRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 8px 10px;
+}
+
+.kotMeta {
+  flex: 1;
+  font-size: var(--text-sm);
+}
+
+.kotTimer {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+}
+
+.alarm {
+  background: var(--signal-600);
+  color: var(--chalk-50);
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+}
+
+.fireBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.total {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.mergeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+
+.mergeSelect {
+  font-size: var(--text-sm);
+  background: var(--ink-900);
+  color: var(--chalk-50);
+  border: 1px solid var(--ink-500);
+  border-radius: var(--radius);
+  min-height: 44px;
+  padding: 0 8px;
+}

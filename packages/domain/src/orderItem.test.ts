@@ -4,7 +4,7 @@ import {
   canTransitionOrderItem,
   voidRequiresAuth,
   type OrderItemStatus,
-} from "./orderItem.js";
+} from "./orderItem";
 
 // Restated independently from DOMAIN.md §3.2's diagram.
 const LEGAL: ReadonlyArray<[OrderItemStatus, OrderItemStatus]> = [

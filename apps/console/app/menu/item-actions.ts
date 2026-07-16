@@ -26,12 +26,17 @@ function optionalString(formData: FormData, key: string): string | null {
  * `.cause.message`. Checking `err.message` alone for a substring like
  * "insufficient privilege" silently never matches; this walks the cause
  * chain and checks all of them.
+ *
+ * The wrapper message itself is dropped, not just walked past (found via
+ * apps/pos hitting the same helper: joining it in shows the cashier a raw
+ * SQL dump — query text, $1/$2 placeholders — ahead of the actual
+ * rejection reason, which defeats the point of a friendly error).
  */
 function fullErrorMessage(err: unknown): string {
   const parts: string[] = [];
   let current: unknown = err;
   while (current instanceof Error) {
-    parts.push(current.message);
+    if (!current.message.startsWith("Failed query:")) parts.push(current.message);
     current = current.cause;
   }
   return parts.join(" | ");

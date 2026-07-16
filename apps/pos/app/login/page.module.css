@@ -1,0 +1,62 @@
+/* POS density: zero animation, dense, dark. No split-pane pitch — a
+   cashier signing in mid-rush needs the two fields and the button, not a
+   marketing pane. lint-motion.mjs also blocks any framer-motion import in
+   this app, so this page can never reach for <Animate> even by accident. */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+.panel {
+  width: 100%;
+  max-width: 22rem;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  color: var(--chalk-50);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.markRail {
+  width: 4px;
+  height: 1.1em;
+  background: linear-gradient(var(--ramp-fresh), var(--brass-500));
+  flex-shrink: 0;
+}
+
+.markDim {
+  color: var(--chalk-400);
+  font-weight: 400;
+}
+
+.sub {
+  margin: 0 0 var(--space-1) 0;
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.error {
+  margin: 0;
+  color: var(--signal-600);
+  font-size: var(--text-sm);
+}

@@ -6,7 +6,7 @@ import {
   canTransitionSession,
   isTerminalSessionStatus,
   type TableSessionStatus,
-} from "./tableSession.js";
+} from "./tableSession";
 
 // The legal transitions, restated independently from DOMAIN.md §3.1's
 // diagram (NOT imported from the module — a test that reads the same table

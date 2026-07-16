@@ -5,7 +5,7 @@ import {
   groupByKitchenSection,
   type KitchenSection,
   type KotStatus,
-} from "./kot.js";
+} from "./kot";
 
 // Restated independently from DOMAIN.md §3.3's diagram.
 const LEGAL: ReadonlyArray<[KotStatus, KotStatus]> = [

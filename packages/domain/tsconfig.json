@@ -1,5 +1,5 @@
 {
-  "extends": "@restrobooth/config/typescript/base.json",
+  "extends": "@restrobooth/config/typescript/nextjs.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src"

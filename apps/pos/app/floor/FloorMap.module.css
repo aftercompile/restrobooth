@@ -1,0 +1,67 @@
+.outlet {
+  margin-bottom: var(--space-3);
+}
+
+.outletName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--chalk-400);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--space-1) 0;
+}
+
+.area {
+  margin-bottom: var(--space-2);
+}
+
+.areaName {
+  font-size: var(--text-sm);
+  color: var(--chalk-400);
+  margin: 0 0 8px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-1);
+}
+
+.tableButton {
+  display: block;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+  background: var(--ink-700);
+  border: 1px solid var(--ink-500);
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-height: 76px;
+  padding: 10px 12px;
+  color: var(--chalk-50);
+  font: inherit;
+}
+
+.tableButton:hover {
+  background: var(--ink-500);
+}
+
+.tableLabel {
+  font-weight: 700;
+  font-size: var(--text-base);
+}
+
+.tableMeta {
+  margin-top: 4px;
+  font-size: var(--text-sm);
+  color: var(--chalk-400);
+}
+
+.tableTimer {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  color: var(--chalk-400);
+}
