@@ -4,6 +4,35 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-16 — Phase 3b Slices 1–2: billing, day close, split-bill, credit notes — the online path is real
+
+**Decided by:** Mohammed ("proceed"), executed against a plan approved via `/plan` (three slices: `packages/domain` money math, the online bill lifecycle, offline outbox — the last not started this session).
+
+**What shipped:**
+
+1. **`packages/domain`'s money math**, 100% line/branch coverage: `money.ts` (`roundHalfUpDiv`, `roundToRupee`, `allocateLargestRemainder`), `bill.ts` (`computeBill()` — DOMAIN.md §5.8's fixed pipeline: line taxable → subtotal → bill-discount allocation → charges → per-tax-class independently-rounded CGST/SGST/IGST → round-to-rupee → payable), `splitBill.ts` (`splitByShares`/`splitByAmount`), `invoiceNumber.ts` (format/validate/FY-from-business-date). Every DOMAIN.md §7 worked example is a transcribed test fixture, verified to the exact paise.
+2. **The invoice number allocator** (`drizzle/0016`): row-locked per-terminal blocks (default 300, GIST-exclude-constrained against overlap), drawn identically online or offline per ADR-0004 — built now because it isn't actually offline-specific logic.
+3. **Day open/close** (`apps/pos/app/day`) with per-terminal opening-float drawer tracking — `terminal_day_drawers` (`drizzle/0018`) didn't exist before this phase; DOMAIN.md §4.4 needs it and nothing else provided it.
+4. **Bill finalize → settle (split tender) → void**, **settled → refunded via credit note**, and **split-bill (item/guest, equal-amount)** (`apps/pos/app/floor/[sessionId]/bill`) — see PROGRESS.md's Phase 3b section for the full feature list. A session can now hold several independent bills at once (split); `reconcileSessionAfterBillChange()` generalizes the old single-bill close/reopen logic to "closes once every bill is resolved, reopens to dining only if all were voided."
+5. **A real GST tax invoice view** (`apps/pos/app/bill/[billId]`), browser-printable, reading a durable `bill_lines` snapshot rather than live `order_items`.
+6. **A new `credit_notes` table** (`drizzle/0021`), its own `A1CN/...` numbering series, capability-gated to managers, with a trigger enforcing a credit note can never exceed its bill's payable — the one cross-table invariant a CHECK constraint can't express directly.
+
+**Real gaps found by building against DOMAIN.md's own spec (not by inspection), each fixed with a migration rather than worked around:**
+
+1. `business_days` had no per-terminal drawer/float tracking at all → `terminal_day_drawers` (0018).
+2. `bills` had no reference back to the `table_session` it was billed for, not even an order_id → `bills.table_session_id` (0019).
+3. Nothing snapshot which `order_items` a finalised bill actually covers, or what they were named/priced at billing time — `getBillableLines()` re-derived from *live* `order_items` by session, which (a) breaks once a session can have more than one bill (split-bill, this same phase) and (b) would let a later menu-item rename silently rewrite an already-issued invoice's content. Fixed with `bill_lines` (0020), a real snapshot table, partitioned and RLS'd like its siblings.
+4. `"settling" → "dining"` wasn't a legal transition in the Phase 3a table_session state machine — needed for a direct bill void to return the table to service. Added to `packages/domain/src/tableSession.ts` with a test, not worked around in application code.
+5. **A DB constraint caught a real money bug in browser testing, not a hand-review**: the first draft of amount-split hardcoded `round_off_paise = 0`, but `splitByAmount()` allocates `payablePaise` independently from `subtotalPaise`/`taxPaise` (each via its own largest-remainder pass), so they don't naturally reconcile — `totals_reconcile` rejected the insert immediately. A second, related bug in the same code: `splitByAmount()`'s own `payablePaise` allocation happens in raw paise, which for most `ways` values doesn't land on a whole-rupee boundary — `payable_is_whole_rupees` would have rejected a 3-way split of an odd total. Fixed by allocating the payable split in whole rupees first, then scaling to paise, and computing the real reconciling round-off from that.
+
+**A deliberate implementation choice worth restating if revisited:** item/guest split does **not** call `packages/domain`'s `splitByShares()` — that function pools same-(sharer-set, tax-class) items together before allocating (correct for the *figures*, and what DOMAIN.md's own worked example does), but throws away which original `order_item` each paisa came from. Since `bill_lines` needs that traceability to reconcile exactly with what's displayed, the Server Action allocates per-item instead (same `allocateLargestRemainder` primitive, applied per original line rather than pooled across lines). DOMAIN.md's own text permits this — split totals don't have to reconcile to a hypothetical un-split bill, only each share's own bill has to be internally correct, which this is by construction.
+
+**Verified via Playwright throughout** (`tools/pos-*-test.mjs`) against real seeded data, not just typecheck/lint/build: finalize/settle/void, split tender (two partial payments), a 3-way amount split reconciling to the exact rupee (₹298+₹298+₹297=₹893), an item/guest split with one shared item producing two invoices each showing the real item names and the shared item's correctly-allocated portion, a manager's partial refund appearing correctly on the original invoice, and a cashier's refund attempt being rejected by `bill_void_refund_capability` with the transaction rolled back atomically (no orphan credit note).
+
+**Not done this session:** Slice 3 (offline outbox, Dexie/IndexedDB, the adversarial reconnect test) — the actual gate ROADMAP.md names for this phase. Flagged in the approved plan as likely to extend past one sitting; Slices 1–2 already deliver a real, demoable, correctly-computed billing flow.
+
+---
+
 ## 2026-07-16 — DOMAIN.md §8 (offline conflict rules) **APPROVED**, Phase 3b unblocked
 
 **Decided by:** Mohammed, approved as written, no changes to the table.
