@@ -4,55 +4,52 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-15, Phase 2 feature-complete (pending push/CI)
+## Where things stand — 2026-07-16, Phase 3a shipped and pushed
 
-**Phase 1 is done and pushed** (`origin/main`, CI green). **Phase 2 is functionally complete against its own plan checklist** — auth, menu catalog, capability layer (A6/A9), the full console UI with the real design system, and now the two remaining unit tests (money entry, audit log). Every checklist item is met **except the last: "CI green on push"** — the Phase 2 commits are local-only, so CI hasn't run on them yet. Nothing is pushed since Phase 1.
+**Phases 1 and 2 are done and pushed, CI green on Phase 1** (Phase 2's CI status was never independently re-checked after its push — see below). **Phase 3a (ordering, tables, KOT) is now feature-complete and pushed** in three checkpoint commits: domain state machines + capability layer, `apps/pos`, `apps/captain`. Full account of what shipped and every real bug found while building it is in DECISIONS.md's 2026-07-16 entry — read that first if picking this back up.
 
-### Phase 2 plan checklist — final status
-- [x] typecheck / lint / build clean across the workspace
-- [x] New migrations (`0011_catalog`, `0012_menu_capability`) apply cleanly to both local DBs
-- [x] A6 + A9 un-skipped and passing; A7/A14 comments corrected to their real phases
-- [x] New audit-log + money-entry tests pass (`test/audit/audit.test.ts`, `packages/ui/src/components/money.test.ts`)
-- [x] BENCH-01 re-run clean after the A9 `bills` policy change (see `docs/BENCHMARKS-RESULTS.md` "Phase 2 re-run")
-- [x] End-to-end walkthrough via real code paths (`scripts/verify-menu-capability.ts`)
-- [ ] **CI green on push** — not done; needs a push (ask first, per standing rule)
+### Phase 3a — what exists and works right now
 
-Beyond the plan, this phase also did a full **design-system pass** (unplanned, requested mid-phase): self-hosted fonts, the app shell, the state rail wired through `/menu`, and Framer Motion with a structural POS/KDS zero-motion guard. See DECISIONS.md.
-
-### What exists and works right now
-
-- **Monorepo**: pnpm + Turborepo. `apps/console` now has real auth (`/login`, session-gated everything else) and a real menu CRUD surface (`/menu`, `/menu/new`, `/menu/[id]`). `apps/{pos,kds,booth,captain}` are still empty shells. `packages/domain`/`ai`/`channels` still empty (Phase 3b+ work).
-- **`packages/db`**: full schema through migration `0012`. Has a real build step now (`pnpm build` → `dist/`, `package.json` main/types point there) — needed because Turbopack can't follow the package's NodeNext-style `.js`-suffixed imports the way `tsx` can. `main`/`types` → `dist/`; `scripts/`/`bench/`/`test/` still import source directly, unaffected.
-- **Both correctness suites pass**, 40 tests, 2 legitimately skipped (A7, A14 — no code path exists yet to enforce a rule against). **A6 and A9 are no longer skipped** — the role-capability layer is real: a price-change trigger (`can_set_menu_price()` + `check_menu_item_override_price_capability()`) and a restrictive RLS policy on `bills`/`bill_tax_lines`/`payments`.
-- **BENCH-01 re-run clean** after the A9 policy change (see `docs/BENCHMARKS-RESULTS.md`'s "Phase 2 re-run" section) — still passes every threshold, InitPlan hoist confirmed intact.
-- **Design tokens + 13 UI primitives** (Phase 1's 10 + `Select`/`Textarea`/`MoneyInput` this session) in `packages/ui`.
-- **CI is green on `origin/main`** (verified via the GitHub API after a real push, all three jobs passed).
-
-### Local environment, for picking this back up
-
-- **docker-compose Postgres** on port 54329 (`restrobooth`/`restrobooth`) — day-to-day schema dev + the 9M-row bench fixture. Has all migrations through `0012`.
-- **Supabase CLI local stack** — `C:\Users\Mohammed\bin\supabase.exe`, direct Postgres on **54322** (`postgres`/`postgres`), API/GoTrue on 54321, Studio on 54323. Start with `supabase start`. This is what the test suites, the console app (`apps/console/.env.local`), and `pnpm seed:auth` all point at.
-- **Docker Desktop on this machine is flaky** — its engine has silently dropped mid-session at least twice this project. If `docker ps` fails with a pipe-connection error, just restart Docker Desktop and wait ~20s; the Supabase containers come back on their own (they're not ephemeral).
-- **Two seeded accounts for manual login** (`localhost:3000/login`): `owner@restrobooth.test` / `cashier@restrobooth.test`, password `restrobooth` for both. **Re-run `pnpm --filter @restrobooth/db seed:auth` after every `pnpm seed`** — the believable-chain seed truncates `auth.users`, which wipes the repointing; `seed:auth` is idempotent and self-healing (documented in its own header comment).
-- **A real, non-obvious gotcha for any future Node CLI script in this package:** the classic `import.meta.url === \`file://${process.argv[1]}\`` entrypoint guard **does not work on Windows** (path-separator/URI-encoding mismatch) — it silently no-ops instead of erroring, which is exactly what happened to `pnpm seed` for an unknown stretch of this project's history. Use `path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)` instead. If a future script copies the old pattern, it will look like it ran (exit 0, no error) and do nothing — this is genuinely hard to notice without checking row counts.
-- **A real Drizzle gotcha, worth knowing before writing more Server Actions:** `DrizzleQueryError.message` is `"Failed query: <sql>"`, not the underlying Postgres error — that's in `.cause.message`. Any code that pattern-matches on an error message to show a friendlier one (see `apps/console/app/menu/item-actions.ts`'s `fullErrorMessage()`) must walk the `.cause` chain, or the match silently never fires.
+- **`packages/domain` has real code for the first time** (Phases 1–2 shipped it as an empty, tested-empty shell). Three state machines (`table_session`, `order_item`, `kot`, DOMAIN.md §3.1–3.3) plus `rail.ts` (the state-rail's time-temperature ramp as a pure function). 30 tests, all-pairs transition coverage.
+- **`apps/pos`**: real auth, a floor map (`/floor`, state-rail-coded by table dwell time, live via Supabase Realtime), and a full order pad (`/floor/[sessionId]`) — add items with server-resolved pricing, fire (routes to one KOT per kitchen section touched), a mock printer bridge with a real 10-second no-ACK alarm, reprint, the full pre-fire-free / post-fire-manager-gated void flow, same-store merge.
+- **`apps/captain`**: real auth, a real PWA (installable manifest + generated icon), a mobile-first floor list and order screen — narrower scope than POS by design (seat, add items, fire, flag-for-void, call for bill; no merge/reprint/void-approval, which are POS/manager surfaces per TENANCY.md's capability matrix).
+- **`packages/db`**: schema through migration `0015`. New capability migration (`0014`) enforces "take an order" by role and gates post-fire voids server-side (never trust the client's claim about who's authorizing). `0015` adds `table_sessions`/`kots` to the `supabase_realtime` publication (guarded — the docker-compose bench DB has no Supabase stack, so this no-ops there).
+- **Both correctness suites pass, 54 tests** (was 44 in Phase 2), 2 legitimately skipped (A7 — bills, Phase 3b; A14 — QR tokens, Phase 5). 10 new Phase 3a capability tests, same shape as A6/A9.
+- **A real architectural fix**: `packages/domain` now uses bundler-mode module resolution (matching `packages/ui`, not `packages/db`) — it ships raw source into Next apps via `transpilePackages`, which needs extensionless imports; NodeNext's `.js` suffixes (needed only for its own `vitest` run) broke the build the first time anything outside its own test suite consumed it. Same ESLint guard `packages/ui` already carries now applies here too.
+- **Ten real bugs found and fixed via the Playwright inspection tooling actually driving the running apps** — not caught by typecheck/lint/build, which all stayed green throughout. Full list with root causes in DECISIONS.md; the two worth remembering for future Server Action work: (a) never `Promise.all()` multiple queries sharing one transaction-bound `pg` client — it silently serialises today, errors in a future major version; (b) a `LEFT JOIN` with the filter condition in the `ON` clause does not eliminate non-matching rows, it just nulls them — for "give me the one currently-active X" queries, use `LEFT JOIN LATERAL (... LIMIT 1) ON true`.
 
 ### Known gaps — not silently closed, need a human or a follow-up session
 
-1. ~~No visual review of anything~~ **Resolved.** A real Playwright-based inspection tool now exists (`tools/screenshot.mjs`, `tools/login-and-save-state.mjs` — Chromium installed as a root devDependency, not shipped in any app). `/style-guide`, `/login`, `/menu`, and `/menu/[id]` have been visually reviewed via real screenshots (viewport, full-page, and pixel-clipped zooms) — none are template-shaped; login pitch pane, state-rail legend, and the item-detail form all read as intentional. One suspected row-alignment glitch on `/menu` turned out to be a PNG-crop/display artifact, not a real bug — confirmed by comparing `getBoundingClientRect()` across rows (byte-identical), which is the lesson: verify layout claims against computed geometry, not just a downscaled screenshot. Use `pnpm screenshot <url> <out.png> [--full-page --width=N --state=path --clip=x,y,w,h]` going forward; `pnpm login:save-state <baseUrl> <email> <password> <out.json>` gets an authenticated storageState first.
-2. **The Server Action / real-browser-form flow has been exercised for login, not yet for item create/price-publish/86.** Login was proven via a real browser click-through (`tools/login-and-save-state.mjs`). The menu-mutation Server Actions are still verified via `packages/db/scripts/verify-menu-capability.ts`, which calls the same `withUser()` primitive but bypasses the real HTTP form submission. Now that the browser tool exists, a full click-through (fill "New item", submit, publish a price, 86 an item, check the audit trail renders) is cheap to do in a follow-up session.
-3. **A7 (captain can't create a bill) and A14 (QR token replay) are still `test.skip`**, correctly — no bill-creation or token-minting code exists yet (Phase 3a / Phase 5 respectively).
-4. **Two BENCH-02 fixture gaps**, documented in `docs/BENCHMARKS-RESULTS.md`: bench overrides don't vary by channel or reference dayparts/promos, so R2/R3 don't fully exercise what their names claim.
-5. **No "create category" UI.** Categories exist and `/menu` groups by them, but they're only created by `pnpm --filter @restrobooth/db seed:categories` (a dev script that keyword-buckets the seeded items). A create-category screen is deferred — not in the Phase 2 plan's scope, and the pilot menu can be categorised by the seed for now. New items with no category land in "Uncategorised", which renders fine.
+1. **Table split and move are not built.** ROADMAP.md's Phase 3a build list names "merge / split / move"; only merge shipped. Split is deliberately deferred to Phase 3b (DOMAIN.md §3.1 says so itself — real split support is billing-time). Move (reassign a session to a different table) just wasn't reached; cheapest of the three to add later.
+2. **`table_sessions` INSERT has no role-capability gate**, unlike `orders`/`order_items` — a kitchen/brand_manager role could open an empty table session directly against the DB (never through either app's UI). Harmless in practice (adding an *item* to it IS gated), noted rather than fixed under time pressure.
+3. **Reprint does not write a print-event row.** ROADMAP.md's acceptance line asks for both the `reprint_count` increment (shipped) and a print event (not shipped — `order_status_events` exists in schema, nothing writes to it yet). Deliberately deferred to Phase 4, when the full event-seq/gap-detection consumer gets built anyway.
+4. **Realtime is configured, not chaos-tested.** The publication and subscriptions are real and verified to exist; no two-browser-session test proved a push actually lands without a manual reload, and there's no heartbeat/polling fallback yet (ADR-0005 scopes that resilience work to Phase 4/KDS explicitly — this isn't a shortfall against Phase 3a's own acceptance criteria).
+5. **No real thermal printer bought.** ROADMAP.md: "buy a real thermal printer — do not discover the code-page problem during a pilot." A hardware purchase, not something buildable; flagging again since it's easy to forget until it's urgent.
+6. **A7 and A14 still `test.skip`, correctly** — bill-creation (Phase 3b) and QR-token (Phase 5) capability, respectively.
+7. **Phase 2's CI status was never re-verified this session.** No network access was available from the tool to check the GitHub Actions API. Phase 1's CI was confirmed green via a direct API check in an earlier session; Phase 2 and Phase 3a's pushes have not had the same independent confirmation — worth checking `origin/main`'s Actions tab next time there's a live connection.
 
 ### Local dev fixtures — restore ritual after any test run
-The test suite's `globalSetup` truncates and reseeds the believable chain, which drops the GoTrue-linked memberships and the categories. After running `pnpm test`, restore the app's dev state with: `pnpm --filter @restrobooth/db seed:auth && pnpm --filter @restrobooth/db seed:categories`. Both are idempotent. (Docker on this machine also keeps stopping on its own — if the DB is unreachable, restart Docker Desktop, wait ~20s, containers self-recover with data intact.)
+The test suite's `globalSetup` truncates and reseeds the believable chain, which drops the GoTrue-linked memberships, categories, and kitchen-section routing. After running `pnpm test`, restore the app's dev state with:
+```
+pnpm --filter @restrobooth/db seed:auth && pnpm --filter @restrobooth/db seed:categories && pnpm --filter @restrobooth/db seed:kitchen-sections
+```
+All three are idempotent. (Docker on this machine also keeps stopping on its own — if the DB is unreachable, restart Docker Desktop, wait ~20s, containers self-recover with data intact — this recurred again this session, same non-fix as before.)
 
-### Not yet pushed
-All Phase 2 work is committed to `main` locally (`539bbc2` auth · `4a3741e` catalog+capability · `e007687` design system · plus the tests commit). **Nothing pushed since Phase 1.** The only unmet checklist item ("CI green on push") needs this. Ask before pushing, per standing instruction.
+### Local environment, for picking this back up
+
+- **docker-compose Postgres** on port 54329 (`restrobooth`/`restrobooth`) — day-to-day schema dev + the 9M-row bench fixture. Has all migrations through `0015` (the realtime-publication migration no-ops here — no Supabase stack).
+- **Supabase CLI local stack** — `C:\Users\Mohammed\bin\supabase.exe`, direct Postgres on **54322** (`postgres`/`postgres`), API/GoTrue on 54321, Studio on 54323. Start with `supabase start`. This is what the test suites and all three Next apps (`apps/console`, `apps/pos`, `apps/captain`) point at.
+- **Two seeded accounts for manual login** on any of the three apps (`localhost:3000/login`): `owner@restrobooth.test` (org_owner — can approve voids, publish prices) / `cashier@restrobooth.test` (cashier — can take orders, cannot approve a post-fire void or publish a price), password `restrobooth` for both. Re-run `seed:auth` after every `pnpm seed` — see the restore ritual above.
+- **The browser inspection tooling** (`tools/screenshot.mjs`, `tools/login-and-save-state.mjs`, installed 2026-07-16) is what found essentially every real bug this phase. `pnpm screenshot <url> <out.png> [--full-page --width=N --height=N --state=path --clip=x,y,w,h --wait=ms]`; `pnpm login:save-state <baseUrl> <email> <password> <out.json>` gets an authenticated storageState first. For anything beyond a static screenshot (clicking through a flow, checking console errors), write a small throwaway Playwright script in `tools/`, run it, delete it — that's how every bug in DECISIONS.md's 2026-07-16 entry was actually found.
+- **Three Next dev servers, one port.** `apps/console`, `apps/pos`, and `apps/captain` all default to port 3000 — only run one at a time locally, or pass a different port. Each has its own `.env.local` (all three point at the same Supabase-local stack).
+
+### Not yet independently CI-verified
+Commits `bb6ba44` (domain + capability), `7e9f14d` (apps/pos), `ca8e3a6` (apps/captain) are all pushed to `origin/main`. CLAUDE.md's git-workflow rule now says "push automatically" (the user edited this directly mid-session, commit `8e46b0b`) — pushing no longer needs to be asked for. GitHub Actions should have triggered on all three; not independently confirmed this session (see gap #7 above).
 
 ---
 
-## Next up: Phase 3a — ordering, tables, KOT
+## Next up: Phase 3b — Billing, Payments, Day Close
 
-Phase 2 is feature-complete pending the push. Next on the pilot path (ROADMAP.md §2) is **Phase 3a: ordering, tables, KOT** — the first phase that writes `orders`/`order_items`/`kots` for real, and where A7 ("captain can't create a bill") finally gets a code path to enforce against. Re-read ROADMAP.md §2 and DOMAIN.md's state machines at the start of that session.
+**⚠️ Blocked until offline conflict rules are approved** (DOMAIN.md §8, PARKED as of 2026-07-13 — re-check whether that's been resolved before starting). If still parked, the bill-generation, tax, and day-close work that doesn't depend on the offline conflict rule can still proceed; the outbox-sync/offline-first half cannot.
+
+This is "the crown jewels — go slow" per ROADMAP.md: bill generation, GST/CGST/SGST, discounts, split bill, split tender, void/refund with credit notes, day open/close with reconciliation, GST-compliant invoice printing, and offline-first mode with outbox sync. `packages/domain` needs 100% line/branch coverage on the money math (every worked example in DOMAIN.md §7 as a fixture) — this is the phase that finally exercises that acceptance bar for real. A7 (captain can't create a bill) finally gets a real code path to enforce against once bill creation exists.
