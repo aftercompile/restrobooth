@@ -79,6 +79,10 @@ describe("canMerge — the cross-store guard (DOMAIN.md §3.1)", () => {
     expect(canMerge(B_sameStore, A)).toBe(true);
   });
 
+  test("assertCanMerge is silent (does not throw) on a fully valid merge — positive control", () => {
+    expect(() => assertCanMerge(B_sameStore, A)).not.toThrow();
+  });
+
   test("a merge across stores is blocked — you cannot fold Wok Express into Spice Route", () => {
     expect(canMerge(B_otherStore, A)).toBe(false);
     expect(() => assertCanMerge(B_otherStore, A)).toThrow(/across stores/);

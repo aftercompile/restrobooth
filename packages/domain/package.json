@@ -9,11 +9,13 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {},
   "devDependencies": {
     "@restrobooth/config": "workspace:*",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9.39.5",
     "typescript": "~5.9.3",
     "vitest": "^4.1.10"
