@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHeader } from "@restrobooth/ui";
 import { createClient } from "../../../lib/supabase/client";
@@ -119,6 +120,8 @@ export function OrderPad({
         </div>
         <div className={styles.total}>₹{formatRupees(total.toString())}</div>
       </div>
+
+      <Link href={`/floor/${session.sessionId}/bill`}>Go to bill →</Link>
 
       <div className={styles.columns}>
         <div>

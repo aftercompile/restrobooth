@@ -6,7 +6,10 @@ import type { ReactNode } from "react";
 import { signOut } from "./auth-actions";
 import styles from "./PosShell.module.css";
 
-const NAV = [{ href: "/floor", label: "Floor" }];
+const NAV = [
+  { href: "/floor", label: "Floor" },
+  { href: "/day", label: "Day" },
+];
 
 export function PosShell({ email, children }: { email?: string | undefined; children: ReactNode }) {
   const pathname = usePathname();

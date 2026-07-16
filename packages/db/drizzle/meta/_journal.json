@@ -113,6 +113,41 @@
       "when": 1784196428044,
       "tag": "0015_realtime_publication",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1784201653404,
+      "tag": "0016_billing_capability_and_allocator",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1784201776272,
+      "tag": "0017_bill_take_capability",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1784202102033,
+      "tag": "0018_terminal_day_drawers",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1784203108346,
+      "tag": "0019_bill_table_session",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1784203920664,
+      "tag": "0020_bill_lines",
+      "breakpoints": true
     }
   ]
 }

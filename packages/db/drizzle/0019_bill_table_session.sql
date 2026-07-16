@@ -1,0 +1,2 @@
+ALTER TABLE "bills" ADD COLUMN "table_session_id" uuid;--> statement-breakpoint
+ALTER TABLE "bills" ADD CONSTRAINT "bills_table_session_id_table_sessions_id_fk" FOREIGN KEY ("table_session_id") REFERENCES "public"."table_sessions"("id") ON DELETE no action ON UPDATE no action;

@@ -5,19 +5,12 @@
  * menu items). Runs against the Supabase local stack's real GoTrue-backed
  * auth.uid() — see fixtures.ts for why.
  *
- * A6, A7, A9, A14 are ROLE-CAPABILITY or token-layer concerns, not tenant-
- * scope ones. Phase 1 deliberately enforced tenant ISOLATION only and left
- * the CAPABILITY matrix for Phase 2/3a. A6 and A9 are built (Phase 2's
- * menu-capability migration, drizzle/0012_menu_capability.sql) and
- * un-skipped below.
- *
- * A7 ("captain cannot create a BILL") is still correctly `test.skip` —
- * bills are Phase 3b (Billing) work; Phase 3a only writes orders/order_
- * items/kots. Do not un-skip A7 against an orders-table insert — that
- * would be testing a different rule than the one TENANCY.md names. The
- * order/order_item/kot capability equivalents A7 is adjacent to (§4's
- * "take an order" and "void a fired KOT item" rows) are covered below as
- * Phase 3a additions, same shape as A6/A9 but not literally A7.
+ * A6, A7, A9 are ROLE-CAPABILITY concerns, not tenant-scope ones. Phase 1
+ * deliberately enforced tenant ISOLATION only and left the CAPABILITY
+ * matrix for later phases, built incrementally as each phase's own code
+ * path came into existence: A6/A9 in Phase 2 (drizzle/0012), A7 in Phase 3b
+ * (drizzle/0017, once bill creation existed at all to enforce a rule
+ * against). All three are un-skipped below.
  *
  * A14 (QR token replay) still legitimately `test.skip` — no token-minting
  * code path exists yet (Phase 5, Booth).
@@ -124,13 +117,34 @@ describe("A6: cashier cannot change a price, but CAN 86 an item (capability, not
   });
 });
 
-// "captain inserts a bill" is a role-capability question, same shape as
-// A6/A9 — but no bill-creation code path exists yet (that's Phase 3b's
-// billing work, ROADMAP.md §3), so there is nothing to enforce a rule
-// against. Phase 3a's own order/order_item/kot capability rules (the "take
-// an order" and "void a fired KOT item" rows of TENANCY.md §4) are covered
-// below — they are A7's siblings, not a resolution of A7 itself.
-test.skip("A7: captain cannot create a bill (capability, not scope) — Phase 3b work, not yet enforced", () => {});
+// A7 — TENANCY.md §6: "captain @ outlet:AMD-1, insert into bills(...),
+// denied." Phase 3b builds the first real bill-creation code path, so this
+// finally has something to enforce against. Enforced by
+// bill_take_capability (drizzle/0017) — same financial-capability role set
+// as "Settle a bill" in TENANCY.md §4's matrix; captain never appears in
+// any billing row.
+describe("A7: captain cannot create a bill (capability, not scope)", () => {
+  const attemptBillInsert = (c: pg.Client) =>
+    c.query(
+      `insert into bills
+         (id, business_date, outlet_id, store_id, gst_registration_id, terminal_id, status, subtotal_paise, payable_paise, idempotency_key)
+       values (gen_random_uuid(), current_date, $1, $2, $3, $4, 'draft', 0, 0, gen_random_uuid())`,
+      [id.OUTLET_AMD, id.STORE_AMD_A, id.GST_GJ, id.TERMINAL_AMD_T1],
+    );
+
+  test("A7: captain cannot create a bill", async () => {
+    await asUser(client, id.USER_AMD_CAPTAIN, async (c) => {
+      await expect(attemptBillInsert(c)).rejects.toThrow(/row-level security/);
+    });
+  });
+
+  test("A7b: cashier CAN create a bill (positive control)", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      const r = await attemptBillInsert(c);
+      expect(r.rowCount).toBe(1);
+    });
+  });
+});
 
 test("A8: brand_manager @ Brand A cannot read Brand B's orders at the SAME shared outlet", async () => {
   // The case that catches a naive implementation: Surat is one outlet
@@ -391,6 +405,91 @@ describe("Phase 3a — a table_session merge is blocked across stores (DOMAIN.md
         "update table_sessions set status = 'merged_into', merged_into_session_id = $1 where id = $2",
         [b.rows[0].id, a.rows[0].id],
       );
+      expect(r.rowCount).toBe(1);
+    });
+  });
+});
+
+// =============================================================================
+// Phase 3b additions — TENANCY.md §4's "Day open/day close" and "Void/
+// refund a settled bill" rows (manager-only, cashier excluded), and the
+// discount-threshold split on "Apply discount <= / > threshold". Enforced
+// by drizzle/0016_billing_capability_and_allocator.sql.
+// =============================================================================
+
+describe("Phase 3b — day open/close is manager-only (TENANCY.md §4)", () => {
+  const attemptDayInsert = (c: pg.Client) =>
+    // A distinct future business_date + status='closed' sidesteps the
+    // "one open day per outlet" partial unique index — this test is only
+    // about the CAPABILITY gate, not day-lifecycle correctness.
+    c.query(
+      "insert into business_days (id, outlet_id, business_date, status) values (gen_random_uuid(), $1, '2099-01-01', 'closed')",
+      [id.OUTLET_AMD],
+    );
+
+  test("cashier cannot open/create a business day", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      await expect(attemptDayInsert(c)).rejects.toThrow(/row-level security/);
+    });
+  });
+
+  test("outlet_manager CAN open/create a business day (positive control)", async () => {
+    await asUser(client, id.USER_AMD_MGR, async (c) => {
+      const r = await attemptDayInsert(c);
+      expect(r.rowCount).toBe(1);
+    });
+  });
+});
+
+describe("Phase 3b — void/refund a settled bill is manager-only (TENANCY.md §4)", () => {
+  test("cashier cannot void a settled bill", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      // No explicit WITH CHECK was written in the policy — Postgres reuses
+      // the single USING clause for both row-selection (against the OLD
+      // row) AND the write-check (against the NEW row) when only one is
+      // given. The OLD row (status='settled') passes the USING/visibility
+      // half either way; it's the NEW row (status='voided') failing the
+      // reused WITH CHECK half that raises here, not a silent 0-row filter.
+      await expect(c.query("update bills set status = 'voided' where id = $1", [id.BILL_AMD_1])).rejects.toThrow(
+        /row-level security/,
+      );
+    });
+  });
+
+  test("outlet_manager CAN void a settled bill (positive control)", async () => {
+    await asUser(client, id.USER_AMD_MGR, async (c) => {
+      const r = await c.query("update bills set status = 'voided' where id = $1", [id.BILL_AMD_1]);
+      expect(r.rowCount).toBe(1);
+    });
+  });
+});
+
+describe("Phase 3b — a discount above the threshold needs a manager (TENANCY.md §4)", () => {
+  const attemptBillWithDiscount = (c: pg.Client, discountPaise: number) =>
+    c.query(
+      `insert into bills
+         (id, business_date, outlet_id, store_id, gst_registration_id, terminal_id, status,
+          subtotal_paise, discount_paise, payable_paise, idempotency_key)
+       values (gen_random_uuid(), current_date, $1, $2, $3, $4, 'draft', 10000, $5, ${10000 - discountPaise}, gen_random_uuid())`,
+      [id.OUTLET_AMD, id.STORE_AMD_A, id.GST_GJ, id.TERMINAL_AMD_T1, discountPaise],
+    );
+
+  test("cashier CAN apply a discount at exactly the 20% threshold (positive control)", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      const r = await attemptBillWithDiscount(c, 2000); // exactly 20% of 10 000
+      expect(r.rowCount).toBe(1);
+    });
+  });
+
+  test("cashier cannot apply a discount above the 20% threshold", async () => {
+    await asUser(client, id.USER_AMD_CASHIER, async (c) => {
+      await expect(attemptBillWithDiscount(c, 2001)).rejects.toThrow(/insufficient privilege/);
+    });
+  });
+
+  test("outlet_manager CAN apply a discount above the threshold (positive control)", async () => {
+    await asUser(client, id.USER_AMD_MGR, async (c) => {
+      const r = await attemptBillWithDiscount(c, 5000); // 50% — well above threshold
       expect(r.rowCount).toBe(1);
     });
   });

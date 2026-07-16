@@ -1,0 +1,83 @@
+.header {
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.sub {
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+  margin: 2px 0 0 0;
+}
+
+.lineRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+}
+
+.lineName {
+  flex: 1;
+}
+
+.lineAmount {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  min-width: 80px;
+  text-align: right;
+}
+
+.totalsRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+}
+
+.totalsRow.grand {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  border-top: 1px solid var(--ink-500);
+  margin-top: 4px;
+  padding-top: 10px;
+}
+
+.controls {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin: var(--space-2) 0;
+}
+
+.narrowInput {
+  width: 140px;
+}
+
+.select {
+  min-height: 44px;
+  background: var(--ink-900);
+  color: var(--chalk-50);
+  border: 1px solid var(--ink-500);
+  border-radius: var(--radius);
+  padding: 0 10px;
+}
+
+.error {
+  color: var(--signal-600);
+  font-size: var(--text-sm);
+}
+
+.paymentRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+}

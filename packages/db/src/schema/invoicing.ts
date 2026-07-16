@@ -14,6 +14,12 @@ import { outlets, terminals } from "./tenancy.js";
 import { gstRegistrations } from "./tenancy.js";
 import { stores } from "./tenancy.js";
 import { taxClasses } from "./menu.js";
+import { tableSessions } from "./operations.js";
+
+// Denormalized so a printed invoice can never change: menu_items.name is
+// editable (Phase 2), but a settled bill must show the name it billed
+// under. bill_id/business_date is a hand-written composite FK -> bills,
+// same as bill_tax_lines. Partitioned by business_date — see 0020's header.
 
 export const invoiceSeries = pgTable(
   "invoice_series",
@@ -109,6 +115,13 @@ export const bills = pgTable(
     terminalId: uuid("terminal_id")
       .notNull()
       .references(() => terminals.id),
+    // Real Phase 1 gap, found while building Phase 3b: nothing traced a
+    // bill back to the table_session it was billed for — not even an
+    // order_id. Nullable because a future non-dine-in channel (delivery,
+    // Phase 7) may bill against an order with no table session at all;
+    // dine-in bills always set it. Split-by-guest/item produces several
+    // bills against the SAME session — a real one-to-many, not a mistake.
+    tableSessionId: uuid("table_session_id").references(() => tableSessions.id),
     invoiceNo: text("invoice_no"), // NULL while draft; assigned at finalise
     status: text("status").notNull(),
 
@@ -161,6 +174,33 @@ export const billTaxLines = pgTable(
   },
   (t) => [
     check("tax_component_valid", sql`${t.component} in ('cgst','sgst','igst','cess')`),
+  ],
+);
+
+export const billLines = pgTable(
+  "bill_lines",
+  {
+    id: uuid("id").notNull(),
+    businessDate: date("business_date").notNull(),
+    billId: uuid("bill_id").notNull(), // composite FK -> bills(id, business_date)
+    outletId: uuid("outlet_id")
+      .notNull()
+      .references(() => outlets.id),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id),
+    orderItemId: uuid("order_item_id").notNull(), // composite FK -> order_items(id, business_date)
+    name: text("name").notNull(), // snapshotted at finalise — see header note
+    quantity: integer("quantity").notNull(),
+    unitPricePaise: bigint("unit_price_paise", { mode: "bigint" }).notNull(),
+    taxClassId: uuid("tax_class_id")
+      .notNull()
+      .references(() => taxClasses.id),
+    taxRateBps: integer("tax_rate_bps").notNull(), // snapshotted rate — see header note
+  },
+  (t) => [
+    check("bill_line_quantity_positive", sql`${t.quantity} > 0`),
+    check("bill_line_unit_price_non_negative", sql`${t.unitPricePaise} >= 0`),
   ],
 );
 

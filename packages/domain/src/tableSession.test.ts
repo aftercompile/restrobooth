@@ -26,6 +26,7 @@ const LEGAL: ReadonlyArray<[TableSessionStatus, TableSessionStatus]> = [
   ["bill_requested", "abandoned"],
   ["settling", "closed"],
   ["settling", "abandoned"],
+  ["settling", "dining"], // Phase 3b: voiding a finalised-but-unsettled bill
 ];
 
 const ALL: TableSessionStatus[] = [

@@ -28,7 +28,15 @@ const TRANSITIONS: Record<TableSessionStatus, readonly TableSessionStatus[]> = {
   // new item after the bill was asked for requires deliberately reopening
   // the session, so nobody adds a line after the printed total by accident.
   bill_requested: ["settling", "dining", "abandoned"],
-  settling: ["closed", "abandoned"],
+  // settling -> dining is the same kind of recovery as bill_requested ->
+  // dining, one step later: voiding a finalised-but-unsettled bill
+  // (Phase 3b — a cashier caught an error before anyone paid) has to put
+  // the party BACK into active service, not strand the session in
+  // 'settling' with no bill and no legal way out. Discovered while
+  // building the void-a-bill action — DOMAIN.md's original diagram didn't
+  // name this path because it predates bill voiding having a real code
+  // path to need it against.
+  settling: ["closed", "abandoned", "dining"],
   closed: [],
   abandoned: [],
   merged_into: [],

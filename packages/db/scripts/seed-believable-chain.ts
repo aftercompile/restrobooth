@@ -258,6 +258,19 @@ export async function seedBelievableChain(db: Database) {
     { id: id.BIZDAY_MUM, outletId: id.OUTLET_MUM, businessDate: today(), status: "open", openedBy: id.USER_MUM_MGR, openedAt: new Date() },
     { id: id.BIZDAY_BLR, outletId: id.OUTLET_BLR, businessDate: today(), status: "open", openedAt: new Date() },
   ]);
+
+  // A real day-open (via apps/pos's openDay Server Action, Phase 3b) also
+  // opens the outlet's one terminal's drawer — this fixture skips that
+  // action and inserts business_days directly, so it has to create the
+  // matching terminal_day_drawers row itself or every seeded outlet would
+  // have an open day that can never actually be closed through the app
+  // (closeDay requires a drawer to count). ₹5,000 is a believable float.
+  await db.insert(schema.terminalDayDrawers).values([
+    { id: crypto.randomUUID(), businessDayId: id.BIZDAY_AMD, terminalId: id.TERMINAL_AMD_T1, outletId: id.OUTLET_AMD, openingFloatPaise: 500_000n, openedBy: id.USER_AMD_MGR },
+    { id: crypto.randomUUID(), businessDayId: id.BIZDAY_SURAT, terminalId: id.TERMINAL_SURAT_T1, outletId: id.OUTLET_SURAT, openingFloatPaise: 500_000n, openedBy: id.USER_SURAT_MGR },
+    { id: crypto.randomUUID(), businessDayId: id.BIZDAY_MUM, terminalId: id.TERMINAL_MUM_T1, outletId: id.OUTLET_MUM, openingFloatPaise: 500_000n, openedBy: id.USER_MUM_MGR },
+    { id: crypto.randomUUID(), businessDayId: id.BIZDAY_BLR, terminalId: id.TERMINAL_BLR_T1, outletId: id.OUTLET_BLR, openingFloatPaise: 500_000n, openedBy: id.USER_ORG2_OWNER },
+  ]);
   await db.insert(schema.outletEventCounters).values([
     { outletId: id.OUTLET_AMD }, { outletId: id.OUTLET_SURAT }, { outletId: id.OUTLET_MUM }, { outletId: id.OUTLET_BLR },
   ]);

@@ -14,7 +14,7 @@ import {
   check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { outlets, stores, tables } from "./tenancy.js";
+import { outlets, stores, tables, terminals } from "./tenancy.js";
 import { menuItems, taxClasses } from "./menu.js";
 
 export const businessDays = pgTable(
@@ -39,6 +39,43 @@ export const businessDays = pgTable(
       .where(sql`${t.status} = 'open'`),
     check("business_day_status_valid", sql`${t.status} in ('open','closed')`),
   ],
+);
+
+// DOMAIN.md §4.4's per-terminal drawer reconciliation — a real gap found
+// while building Phase 3b's day-close checklist: business_days itself
+// carries no opening float or counted-cash fields, and the doc is explicit
+// that a drawer is reconciled PER TERMINAL, not per outlet (a two-till
+// outlet has two drawers — TENANCY.md §2 Case C). One row per
+// (business_day, terminal); opening_float is set at day-open, counted/
+// variance are set at day-close. "payouts" (a real line in DOMAIN.md's
+// expected-cash formula) has no schema anywhere yet — out of scope here,
+// documented at the call site that computes expected cash, not hidden.
+export const terminalDayDrawers = pgTable(
+  "terminal_day_drawers",
+  {
+    id: uuid("id").primaryKey(),
+    businessDayId: uuid("business_day_id")
+      .notNull()
+      .references(() => businessDays.id),
+    terminalId: uuid("terminal_id")
+      .notNull()
+      .references(() => terminals.id),
+    outletId: uuid("outlet_id")
+      .notNull()
+      .references(() => outlets.id), // denormalized for RLS, same convention as orders/kots
+    openingFloatPaise: bigint("opening_float_paise", { mode: "bigint" }).notNull().default(sql`0`),
+    countedPaise: bigint("counted_paise", { mode: "bigint" }), // null until counted at close
+    // Recorded at count time, not recomputed later — DOMAIN.md §4.4:
+    // "variance = counted - expected is recorded." Expected cash depends on
+    // that moment's payment records; storing the variance is what keeps
+    // the reconciliation an immutable historical fact.
+    variancePaise: bigint("variance_paise", { mode: "bigint" }),
+    varianceNote: text("variance_note"), // required when variance != 0, checked at the app layer
+    openedBy: uuid("opened_by").notNull(),
+    countedBy: uuid("counted_by"),
+    countedAt: timestamp("counted_at", { withTimezone: true }),
+  },
+  (t) => [unique().on(t.businessDayId, t.terminalId)],
 );
 
 // Backs the per-outlet monotonic event_seq that ADR-0005's gap-detection
