@@ -74,5 +74,4 @@ After completing any discrete unit of work (a phase, a feature, a bug fix),
 automatically run:
   git add .
   git commit -m "<clear, specific message describing what changed>"
-Do this without waiting to be asked. Do NOT push automatically — only commit.
-Ask before pushing to origin.
+Do this without waiting to be asked. Push automatically.
