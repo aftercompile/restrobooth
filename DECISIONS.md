@@ -4,6 +4,18 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-16 — DOMAIN.md §8 (offline conflict rules) **APPROVED**, Phase 3b unblocked
+
+**Decided by:** Mohammed, approved as written, no changes to the table.
+
+The per-entity conflict-rule table drafted in Phase 0 (2026-07-13) and PARKED pending sign-off is now approved without modification. Reviewed against everything built since it was drafted (the Phase 3a append-only `order_item`/`kot` patterns, the single-writer `business_day` semantics, the idempotency-key discipline already wired through `packages/db`) and it holds up — nothing built since contradicts it.
+
+The rule, restated for whoever builds Phase 3b: **it is per entity, not global.** `order_item` adds append-only-merge (never lose an order); `table_session` close/settle server-rejects-with-replay (never resurrect a closed table); `bill` finalise is immutable and idempotency-keyed (never renumber, never double-charge); item availability uses an *asymmetric* LWW — `unavailable` beats `available` inside a 60s window, because it's cheaper to be wrong in the safe direction. Full table: [docs/DOMAIN.md](docs/DOMAIN.md) §8.
+
+Updated in place: `DOMAIN.md`'s top banner and §8's own banner (PARKED → APPROVED), `ROADMAP.md`'s Phase 3b blocked-banner (BLOCKED → UNBLOCKED). No schema or code changes — this was purely a documentation/approval action; Phase 3b's actual build (bill generation, tax, day close, offline outbox sync) has not started.
+
+---
+
 ## 2026-07-16 — Phase 3a: ordering, tables, KOT — apps/pos and apps/captain both real, shipped in three slices
 
 **Decided by:** Mohammed ("let's move to Phase 3"), executed against a plan approved via `/plan` (three slices: domain + capability layer, apps/pos, apps/captain).

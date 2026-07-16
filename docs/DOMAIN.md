@@ -1,8 +1,8 @@
 # RestroBooth — Domain Model
 
-**Status: ✅ APPROVED — 2026-07-13**, with one exception: **§8 (offline conflict rules) is PARKED, not approved.** See the banner on §8.
-Entities, the four state machines, the business-day rule, the money rules, invoice numbering, and every worked example in §7 are settled. **Phase 1 builds to this.**
-**Last updated:** 2026-07-13
+**Status: ✅ APPROVED — 2026-07-13.** §8 (offline conflict rules) was PARKED pending sign-off; **approved 2026-07-16** (see the banner on §8 and DECISIONS.md). The whole document is now settled.
+Entities, the four state machines, the business-day rule, the money rules, invoice numbering, every worked example in §7, and the per-entity offline conflict rules in §8 are settled. **Phase 1 builds to this; Phase 3b builds to §7 and §8.**
+**Last updated:** 2026-07-16
 
 This is the specification for `packages/domain`: pure functions, no I/O, no framework, exhaustive tests. Every numeric example in §7 is arithmetically checked and is meant to be transcribed into a test fixture verbatim.
 
@@ -400,13 +400,9 @@ That one contrast is the entire reason `gst_registration` must exist in the Phas
 
 ## 8. Offline conflict rules — **per entity**
 
-> ## ⏸ PARKED — 2026-07-13. Not approved. Decision deferred.
+> ## ✅ APPROVED — 2026-07-16 (drafted 2026-07-13, sign-off deferred until now)
 >
-> **Offline-first billing remains fully in scope and still ships in Phase 3b.** What is deferred is *sign-off on the table below*, not the feature.
->
-> **This must be approved before Phase 3b begins.** It is not optional and it cannot be discovered during implementation: the conflict rule for each entity determines its *schema* (append-only vs. mutable), and getting that wrong is a migration, not a patch. Phases 1, 2, 3a and 4 do not depend on it and can proceed.
->
-> **Nothing else in this document is blocked by it.** Everything above (§1–§7) is approved.
+> Approved as written, no changes to the table below. Phase 3b is unblocked. See DECISIONS.md for the approval entry.
 
 **The brief asks:** last-write-wins, or server-rejects-with-replay? The answer is *neither, globally* — it is per entity, and the answer for `order_items` is emphatically not the answer for `table_session`.
 

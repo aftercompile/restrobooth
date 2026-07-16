@@ -95,12 +95,8 @@ Phase 10 Hardening             }
 
 ### Phase 3b — Billing, Payments, Day Close *(the crown jewels — go slow)*
 
-> ## ⏸ BLOCKED UNTIL: offline conflict rules are approved
-> [DOMAIN.md](DOMAIN.md) §8 is **PARKED** — sign-off deferred as of 2026-07-13. **Offline-first billing is still in scope; only the approval is pending.**
->
-> **It must be approved before this phase starts.** The conflict rule per entity determines that entity's **schema** (append-only vs. mutable), so discovering it during implementation is a migration, not a patch.
->
-> **Phases 1, 2, 3a and 4 are unaffected and proceed normally.**
+> ## ✅ UNBLOCKED — 2026-07-16
+> [DOMAIN.md](DOMAIN.md) §8's offline conflict rules were approved as drafted. This phase can now begin.
 
 **Build:** Bill generation. GST / CGST / SGST. Discounts (item, bill, %, flat, coupon). Service charge. Packaging. Round-off. **Split bill (item / amount / guest)**. Split tender. Void / refund with audit and credit note. Cash drawer. **Day Open / Day Close** with reconciliation. GST-compliant invoice print. **Offline-first mode with outbox sync.**
 
