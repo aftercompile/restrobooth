@@ -106,9 +106,11 @@ export function TableWorkspace({
             <p className={styles.sub}>{session.brandName}</p>
           </div>
         </div>
-        <Button type="button" variant="secondary" onClick={() => setView("order")}>
-          ← Back to order
-        </Button>
+        <div className={styles.goToBillBar}>
+          <Button type="button" variant="secondary" className={styles.goToBillButton} onClick={() => setView("order")}>
+            ← Back to order
+          </Button>
+        </div>
         <BillView sessionId={session.sessionId} preview={preview} bills={bills} />
       </>
     );
