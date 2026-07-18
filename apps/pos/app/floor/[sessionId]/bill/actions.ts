@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { eq, schema, sql, type RlsTx } from "@restrobooth/db";
+import { eq, schema, sql, withIdempotency, type RlsTx } from "@restrobooth/db";
 import { allocateLargestRemainder, assertSessionTransition, computeBill, financialYearFor, formatInvoiceNumber, splitByAmount, type BillLineInput, type TaxRateInput } from "@restrobooth/domain";
 import { queryAsCurrentUser } from "../../../../lib/db";
 import { computeBillPreview, getBillableLines, getBillableSession, type BillableLine, type BillableSession } from "./queries";
@@ -84,105 +84,118 @@ async function drawCreditNoteNumber(tx: RlsTx, session: BillableSession): Promis
  * explicitly asked for the bill first, since a cashier finalising IS that
  * ask when nobody else made it).
  */
-export async function finalizeBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const sessionId = String(formData.get("sessionId") ?? "");
-  const discountKind = String(formData.get("discountKind") ?? "none");
-  const discountValue = String(formData.get("discountValue") ?? "0");
-  const serviceChargeBps = Number(formData.get("serviceChargeBps") ?? 0);
-  if (!sessionId) return { error: "Missing session." };
+export interface FinalizeBillInput {
+  sessionId: string;
+  billId: string;
+  discountKind: string;
+  discountValue: string;
+  serviceChargeBps: number;
+}
 
-  let billId: string;
-  try {
-    billId = await queryAsCurrentUser(async (tx) => {
-      const session = await getBillableSession(tx, sessionId);
-      if (!session) throw new Error("session not found");
+/**
+ * ADR-0004: `billId` is client-generated so the offline drain's retry is a
+ * genuine no-op (`withIdempotency`) and so the UI can navigate to the bill
+ * screen before the server has confirmed anything. No FormData, no
+ * redirect() — called by the offline outbox drain
+ * (`lib/offline/outbox.ts`); `BillView.tsx` enqueues, it doesn't call
+ * this directly.
+ */
+export async function applyFinalizeBill(idempotencyKey: string, input: FinalizeBillInput): Promise<{ billId: string }> {
+  const { sessionId, billId, discountKind, discountValue, serviceChargeBps } = input;
+  if (!sessionId || !billId) throw new Error("missing session or bill id");
 
-      const tsRow = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
-      if (!tsRow) throw new Error("session not found");
-      if (tsRow.status !== "dining" && tsRow.status !== "bill_requested") {
-        throw new Error(`cannot finalise a bill — session is '${tsRow.status}'`);
-      }
+  return queryAsCurrentUser(async (tx) => {
+    const session = await getBillableSession(tx, sessionId);
+    if (!session) throw new Error("session not found");
 
-      const billDiscount =
-        discountKind === "flat"
-          ? { kind: "flat" as const, amountPaise: BigInt(Math.round(Number(discountValue) * 100)) }
-          : discountKind === "percent"
-            ? { kind: "percent" as const, bps: Math.round(Number(discountValue) * 100) }
-            : undefined;
+    const { result } = await withIdempotency(
+      tx,
+      { key: idempotencyKey, outletId: session.outletId, endpoint: "finalizeBill", requestBody: input },
+      async () => {
+        const tsRow = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
+        if (!tsRow) throw new Error("session not found");
+        if (tsRow.status !== "dining" && tsRow.status !== "bill_requested") {
+          throw new Error(`cannot finalise a bill — session is '${tsRow.status}'`);
+        }
 
-      const { computed } = await computeBillPreview(tx, sessionId, {
-        ...(billDiscount !== undefined ? { billDiscount } : {}),
-        serviceChargeBps,
-      });
-      if (computed.lines.length === 0) throw new Error("nothing to bill — no fired or served items on this session");
+        const billDiscount =
+          discountKind === "flat"
+            ? { kind: "flat" as const, amountPaise: BigInt(Math.round(Number(discountValue) * 100)) }
+            : discountKind === "percent"
+              ? { kind: "percent" as const, bps: Math.round(Number(discountValue) * 100) }
+              : undefined;
 
-      const invoiceNo = await drawInvoiceNumber(tx, session);
+        const { computed } = await computeBillPreview(tx, sessionId, {
+          ...(billDiscount !== undefined ? { billDiscount } : {}),
+          serviceChargeBps,
+        });
+        if (computed.lines.length === 0) throw new Error("nothing to bill — no fired or served items on this session");
 
-      const newBillId = crypto.randomUUID();
-      await tx.insert(schema.bills).values({
-        id: newBillId,
-        businessDate: session.businessDate,
-        outletId: session.outletId,
-        storeId: session.storeId,
-        gstRegistrationId: session.gstRegistrationId,
-        terminalId: session.terminalId,
-        tableSessionId: sessionId,
-        invoiceNo,
-        status: "finalised",
-        subtotalPaise: computed.subtotalPaise,
-        discountPaise: computed.billDiscountPaise,
-        chargesPaise: computed.chargesPaise,
-        taxPaise: computed.taxTotalPaise,
-        roundOffPaise: computed.roundOffPaise,
-        payablePaise: computed.payablePaise,
-        idempotencyKey: crypto.randomUUID(),
-        finalisedAt: new Date(),
-      });
+        const invoiceNo = await drawInvoiceNumber(tx, session);
 
-      if (computed.taxLines.length > 0) {
-        await tx.insert(schema.billTaxLines).values(
-          computed.taxLines.map((t) => ({
-            billId: newBillId,
-            businessDate: session.businessDate,
-            outletId: session.outletId,
-            taxClassId: t.taxClassId,
-            component: t.component,
-            taxablePaise: t.taxablePaise,
-            rateBps: t.rateBps,
-            amountPaise: t.amountPaise,
-          })),
-        );
-      }
-
-      // Snapshot which order_items this bill covers, and what they were
-      // named/priced at billing time — see 0020's header note.
-      const billableLines = await getBillableLines(tx, sessionId);
-      await tx.insert(schema.billLines).values(
-        billableLines.map((l) => ({
-          id: crypto.randomUUID(),
+        await tx.insert(schema.bills).values({
+          id: billId,
           businessDate: session.businessDate,
-          billId: newBillId,
           outletId: session.outletId,
           storeId: session.storeId,
-          orderItemId: l.orderItemId,
-          name: l.name,
-          quantity: l.quantity,
-          unitPricePaise: BigInt(l.unitPricePaise),
-          taxClassId: l.taxClassId,
-          taxRateBps: l.taxRateBps,
-        })),
-      );
+          gstRegistrationId: session.gstRegistrationId,
+          terminalId: session.terminalId,
+          tableSessionId: sessionId,
+          invoiceNo,
+          status: "finalised",
+          subtotalPaise: computed.subtotalPaise,
+          discountPaise: computed.billDiscountPaise,
+          chargesPaise: computed.chargesPaise,
+          taxPaise: computed.taxTotalPaise,
+          roundOffPaise: computed.roundOffPaise,
+          payablePaise: computed.payablePaise,
+          idempotencyKey,
+          finalisedAt: new Date(),
+        });
 
-      await freezeSessionForBilling(tx, sessionId, tsRow.status);
+        if (computed.taxLines.length > 0) {
+          await tx.insert(schema.billTaxLines).values(
+            computed.taxLines.map((t) => ({
+              billId,
+              businessDate: session.businessDate,
+              outletId: session.outletId,
+              taxClassId: t.taxClassId,
+              component: t.component,
+              taxablePaise: t.taxablePaise,
+              rateBps: t.rateBps,
+              amountPaise: t.amountPaise,
+            })),
+          );
+        }
 
-      return newBillId;
-    });
-  } catch (err) {
-    return { error: fullErrorMessage(err) || "Could not finalise the bill." };
-  }
+        // Snapshot which order_items this bill covers, and what they were
+        // named/priced at billing time — see 0020's header note.
+        const billableLines = await getBillableLines(tx, sessionId);
+        await tx.insert(schema.billLines).values(
+          billableLines.map((l) => ({
+            id: crypto.randomUUID(),
+            businessDate: session.businessDate,
+            billId,
+            outletId: session.outletId,
+            storeId: session.storeId,
+            orderItemId: l.orderItemId,
+            name: l.name,
+            quantity: l.quantity,
+            unitPricePaise: BigInt(l.unitPricePaise),
+            taxClassId: l.taxClassId,
+            taxRateBps: l.taxRateBps,
+          })),
+        );
 
-  revalidatePath(`/floor/${sessionId}`);
-  redirect(`/floor/${sessionId}/bill?billId=${billId}`);
+        await freezeSessionForBilling(tx, sessionId, tsRow.status);
+
+        return { billId };
+      },
+    );
+
+    revalidatePath(`/floor/${sessionId}`);
+    return result;
+  });
 }
 
 /**
@@ -190,52 +203,69 @@ export async function finalizeBill(_prev: ActionState, formData: FormData): Prom
  * exactly (DOMAIN.md §7.4). Settling closes the table session — this is
  * the point a table actually frees up.
  */
-export async function settleBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const billId = String(formData.get("billId") ?? "");
-  const sessionId = String(formData.get("sessionId") ?? "");
-  const method = String(formData.get("method") ?? "cash");
-  const amountRupees = String(formData.get("amount") ?? "");
-  if (!billId || !sessionId) return { error: "Missing bill." };
+export interface SettleBillInput {
+  billId: string;
+  sessionId: string;
+  method: string;
+  amountRupees: string;
+}
+
+/**
+ * Split tender: one or more payments, `Σ amounts === bill.payable`
+ * exactly (DOMAIN.md §7.4). Settling closes the table session — this is
+ * the point a table actually frees up. ADR-0004 §5: card/UPI need the
+ * network by definition and are simply not offered offline — the UI
+ * layer enforces that (`SettleView`'s method picker), not this function.
+ */
+export async function applySettleBill(idempotencyKey: string, input: SettleBillInput): Promise<{ settled: boolean }> {
+  const { billId, sessionId, method, amountRupees } = input;
+  if (!billId || !sessionId) throw new Error("missing bill");
 
   const amountPaise = BigInt(Math.round(Number(amountRupees) * 100));
   if (!Number.isFinite(Number(amountRupees)) || amountPaise <= 0n) {
-    return { error: "Payment amount must be positive." };
+    throw new Error("payment amount must be positive");
   }
 
-  try {
-    await queryAsCurrentUser(async (tx) => {
-      const bill = (await tx.select().from(schema.bills).where(eq(schema.bills.id, billId)))[0];
-      if (!bill) throw new Error("bill not found");
-      if (bill.status !== "finalised") throw new Error(`cannot settle — bill is '${bill.status}'`);
+  return queryAsCurrentUser(async (tx) => {
+    const bill = (await tx.select().from(schema.bills).where(eq(schema.bills.id, billId)))[0];
+    if (!bill) throw new Error("bill not found");
 
-      await tx.insert(schema.payments).values({
-        id: crypto.randomUUID(),
-        businessDate: bill.businessDate,
-        billId,
-        outletId: bill.outletId,
-        storeId: bill.storeId,
-        method,
-        amountPaise,
-        status: "captured",
-        idempotencyKey: crypto.randomUUID(),
-      });
+    const { result } = await withIdempotency(
+      tx,
+      { key: idempotencyKey, outletId: bill.outletId, endpoint: "settleBill", requestBody: input },
+      async () => {
+        if (bill.status !== "finalised") throw new Error(`cannot settle — bill is '${bill.status}'`);
 
-      const paidResult = await tx.execute<{ [key: string]: unknown; total: string }>(sql`
-        select coalesce(sum(amount_paise), 0) as total from payments where bill_id = ${billId} and status = 'captured'
-      `);
-      const totalPaid = BigInt(paidResult.rows[0]!.total);
+        await tx.insert(schema.payments).values({
+          id: crypto.randomUUID(),
+          businessDate: bill.businessDate,
+          billId,
+          outletId: bill.outletId,
+          storeId: bill.storeId,
+          method,
+          amountPaise,
+          status: "captured",
+          idempotencyKey,
+        });
 
-      if (totalPaid >= bill.payablePaise) {
-        await tx.update(schema.bills).set({ status: "settled" }).where(eq(schema.bills.id, billId));
-        await reconcileSessionAfterBillChange(tx, sessionId);
-      }
-    });
-  } catch (err) {
-    return { error: fullErrorMessage(err) || "Could not record the payment." };
-  }
+        const paidResult = await tx.execute<{ [key: string]: unknown; total: string }>(sql`
+          select coalesce(sum(amount_paise), 0) as total from payments where bill_id = ${billId} and status = 'captured'
+        `);
+        const totalPaid = BigInt(paidResult.rows[0]!.total);
 
-  revalidatePath(`/floor/${sessionId}/bill`);
-  return OK;
+        let settled = false;
+        if (totalPaid >= bill.payablePaise) {
+          await tx.update(schema.bills).set({ status: "settled" }).where(eq(schema.bills.id, billId));
+          await reconcileSessionAfterBillChange(tx, sessionId);
+          settled = true;
+        }
+        return { settled };
+      },
+    );
+
+    revalidatePath(`/floor/${sessionId}/bill`);
+    return result;
+  });
 }
 
 /** A finalised-but-unsettled bill voids directly — no payment was ever

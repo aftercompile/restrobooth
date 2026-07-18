@@ -53,6 +53,33 @@ export async function getSessionDetail(tx: RlsTx, sessionId: string): Promise<Se
   };
 }
 
+export interface OfflineSeatContext {
+  storeId: string;
+  brandName: string;
+  tableLabel: string;
+}
+
+/**
+ * Resolves what `applySeatTable` would have resolved server-side, for a
+ * session that was seated while offline and hasn't synced yet — there is
+ * no `table_sessions` row to read from. Page.tsx uses this to render a
+ * working (if reduced) order pad instead of a 404 for a table that really
+ * is occupied, the server just doesn't know it yet. Same "exactly one
+ * active store per outlet" assumption `applySeatTable` makes.
+ */
+export async function getOfflineSeatContext(tx: RlsTx, outletId: string, tableId: string): Promise<OfflineSeatContext | null> {
+  const result = await tx.execute<{ [key: string]: unknown; store_id: string; brand_name: string; table_label: string }>(sql`
+    select s.id as store_id, b.name as brand_name, t.label as table_label
+    from tables t
+    join stores s on s.outlet_id = t.outlet_id and s.status = 'active'
+    join brands b on b.id = s.brand_id
+    where t.id = ${tableId} and t.outlet_id = ${outletId}
+  `);
+  if (result.rows.length !== 1) return null;
+  const row = result.rows[0]!;
+  return { storeId: row.store_id, brandName: row.brand_name, tableLabel: row.table_label };
+}
+
 export interface OrderItemRow {
   orderItemId: string;
   businessDate: string;
@@ -160,12 +187,16 @@ export interface OrderableMenuItem {
   categoryName: string | null;
   kitchenSection: string;
   taxClassId: string;
+  taxRateBps: number;
   pricePaise: string;
   isAvailable: boolean;
 }
 
 /** resolve_menu() (drizzle/0007) joined back to menu_items for display —
- *  the store-resolved, availability-aware picker for "add item". */
+ *  the store-resolved, availability-aware picker for "add item". Carries
+ *  taxRateBps (not just taxClassId) so the client can independently
+ *  compute an offline bill preview with packages/domain's computeBill() —
+ *  see TableWorkspace.tsx — without a second round trip. */
 export async function getOrderableMenu(tx: RlsTx, storeId: string, channelCode: string): Promise<OrderableMenuItem[]> {
   const result = await tx.execute<{
     [key: string]: unknown;
@@ -174,13 +205,15 @@ export async function getOrderableMenu(tx: RlsTx, storeId: string, channelCode: 
     category_name: string | null;
     kitchen_section: string;
     tax_class_id: string;
+    tax_rate_bps: number;
     price_paise: string;
     is_available: boolean;
   }>(sql`
-    select mi.id as menu_item_id, mi.name, c.name as category_name, mi.kitchen_section, mi.tax_class_id,
+    select mi.id as menu_item_id, mi.name, c.name as category_name, mi.kitchen_section, mi.tax_class_id, tc.rate_bps as tax_rate_bps,
            rm.price_paise, rm.is_available
     from resolve_menu(${storeId}, ${channelCode}) rm
     join menu_items mi on mi.id = rm.menu_item_id
+    join tax_classes tc on tc.id = mi.tax_class_id
     left join categories c on c.id = mi.category_id
     where rm.is_available
     order by c.sort_order nulls last, mi.name
@@ -191,6 +224,7 @@ export async function getOrderableMenu(tx: RlsTx, storeId: string, channelCode: 
     categoryName: r.category_name,
     kitchenSection: r.kitchen_section,
     taxClassId: r.tax_class_id,
+    taxRateBps: r.tax_rate_bps,
     pricePaise: r.price_paise,
     isAvailable: r.is_available,
   }));

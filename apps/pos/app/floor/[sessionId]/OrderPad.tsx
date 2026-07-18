@@ -1,19 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import Link from "next/link";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardHeader } from "@restrobooth/ui";
+import { useLiveQuery } from "dexie-react-hooks";
+import { Badge, Button, Card, CardHeader, useToast, type ToastTone } from "@restrobooth/ui";
 import { createClient } from "../../../lib/supabase/client";
-import {
-  approveVoid,
-  fireOrder,
-  rejectVoid,
-  reprintKot,
-  requestVoid,
-  voidPendingItem,
-  type ActionState,
-} from "./actions";
+import { getOfflineDb, type OutboxEntry } from "../../../lib/offline/db";
+import { enqueue, discardRejected } from "../../../lib/offline/outbox";
+import { approveVoid, rejectVoid, reprintKot, requestVoid, voidPendingItem, type ActionState } from "./actions";
 import { mergeSessions } from "../actions";
 import type { KotSummary, OrderableMenuItem, OrderItemRow, SessionDetail } from "./queries";
 import type { MergeCandidate } from "../queries";
@@ -41,20 +35,28 @@ function formatElapsed(ms: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+/** A server-confirmed row, or one still local-only — ADR-0004's "the UI
+ *  reads from here" overlay. `syncStatus` drives the badge; nothing else
+ *  about rendering an item differs between the two cases. */
+type DisplayItem = OrderItemRow & { syncStatus: "synced" | "pending" | "sending" | "rejected"; outboxId?: string };
+
 export function OrderPad({
   session,
   order,
   kots,
   menu,
   mergeTargets,
+  onGoToBill,
 }: {
   session: SessionDetail;
   order: { orderId: string; businessDate: string; items: OrderItemRow[] } | null;
   kots: KotSummary[];
   menu: OrderableMenuItem[];
   mergeTargets: MergeCandidate[];
+  onGoToBill: () => void;
 }) {
   const router = useRouter();
+  const toast = useToast();
   // Starts null, not Date.now() — see FloorMap.tsx's identical comment.
   // Server and client must render the same thing on the first paint, or
   // React discards the server HTML as a hydration mismatch.
@@ -87,7 +89,42 @@ export function OrderPad({
     };
   }, [router, session.sessionId]);
 
-  const items = order?.items ?? [];
+  // ADR-0004's local-first overlay: every addOrderItem/fireOrder mutation
+  // for THIS session, whatever its state. Once one applies, the realtime
+  // subscription above (or the next online navigation) brings in the real
+  // server row and this entry simply stops being rendered — see the
+  // header note in outbox.ts on why that's a fine trade for this pass.
+  const outboxEntries = useLiveQuery(
+    () => getOfflineDb().outbox.where("sessionId").equals(session.sessionId).sortBy("createdAt"),
+    [session.sessionId],
+    [] as OutboxEntry[],
+  );
+
+  const pendingAddEntries = (outboxEntries ?? []).filter((e) => e.mutationType === "addOrderItem" && e.status !== "applied");
+  const fireEntry = (outboxEntries ?? []).find((e) => e.mutationType === "fireOrder" && e.status !== "applied");
+
+  const menuById = useMemo(() => new Map(menu.map((m) => [m.menuItemId, m])), [menu]);
+
+  const baseItems: DisplayItem[] = (order?.items ?? []).map((i) => ({ ...i, syncStatus: "synced" }));
+  const localItems: DisplayItem[] = pendingAddEntries.map((e) => {
+    const p = e.payload as { orderItemId: string; menuItemId: string; quantity: number };
+    const menuItem = menuById.get(p.menuItemId);
+    return {
+      orderItemId: p.orderItemId,
+      businessDate: order?.businessDate ?? "",
+      menuItemId: p.menuItemId,
+      name: menuItem?.name ?? "(item)",
+      kitchenSection: menuItem?.kitchenSection ?? "hot",
+      quantity: p.quantity,
+      unitPricePaise: menuItem?.pricePaise ?? "0",
+      taxClassId: menuItem?.taxClassId ?? "",
+      status: fireEntry ? "fired" : "pending", // optimistic: a queued fire covers queued adds too
+      syncStatus: e.status === "sending" ? "sending" : e.status === "rejected" ? "rejected" : "pending",
+      outboxId: e.id,
+    };
+  });
+
+  const items = [...baseItems, ...localItems];
   const pendingItems = items.filter((i) => i.status === "pending");
   const activeItems = items.filter((i) => i.status !== "pending" && i.status !== "voided");
   const total = items
@@ -101,6 +138,10 @@ export function OrderPad({
     now === null
       ? []
       : kots.filter((k) => (k.status === "queued" || k.status === "print_failed") && now - new Date(k.firedAt).getTime() > 10_000);
+
+  async function handleDiscard(outboxId: string) {
+    await discardRejected(outboxId);
+  }
 
   return (
     <>
@@ -121,7 +162,9 @@ export function OrderPad({
         <div className={styles.total}>₹{formatRupees(total.toString())}</div>
       </div>
 
-      <Link href={`/floor/${session.sessionId}/bill`}>Go to bill →</Link>
+      <Button type="button" variant="secondary" onClick={onGoToBill}>
+        Go to bill →
+      </Button>
 
       <div className={styles.columns}>
         <div>
@@ -131,20 +174,28 @@ export function OrderPad({
               <p className={styles.itemRow}>No items yet — add from the menu.</p>
             )}
             {activeItems.map((item) => (
-              <OrderItemRowView key={item.orderItemId} item={item} sessionId={session.sessionId} />
+              <OrderItemRowView key={item.orderItemId} item={item} sessionId={session.sessionId} onDiscard={handleDiscard} />
             ))}
             {pendingItems.map((item) => (
-              <OrderItemRowView key={item.orderItemId} item={item} sessionId={session.sessionId} />
+              <OrderItemRowView key={item.orderItemId} item={item} sessionId={session.sessionId} onDiscard={handleDiscard} />
             ))}
           </Card>
 
           <div className={styles.fireBar}>
-            <FireButton sessionId={session.sessionId} disabled={pendingItems.length === 0} />
+            <FireButton sessionId={session.sessionId} disabled={pendingItems.length === 0 || !!fireEntry} firing={!!fireEntry} toast={toast} />
           </div>
 
           <p className={styles.sectionTitle}>KOTs</p>
           <Card padded={false}>
-            {kots.length === 0 && <p className={styles.itemRow}>None fired yet.</p>}
+            {kots.length === 0 && !fireEntry && <p className={styles.itemRow}>None fired yet.</p>}
+            {fireEntry && (
+              <p className={styles.itemRow}>
+                <Badge tone={fireEntry.status === "rejected" ? "critical" : "warning"}>
+                  {fireEntry.status === "rejected" ? "fire failed" : "fire queued (syncing)"}
+                </Badge>
+                {fireEntry.status === "rejected" && fireEntry.errorMessage}
+              </p>
+            )}
             {kots.map((k) => (
               <KotRowView key={k.kotId} kot={k} sessionId={session.sessionId} now={now} />
             ))}
@@ -162,34 +213,72 @@ export function OrderPad({
   );
 }
 
-function FireButton({ sessionId, disabled }: { sessionId: string; disabled: boolean }) {
-  const [state, formAction, pending] = useActionState(fireOrder, INITIAL);
+function FireButton({
+  sessionId,
+  disabled,
+  firing,
+  toast,
+}: {
+  sessionId: string;
+  disabled: boolean;
+  firing: boolean;
+  toast: (message: string, tone?: ToastTone) => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleFire() {
+    setSubmitting(true);
+    try {
+      await enqueue("fireOrder", sessionId, { sessionId });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not queue the fire.", "critical");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
-    <form action={formAction}>
-      <input type="hidden" name="sessionId" value={sessionId} />
-      <Button type="submit" variant="primary" disabled={disabled || pending}>
-        {pending ? "Firing…" : "Fire (F2)"}
-      </Button>
-      {state.error && <span style={{ color: "var(--signal-600)", marginLeft: 8 }}>{state.error}</span>}
-    </form>
+    <Button type="button" variant="primary" disabled={disabled || submitting} onClick={handleFire}>
+      {firing ? "Firing…" : "Fire (F2)"}
+    </Button>
   );
 }
 
-function OrderItemRowView({ item, sessionId }: { item: OrderItemRow; sessionId: string }) {
+function OrderItemRowView({
+  item,
+  sessionId,
+  onDiscard,
+}: {
+  item: DisplayItem;
+  sessionId: string;
+  onDiscard: (outboxId: string) => void;
+}) {
   const [voidState, voidAction, voidPending] = useActionState(voidPendingItem, INITIAL);
   const [reqState, reqAction, reqPending] = useActionState(requestVoid, INITIAL);
   const [appState, appAction, appPending] = useActionState(approveVoid, INITIAL);
   const [rejState, rejAction, rejPending] = useActionState(rejectVoid, INITIAL);
 
   const lineTotal = (BigInt(item.unitPricePaise) * BigInt(item.quantity)).toString();
+  const notYetSynced = item.syncStatus !== "synced";
 
   return (
     <div className={styles.itemRow}>
       <span className={styles.itemQty}>{item.quantity}×</span>
       <span className={styles.itemName}>{item.name}</span>
+      {item.syncStatus === "pending" || item.syncStatus === "sending" ? <Badge tone="warning">syncing</Badge> : null}
+      {item.syncStatus === "rejected" && <Badge tone="critical">sync failed</Badge>}
       <span className={styles.itemPrice}>₹{formatRupees(lineTotal)}</span>
 
-      {item.status === "pending" && (
+      {item.syncStatus === "rejected" && item.outboxId && (
+        <Button type="button" variant="secondary" className={styles.smallButton} onClick={() => onDiscard(item.outboxId!)}>
+          Discard
+        </Button>
+      )}
+
+      {/* Void/remove actions only make sense once the item is actually a
+          real, server-confirmed row — a not-yet-synced local item is
+          removed by discarding its outbox entry above, not by voiding. */}
+      {!notYetSynced && item.status === "pending" && (
         <form action={voidAction} className={styles.voidForm}>
           <input type="hidden" name="orderItemId" value={item.orderItemId} />
           <input type="hidden" name="sessionId" value={sessionId} />
@@ -207,7 +296,7 @@ function OrderItemRowView({ item, sessionId }: { item: OrderItemRow; sessionId: 
         </form>
       )}
 
-      {item.status === "fired" && (
+      {!notYetSynced && item.status === "fired" && (
         <form action={reqAction}>
           <input type="hidden" name="orderItemId" value={item.orderItemId} />
           <input type="hidden" name="sessionId" value={sessionId} />

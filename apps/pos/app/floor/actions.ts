@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { eq, schema, sql } from "@restrobooth/db";
+import { eq, schema, sql, withIdempotency } from "@restrobooth/db";
 import { assertCanMerge, type TableSessionStatus } from "@restrobooth/domain";
 import { queryAsCurrentUser } from "../../lib/db";
 
@@ -20,78 +20,90 @@ function fullErrorMessage(err: unknown): string {
   return parts.join(" | ");
 }
 
+export interface SeatTableInput {
+  sessionId: string;
+  tableId: string;
+  outletId: string;
+  covers: number;
+}
+
 /**
  * Seats one or more physical tables as a single party. Guards against
  * double-seating a table that's already claimed by a live session — the
  * schema has no unique constraint for this (a table can appear in more
  * than one table_session_tables row over its lifetime), so it's an
  * application-level check, done inside the same transaction as the insert.
+ *
+ * ADR-0004: the client generates `sessionId` (not this function) so the
+ * UI can navigate to `/floor/{sessionId}` immediately, online or off, and
+ * so a retried outbox entry is a no-op (`withIdempotency`) rather than a
+ * second table_sessions row. No FormData, no redirect() — this is called
+ * directly by the offline outbox drain (`lib/offline/outbox.ts`), which
+ * is the ONLY caller; `SeatTableDialog.tsx` enqueues, it doesn't call this.
  */
-export async function seatTable(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const tableId = String(formData.get("tableId") ?? "");
-  const outletId = String(formData.get("outletId") ?? "");
-  const covers = Number(formData.get("covers") ?? 1);
-
-  if (!tableId || !outletId || !Number.isFinite(covers) || covers < 1) {
-    return { error: "Missing or invalid seating details." };
+export async function applySeatTable(idempotencyKey: string, input: SeatTableInput): Promise<{ sessionId: string }> {
+  const { sessionId, tableId, outletId, covers } = input;
+  if (!sessionId || !tableId || !outletId || !Number.isFinite(covers) || covers < 1) {
+    throw new Error("missing or invalid seating details");
   }
 
-  let sessionId: string;
-  try {
-    sessionId = await queryAsCurrentUser(async (tx) => {
-      const claimed = await tx.execute<{ id: string }>(sql`
-        select ts.id from table_sessions ts
-        join table_session_tables tst on tst.table_session_id = ts.id
-        where tst.table_id = ${tableId}
-          and ts.status not in ('closed', 'abandoned', 'merged_into')
-        limit 1
-      `);
-      if (claimed.rows.length > 0) {
-        throw new Error(`table already has a live session (${claimed.rows[0]!.id})`);
-      }
+  const result = await queryAsCurrentUser(async (tx) => {
+    const { result } = await withIdempotency(
+      tx,
+      { key: idempotencyKey, outletId, endpoint: "seatTable", requestBody: input },
+      async () => {
+        const claimed = await tx.execute<{ id: string }>(sql`
+          select ts.id from table_sessions ts
+          join table_session_tables tst on tst.table_session_id = ts.id
+          where tst.table_id = ${tableId}
+            and ts.status not in ('closed', 'abandoned', 'merged_into')
+          limit 1
+        `);
+        if (claimed.rows.length > 0) {
+          throw new Error(`table already has a live session (${claimed.rows[0]!.id})`);
+        }
 
-      const bizday = await tx.execute<{ id: string }>(sql`
-        select id from business_days where outlet_id = ${outletId} and status = 'open' limit 1
-      `);
-      const businessDayId = bizday.rows[0]?.id;
-      if (!businessDayId) throw new Error("no open business day at this outlet — cannot seat a table");
+        const bizday = await tx.execute<{ id: string }>(sql`
+          select id from business_days where outlet_id = ${outletId} and status = 'open' limit 1
+        `);
+        const businessDayId = bizday.rows[0]?.id;
+        if (!businessDayId) throw new Error("no open business day at this outlet — cannot seat a table");
 
-      // Dine-in tables only exist at single-store outlets (a shared cloud
-      // kitchen has no physical tables — see seed-believable-chain.ts's
-      // Surat comment), so the store is resolved server-side rather than
-      // asked of the cashier. A future multi-store dine-in outlet would
-      // need a real picker here; surface a clear error rather than
-      // silently guessing which brand is being served.
-      const stores = await tx.execute<{ id: string }>(sql`
-        select id from stores where outlet_id = ${outletId} and status = 'active'
-      `);
-      if (stores.rows.length !== 1) {
-        throw new Error(
-          `expected exactly one active store at this outlet, found ${stores.rows.length} — cannot auto-resolve which brand is being served`,
-        );
-      }
-      const storeId = stores.rows[0]!.id;
+        // Dine-in tables only exist at single-store outlets (a shared cloud
+        // kitchen has no physical tables — see seed-believable-chain.ts's
+        // Surat comment), so the store is resolved server-side rather than
+        // asked of the cashier. A future multi-store dine-in outlet would
+        // need a real picker here; surface a clear error rather than
+        // silently guessing which brand is being served.
+        const stores = await tx.execute<{ id: string }>(sql`
+          select id from stores where outlet_id = ${outletId} and status = 'active'
+        `);
+        if (stores.rows.length !== 1) {
+          throw new Error(
+            `expected exactly one active store at this outlet, found ${stores.rows.length} — cannot auto-resolve which brand is being served`,
+          );
+        }
+        const storeId = stores.rows[0]!.id;
 
-      const id = crypto.randomUUID();
-      await tx.insert(schema.tableSessions).values({
-        id,
-        outletId,
-        storeId,
-        businessDayId,
-        status: "open",
-        covers,
-        idempotencyKey: crypto.randomUUID(),
-      });
-      await tx.insert(schema.tableSessionTables).values({ tableSessionId: id, tableId });
+        await tx.insert(schema.tableSessions).values({
+          id: sessionId,
+          outletId,
+          storeId,
+          businessDayId,
+          status: "open",
+          covers,
+          idempotencyKey,
+        });
+        await tx.insert(schema.tableSessionTables).values({ tableSessionId: sessionId, tableId });
 
-      return id;
-    });
-  } catch (err) {
-    return { error: fullErrorMessage(err) || "Could not seat the table." };
-  }
+        return { sessionId };
+      },
+    );
+    return result;
+  });
 
   revalidatePath("/floor");
-  redirect(`/floor/${sessionId}`);
+  return result;
 }
 
 /**

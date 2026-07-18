@@ -1,20 +1,46 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button, Dialog, Input } from "@restrobooth/ui";
-import { seatTable, type ActionState } from "./actions";
+import { enqueue } from "../../lib/offline/outbox";
+import { uuid7 } from "../../lib/offline/uuid7";
 import type { FloorTable } from "./queries";
 
-const initialState: ActionState = { error: null };
-
+/**
+ * ADR-0004: seating a table is one of the offline-critical mutations.
+ * The session id is generated HERE, not by the server, so navigation to
+ * `/floor/{sessionId}` can happen immediately — online or off — with no
+ * round trip in between. `enqueue()` writes the mutation to the local
+ * outbox and kicks off a drain attempt; it does not wait for the server.
+ */
 export function SeatTableDialog({ table, onClose }: { table: FloorTable; onClose: () => void }) {
-  const [state, formAction, pending] = useActionState(seatTable, initialState);
+  const router = useRouter();
+  const [covers, setCovers] = useState(Math.min(2, table.capacity));
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!Number.isFinite(covers) || covers < 1) {
+      setError("Covers must be at least 1.");
+      return;
+    }
+    setPending(true);
+    const sessionId = uuid7();
+    try {
+      await enqueue("seatTable", sessionId, { sessionId, tableId: table.tableId, outletId: table.outletId, covers });
+    } catch (err) {
+      setPending(false);
+      setError(err instanceof Error ? err.message : "Could not seat the table.");
+      return;
+    }
+    router.push(`/floor/${sessionId}?outletId=${table.outletId}&tableId=${table.tableId}&covers=${covers}`);
+  }
 
   return (
     <Dialog open onClose={onClose} title={`Seat ${table.label}`}>
-      <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-        <input type="hidden" name="tableId" value={table.tableId} />
-        <input type="hidden" name="outletId" value={table.outletId} />
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
         <Input
           label="Covers"
           name="covers"
@@ -22,13 +48,14 @@ export function SeatTableDialog({ table, onClose }: { table: FloorTable; onClose
           inputMode="numeric"
           min={1}
           max={table.capacity}
-          defaultValue={Math.min(2, table.capacity)}
+          value={covers}
+          onChange={(e) => setCovers(Number(e.target.value))}
           required
           autoFocus
         />
-        {state.error && (
+        {error && (
           <p role="alert" style={{ color: "var(--signal-600)", fontSize: "var(--text-sm)", margin: 0 }}>
-            {state.error}
+            {error}
           </p>
         )}
         <Button type="submit" variant="primary" disabled={pending}>

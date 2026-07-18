@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, schema, sql, type RlsTx } from "@restrobooth/db";
+import { eq, schema, sql, withIdempotency, type RlsTx } from "@restrobooth/db";
 import { assertOrderItemTransition, assertSessionTransition, groupByKitchenSection } from "@restrobooth/domain";
 import { queryAsCurrentUser } from "../../../lib/db";
 import { mockPrinterBridge } from "../../../lib/printerBridge";
@@ -39,93 +39,116 @@ async function getBusinessDate(tx: RlsTx, businessDayId: string): Promise<string
   return row.businessDate;
 }
 
+export interface AddOrderItemInput {
+  sessionId: string;
+  orderItemId: string;
+  menuItemId: string;
+  quantity: number;
+  clientLineId: string;
+}
+
 /**
  * Adds one item to the session's running order, creating the order itself
  * on first add (DOMAIN.md §1: one order per party, not one per round).
  * Price and tax class are re-resolved from resolve_menu() here — never
- * trusted from the client — so a stale picker never bills the wrong price.
+ * trusted from the client — so a stale picker never bills the wrong price;
+ * the client's own optimistic price (shown instantly, computed from the
+ * page-load menu snapshot) is display-only and is simply superseded once
+ * this applies, online or from the offline drain.
+ *
+ * ADR-0004: `orderItemId`/`clientLineId` are client-generated so a retried
+ * outbox entry is a genuine no-op — `withIdempotency` short-circuits the
+ * whole body, and `order_items`' own `(order_id, client_line_id)` unique
+ * constraint is a second, independent backstop.
  */
-export async function addOrderItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const sessionId = String(formData.get("sessionId") ?? "");
-  const menuItemId = String(formData.get("menuItemId") ?? "");
-  const quantity = Number(formData.get("quantity") ?? 1);
-  if (!sessionId || !menuItemId || !Number.isFinite(quantity) || quantity < 1) {
-    return { error: "Missing or invalid item." };
+export async function applyAddOrderItem(idempotencyKey: string, input: AddOrderItemInput): Promise<{ orderItemId: string }> {
+  const { sessionId, orderItemId, menuItemId, quantity, clientLineId } = input;
+  if (!sessionId || !orderItemId || !menuItemId || !clientLineId || !Number.isFinite(quantity) || quantity < 1) {
+    throw new Error("missing or invalid item");
   }
 
-  try {
-    await queryAsCurrentUser(async (tx) => {
-      const session = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
-      if (!session) throw new Error("session not found");
-      // DOMAIN.md §3.1: "Menu is frozen for this session" once a bill has
-      // been requested — an item added after the bill was asked for is
-      // exactly the bug this rule exists to prevent. Un-freezing (back to
-      // 'dining') is a deliberate, separate recovery action, not implied
-      // by adding an item.
-      if (session.status !== "open" && session.status !== "ordering" && session.status !== "dining") {
-        throw new Error(`cannot add an item — session is '${session.status}' (menu is frozen; un-freeze it first)`);
-      }
+  return queryAsCurrentUser(async (tx) => {
+    const session = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
+    if (!session) throw new Error("session not found");
 
-      const resolved = await tx.execute<{ [key: string]: unknown; price_paise: string; is_available: boolean }>(sql`
-        select price_paise, is_available from resolve_menu(${session.storeId}, 'dinein') where menu_item_id = ${menuItemId}
-      `);
-      const price = resolved.rows[0];
-      if (!price || !price.is_available) throw new Error("item is not available at this store right now");
+    const { result } = await withIdempotency(
+      tx,
+      { key: idempotencyKey, outletId: session.outletId, endpoint: "addOrderItem", requestBody: input },
+      async () => {
+        // DOMAIN.md §3.1: "Menu is frozen for this session" once a bill has
+        // been requested — an item added after the bill was asked for is
+        // exactly the bug this rule exists to prevent. Un-freezing (back to
+        // 'dining') is a deliberate, separate recovery action, not implied
+        // by adding an item.
+        if (session.status !== "open" && session.status !== "ordering" && session.status !== "dining") {
+          throw new Error(`cannot add an item — session is '${session.status}' (menu is frozen; un-freeze it first)`);
+        }
 
-      const item = (await tx.select().from(schema.menuItems).where(eq(schema.menuItems.id, menuItemId)))[0];
-      if (!item) throw new Error("menu item not found");
+        const resolved = await tx.execute<{ [key: string]: unknown; price_paise: string; is_available: boolean }>(sql`
+          select price_paise, is_available from resolve_menu(${session.storeId}, 'dinein') where menu_item_id = ${menuItemId}
+        `);
+        const price = resolved.rows[0];
+        if (!price || !price.is_available) throw new Error("item is not available at this store right now");
 
-      const businessDate = await getBusinessDate(tx, session.businessDayId);
+        const item = (await tx.select().from(schema.menuItems).where(eq(schema.menuItems.id, menuItemId)))[0];
+        if (!item) throw new Error("menu item not found");
 
-      let orderId = (
-        await tx.execute<{ [key: string]: unknown; id: string }>(sql`
-          select id from orders where table_session_id = ${sessionId} and status = 'open' limit 1
-        `)
-      ).rows[0]?.id;
+        const businessDate = await getBusinessDate(tx, session.businessDayId);
 
-      if (!orderId) {
-        orderId = crypto.randomUUID();
-        await tx.insert(schema.orders).values({
-          id: orderId,
+        let orderId = (
+          await tx.execute<{ [key: string]: unknown; id: string }>(sql`
+            select id from orders where table_session_id = ${sessionId} and status = 'open' limit 1
+          `)
+        ).rows[0]?.id;
+
+        if (!orderId) {
+          orderId = crypto.randomUUID();
+          await tx.insert(schema.orders).values({
+            id: orderId,
+            businessDate,
+            outletId: session.outletId,
+            storeId: session.storeId,
+            businessDayId: session.businessDayId,
+            tableSessionId: sessionId,
+            channelCode: "dinein",
+            status: "open",
+            idempotencyKey: crypto.randomUUID(),
+          });
+        }
+
+        await tx.insert(schema.orderItems).values({
+          id: orderItemId,
           businessDate,
+          orderId,
           outletId: session.outletId,
           storeId: session.storeId,
-          businessDayId: session.businessDayId,
-          tableSessionId: sessionId,
-          channelCode: "dinein",
-          status: "open",
+          menuItemId,
+          quantity,
+          unitPricePaise: BigInt(price.price_paise),
+          taxClassId: item.taxClassId,
+          status: "pending",
+          clientLineId,
           idempotencyKey: crypto.randomUUID(),
         });
-      }
 
-      await tx.insert(schema.orderItems).values({
-        id: crypto.randomUUID(),
-        businessDate,
-        orderId,
-        outletId: session.outletId,
-        storeId: session.storeId,
-        menuItemId,
-        quantity,
-        unitPricePaise: BigInt(price.price_paise),
-        taxClassId: item.taxClassId,
-        status: "pending",
-        clientLineId: crypto.randomUUID(),
-        idempotencyKey: crypto.randomUUID(),
-      });
+        // open -> ordering on the FIRST item only; a session already past
+        // 'open' just gets another line, no transition needed.
+        if (session.status === "open") {
+          assertSessionTransition("open", "ordering");
+          await tx.update(schema.tableSessions).set({ status: "ordering" }).where(eq(schema.tableSessions.id, sessionId));
+        }
 
-      // open -> ordering on the FIRST item only; a session already past
-      // 'open' just gets another line, no transition needed.
-      if (session.status === "open") {
-        assertSessionTransition("open", "ordering");
-        await tx.update(schema.tableSessions).set({ status: "ordering" }).where(eq(schema.tableSessions.id, sessionId));
-      }
-    });
-  } catch (err) {
-    return { error: fullErrorMessage(err) || "Could not add the item." };
-  }
+        return { orderItemId };
+      },
+    );
 
-  revalidatePath(`/floor/${sessionId}`);
-  return OK;
+    revalidatePath(`/floor/${sessionId}`);
+    return result;
+  });
+}
+
+export interface FireOrderInput {
+  sessionId: string;
 }
 
 /**
@@ -133,103 +156,117 @@ export async function addOrderItem(_prev: ActionState, formData: FormData): Prom
  * section (DOMAIN.md §3.3 — one KOT per hot/cold/bar line touched),
  * creates a KOT per group, attempts the (mock) print, and transitions the
  * session ordering -> dining on the first fire.
+ *
+ * Takes no item-list argument — it fires whatever is 'pending' in the DB
+ * at the moment it actually runs. That's safe under the offline outbox
+ * (`lib/offline/outbox.ts`) specifically because the outbox drains
+ * oldest-first: every `addOrderItem` entry the cashier enqueued before
+ * this fire was enqueued (and therefore sorts earlier by UUIDv7) has
+ * already been applied by the time this one's turn comes, online or on
+ * reconnect — no explicit item-id handoff needed.
  */
-export async function fireOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const sessionId = String(formData.get("sessionId") ?? "");
-  if (!sessionId) return { error: "Missing session." };
+export async function applyFireOrder(idempotencyKey: string, input: FireOrderInput): Promise<{ kotIds: string[] }> {
+  const { sessionId } = input;
+  if (!sessionId) throw new Error("missing session");
 
-  try {
-    await queryAsCurrentUser(async (tx) => {
-      const session = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
-      if (!session) throw new Error("session not found");
+  return queryAsCurrentUser(async (tx) => {
+    const session = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
+    if (!session) throw new Error("session not found");
 
-      const order = (
-        await tx.execute<{ [key: string]: unknown; id: string }>(sql`
-          select id from orders where table_session_id = ${sessionId} and status = 'open' limit 1
-        `)
-      ).rows[0];
-      if (!order) throw new Error("nothing to fire — no open order on this session");
+    const { result } = await withIdempotency(
+      tx,
+      { key: idempotencyKey, outletId: session.outletId, endpoint: "fireOrder", requestBody: input },
+      async () => {
+        const order = (
+          await tx.execute<{ [key: string]: unknown; id: string }>(sql`
+            select id from orders where table_session_id = ${sessionId} and status = 'open' limit 1
+          `)
+        ).rows[0];
+        if (!order) throw new Error("nothing to fire — no open order on this session");
 
-      const businessDate = await getBusinessDate(tx, session.businessDayId);
+        const businessDate = await getBusinessDate(tx, session.businessDayId);
 
-      const pending = await tx.execute<{
-        [key: string]: unknown;
-        id: string;
-        kitchen_section: string;
-        quantity: number;
-      }>(sql`
-        select oi.id, mi.kitchen_section, oi.quantity
-        from order_items oi
-        join menu_items mi on mi.id = oi.menu_item_id
-        where oi.order_id = ${order.id} and oi.status = 'pending'
-      `);
-      if (pending.rows.length === 0) throw new Error("nothing to fire — no pending items");
+        const pending = await tx.execute<{
+          [key: string]: unknown;
+          id: string;
+          kitchen_section: string;
+          quantity: number;
+        }>(sql`
+          select oi.id, mi.kitchen_section, oi.quantity
+          from order_items oi
+          join menu_items mi on mi.id = oi.menu_item_id
+          where oi.order_id = ${order.id} and oi.status = 'pending'
+        `);
+        if (pending.rows.length === 0) throw new Error("nothing to fire — no pending items");
 
-      const groups = groupByKitchenSection(
-        pending.rows.map((r) => ({
-          id: r.id,
-          kitchenSection: r.kitchen_section as "hot" | "cold" | "bar",
-          quantity: r.quantity,
-        })),
-      );
-
-      const nextKotNumberResult = await tx.execute<{ [key: string]: unknown; next: number }>(sql`
-        select coalesce(max(kot_number), 0) + 1 as next from kots where outlet_id = ${session.outletId} and business_date = ${businessDate}
-      `);
-      let nextKotNumber = nextKotNumberResult.rows[0]!.next;
-
-      for (const group of groups) {
-        const kotId = crypto.randomUUID();
-        await tx.insert(schema.kots).values({
-          id: kotId,
-          businessDate,
-          outletId: session.outletId,
-          storeId: session.storeId,
-          tableSessionId: sessionId,
-          orderId: order.id,
-          kitchenSection: group.section,
-          kotNumber: nextKotNumber++,
-          status: "queued",
-          idempotencyKey: crypto.randomUUID(),
-        });
-        for (const item of group.items) {
-          await tx.insert(schema.kotItems).values({
-            id: crypto.randomUUID(),
-            businessDate,
-            kotId,
-            orderItemId: item.id,
-            outletId: session.outletId,
-            quantity: item.quantity,
-          });
-        }
-
-        // The mock printer bridge — see lib/printerBridge.ts. A "queued"
-        // result is left exactly as-is: the client's own 10s-no-ACK timer
-        // (DOMAIN.md §3.3) is what surfaces a stuck ticket, not a server
-        // retry loop.
-        const result = await mockPrinterBridge.send();
-        if (result === "printed") {
-          await tx.execute(sql`update kots set status = 'printed' where id = ${kotId}`);
-        }
-
-        const itemIds = sql.join(
-          group.items.map((i) => sql`${i.id}`),
-          sql`, `,
+        const groups = groupByKitchenSection(
+          pending.rows.map((r) => ({
+            id: r.id,
+            kitchenSection: r.kitchen_section as "hot" | "cold" | "bar",
+            quantity: r.quantity,
+          })),
         );
-        await tx.execute(sql`update order_items set status = 'fired' where id in (${itemIds})`);
-      }
 
-      if (session.status === "ordering") {
-        assertSessionTransition("ordering", "dining");
-        await tx.update(schema.tableSessions).set({ status: "dining" }).where(eq(schema.tableSessions.id, sessionId));
-      }
-    });
-  } catch (err) {
-    return { error: fullErrorMessage(err) || "Could not fire the order." };
-  }
+        const nextKotNumberResult = await tx.execute<{ [key: string]: unknown; next: number }>(sql`
+          select coalesce(max(kot_number), 0) + 1 as next from kots where outlet_id = ${session.outletId} and business_date = ${businessDate}
+        `);
+        let nextKotNumber = nextKotNumberResult.rows[0]!.next;
 
-  revalidatePath(`/floor/${sessionId}`);
-  return OK;
+        const kotIds: string[] = [];
+        for (const group of groups) {
+          const kotId = crypto.randomUUID();
+          kotIds.push(kotId);
+          await tx.insert(schema.kots).values({
+            id: kotId,
+            businessDate,
+            outletId: session.outletId,
+            storeId: session.storeId,
+            tableSessionId: sessionId,
+            orderId: order.id,
+            kitchenSection: group.section,
+            kotNumber: nextKotNumber++,
+            status: "queued",
+            idempotencyKey: crypto.randomUUID(),
+          });
+          for (const item of group.items) {
+            await tx.insert(schema.kotItems).values({
+              id: crypto.randomUUID(),
+              businessDate,
+              kotId,
+              orderItemId: item.id,
+              outletId: session.outletId,
+              quantity: item.quantity,
+            });
+          }
+
+          // The mock printer bridge — see lib/printerBridge.ts. A "queued"
+          // result is left exactly as-is: the client's own 10s-no-ACK timer
+          // (DOMAIN.md §3.3) is what surfaces a stuck ticket, not a server
+          // retry loop.
+          const printResult = await mockPrinterBridge.send();
+          if (printResult === "printed") {
+            await tx.execute(sql`update kots set status = 'printed' where id = ${kotId}`);
+          }
+
+          const itemIds = sql.join(
+            group.items.map((i) => sql`${i.id}`),
+            sql`, `,
+          );
+          await tx.execute(sql`update order_items set status = 'fired' where id in (${itemIds})`);
+        }
+
+        if (session.status === "ordering") {
+          assertSessionTransition("ordering", "dining");
+          await tx.update(schema.tableSessions).set({ status: "dining" }).where(eq(schema.tableSessions.id, sessionId));
+        }
+
+        return { kotIds };
+      },
+    );
+
+    revalidatePath(`/floor/${sessionId}`);
+    return result;
+  });
 }
 
 /** A pre-fire void — free, no manager auth (DOMAIN.md §3.2). */

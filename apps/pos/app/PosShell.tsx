@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { signOut } from "./auth-actions";
+import { OfflineStatusBar } from "./OfflineStatusBar";
 import styles from "./PosShell.module.css";
 
 const NAV = [
@@ -44,6 +45,7 @@ export function PosShell({ email, children }: { email?: string | undefined; chil
           </button>
         </form>
       </header>
+      <OfflineStatusBar />
       <main className={styles.main}>{children}</main>
     </>
   );

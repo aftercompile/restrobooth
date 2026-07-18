@@ -18,6 +18,8 @@
     "@restrobooth/ui": "workspace:*",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.3",
+    "dexie": "^4.4.4",
+    "dexie-react-hooks": "^4.4.0",
     "next": "^16.2.10",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { useToast } from "@restrobooth/ui";
-import { addOrderItem } from "./actions";
+import { enqueue } from "../../../lib/offline/outbox";
+import { uuid7 } from "../../../lib/offline/uuid7";
 import type { OrderableMenuItem } from "./queries";
 import styles from "./AddItemPicker.module.css";
 
@@ -15,14 +16,14 @@ function formatRupees(paise: string): string {
 
 /**
  * Tap-to-add, one item at a time — DESIGN.md's POS speed goal ("the order
- * fired in under 15 seconds"). Each tap calls the Server Action directly
- * (not a <form> submit) so a rejection surfaces as a toast without
- * blocking the next tap; the row list itself updates via the action's own
- * revalidatePath, not local state.
+ * fired in under 15 seconds"). ADR-0004: this writes to the local outbox
+ * and returns immediately — it never waits on a network round trip, so
+ * the tap is exactly as fast offline as on. OrderPad's own `useLiveQuery`
+ * on the outbox is what makes the new row appear; this component doesn't
+ * hold or update the item list itself.
  */
 export function AddItemPicker({ sessionId, menu }: { sessionId: string; menu: OrderableMenuItem[] }) {
   const toast = useToast();
-  const [pending, startTransition] = useTransition();
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 
   const byCategory = useMemo(() => {
@@ -36,17 +37,21 @@ export function AddItemPicker({ sessionId, menu }: { sessionId: string; menu: Or
     return groups;
   }, [menu]);
 
-  function handleAdd(item: OrderableMenuItem) {
+  async function handleAdd(item: OrderableMenuItem) {
     setPendingItemId(item.menuItemId);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("sessionId", sessionId);
-      formData.set("menuItemId", item.menuItemId);
-      formData.set("quantity", "1");
-      const result = await addOrderItem({ error: null }, formData);
-      if (result.error) toast(result.error, "critical");
+    try {
+      await enqueue("addOrderItem", sessionId, {
+        sessionId,
+        orderItemId: uuid7(),
+        menuItemId: item.menuItemId,
+        quantity: 1,
+        clientLineId: uuid7(),
+      });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not queue the item.", "critical");
+    } finally {
       setPendingItemId(null);
-    });
+    }
   }
 
   return (
@@ -60,7 +65,7 @@ export function AddItemPicker({ sessionId, menu }: { sessionId: string; menu: Or
                 key={item.menuItemId}
                 type="button"
                 className={styles.itemButton}
-                disabled={pending && pendingItemId === item.menuItemId}
+                disabled={pendingItemId === item.menuItemId}
                 onClick={() => handleAdd(item)}
               >
                 <div className={styles.itemName}>{item.name}</div>
