@@ -4,6 +4,30 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-18 — Phase 4 (KDS): the ADR-0005 event log gets written to, and the actual transport gate
+
+**Decided by:** Mohammed ("proceed to the next phase," then "proceed" through each slice; "Full build now" was the only explicit scope decision this phase needed — see below).
+
+**Scope decision, made explicit before building:** ROADMAP.md's own Phase 4 line ("Build: Ticket rail, aging colour states, section filtering, bump / recall, prep-time tracking, ticket-time anomaly flag") and DESIGN.md's mockup ("[SPACE = bump]") name exactly ONE interactive gesture for the forward direction of the KOT lifecycle, not five. The original plan sketched five separate mutations (acknowledge/start/ready/bump/recall) before any code was written; re-reading the roadmap line literally during Slice 3 caught this before it was built, and `bumpKot()` instead walks the whole forward path in one action, with `recallKot()` as the sole reverse transition. Prep-time tracking and ticket-time anomaly flagging are analytics, explicitly deferred to Phase 9 (reports) — the aging colour states already serve as the operational signal a cook needs in the moment.
+
+**What shipped:**
+
+1. **The event log finally gets written to** (`packages/db/src/orderStatusEvents.ts`): `order_status_events`/`outlet_event_counters` have existed since Phase 1, entirely unused — a real, load-bearing gap found by re-reading ADR-0005 before starting, the same way Phase 3b found `idempotency_keys` was decorative. `next_outlet_event_seq()` is a single atomic `INSERT ... ON CONFLICT DO UPDATE ... RETURNING` — simpler than the Phase 3b invoice allocator, since an event is only ever written inside an already-committing transaction (no offline block-reservation problem exists here). Wired into `apps/pos`'s fire and reprint paths and `apps/captain`'s independent fire implementation.
+2. **`apps/kds`** goes from a bare scaffold to a real app: auth ported from `apps/pos`, a `kitchen@restrobooth.test` login added to `seed-auth-users.ts`, a ticket board reading real KOTs with real items, aging via a new `KOT_AGE_THRESHOLDS` ramp in `packages/domain` (5/10/15 min, tighter than a table's dwell clock — DOMAIN.md §3.3's "an unstarted ticket is already a problem sooner than a table just sitting").
+3. **Bump/recall**, capability-gated by a new `can_manage_kot()` mirroring `can_manage_business_day()`'s shape but with TENANCY.md §4's actual, deliberately broad "Bump a KOT" row (everyone except `brand_manager`).
+4. **The transport** (`RealtimeSync.tsx`): Realtime fast path (payload never trusted, any change just triggers `router.refresh()` — the board always re-derives current state from real RLS-scoped queries rather than replaying events client-side, which is what makes a missed message self-healing without any row-level reconciliation code) plus a 10s-heartbeat/30s-timeout/5s-poll guaranteed path with a visible "RECONNECTING" banner.
+
+**Real bugs found by killing the network for real, not by reasoning about it:**
+
+1. `kots`' composite primary key `(id, business_date)` meant Postgres couldn't infer functional dependency from `GROUP BY k.id` alone — every board query failed outright (a real query bug, not a design question) until every `k.*` column was added to the GROUP BY explicitly.
+2. A short Playwright test that fired a KOT and closed the browser a second later found nothing on the board. Not a KDS bug: `apps/pos`'s fire path is local-first since Phase 3b, and the mutation was still sitting in the client's offline outbox, not yet drained to the server, when the page closed. Recurred a second time inside the acceptance test itself (see below) — worth remembering as a standing hazard of testing anything in `apps/pos` now, not a one-off.
+3. **The exact `router.refresh()`-while-offline crash Phase 3b's own offline outbox hit first, recurring in a brand new component that had never seen that code.** The polling fallback's first version refreshed the instant `degraded` was true, which includes "the browser is offline" — and `router.refresh()`'s own fetch failing while offline forced Next's client router into a hard-navigation fallback that blanked the page to white. Fixed identically to the Phase 3b instance: gate every refresh call on `navigator.onLine` specifically, and refresh immediately on the browser's own `online` event rather than waiting for a poll tick. Worth naming as a pattern now, having hit it twice: **any `router.refresh()` call reachable from a background timer/subscription in this codebase must be gated on `online`, full stop** — it is never safe to assume a failed refresh just silently no-ops.
+4. The acceptance test's own first full run showed only 4 of the 5 fired KOTs after reconnect. Root cause was the SAME class of bug as #2 — the test script closed each POS tab 400ms after clicking Fire, which under the offline-outbox architecture is not enough margin for the mutation to actually reach the server. Fixed by waiting ~2.5s before closing each tab; not a product bug, but confirms #2 is a real, repeatable trap for future test-writing in this repo, not a fluke.
+
+**The acceptance test, run for real** (`tools/kds-offline-acceptance-test.mjs`, Playwright's `context.setOffline()`): killed the KDS's network, held it offline a full 30 seconds while firing 5 KOTs from a separate, still-online POS terminal, confirmed zero tickets appeared on the KDS and zero page errors occurred while genuinely offline, confirmed the RECONNECTING banner stayed visible for the entire 30 seconds, reconnected, and confirmed all 5 tickets appeared — correctly ordered by `kot_number`, zero duplicates, ages all reflecting real `fired_at` timestamps rather than the reconnect moment.
+
+---
+
 ## 2026-07-16 — Phase 3b Slice 3: the offline outbox — CLAUDE.md's gate is cleared
 
 **Decided by:** Mohammed ("proceed with the plan," then "Full build now" when asked how to scope Slice 3 given its size relative to Slices 1–2).
