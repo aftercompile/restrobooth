@@ -129,3 +129,60 @@
   font-size: var(--text-base);
   font-style: italic;
 }
+
+.bumpButton {
+  margin-top: var(--space-1);
+  width: 100%;
+  min-height: 56px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.error {
+  color: var(--signal-600);
+  font-size: var(--text-sm);
+  margin: 4px 0 0 0;
+}
+
+.bumpedSection {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--ink-500);
+}
+
+.bumpedHeading {
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 var(--space-1) 0;
+}
+
+.bumpedRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.bumpedChip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--ink-700);
+  border: 1px solid var(--ink-500);
+  padding: 6px 10px;
+  border-radius: var(--radius);
+}
+
+.bumpedChipLabel {
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.smallButton {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: var(--text-sm);
+}

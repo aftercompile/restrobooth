@@ -26,6 +26,72 @@ export interface Ticket {
 
 const ACTIVE_STATUSES = ["queued", "printed", "acknowledged", "preparing", "ready"] as const;
 
+interface KotRow {
+  [key: string]: unknown;
+  kot_id: string;
+  kot_number: number;
+  kitchen_section: string;
+  status: string;
+  reprint_count: number;
+  fired_at: string;
+  bumped_at: string | null;
+  outlet_id: string;
+  outlet_name: string;
+  brand_name: string;
+  table_labels: string;
+  covers: number;
+}
+
+function rowToTicket(r: KotRow, items: TicketItem[]): Ticket {
+  return {
+    kotId: r.kot_id,
+    kotNumber: r.kot_number,
+    kitchenSection: r.kitchen_section,
+    status: r.status,
+    reprintCount: r.reprint_count,
+    firedAt: r.fired_at,
+    bumpedAt: r.bumped_at,
+    outletId: r.outlet_id,
+    outletName: r.outlet_name,
+    brandName: r.brand_name,
+    tableLabels: r.table_labels,
+    covers: r.covers,
+    items,
+  };
+}
+
+async function loadItemsByKot(tx: RlsTx, kotIds: string[]): Promise<Map<string, TicketItem[]>> {
+  const itemsByKot = new Map<string, TicketItem[]>();
+  if (kotIds.length === 0) return itemsByKot;
+
+  const kotIdList = sql.join(
+    kotIds.map((kid) => sql`${kid}`),
+    sql`, `,
+  );
+  const itemsResult = await tx.execute<{
+    [key: string]: unknown;
+    kot_id: string;
+    order_item_id: string;
+    name: string;
+    quantity: number;
+    prep_notes: string | null;
+  }>(sql`
+    select ki.kot_id, ki.order_item_id, mi.name, ki.quantity, ki.prep_notes
+    from kot_items ki
+    join order_items oi on oi.id = ki.order_item_id
+    join menu_items mi on mi.id = oi.menu_item_id
+    where ki.kot_id in (${kotIdList})
+    order by mi.name
+  `);
+  for (const r of itemsResult.rows) {
+    const bucket = itemsByKot.get(r.kot_id);
+    const item: TicketItem = { orderItemId: r.order_item_id, name: r.name, quantity: r.quantity, prepNotes: r.prep_notes };
+    if (bucket) bucket.push(item);
+    else itemsByKot.set(r.kot_id, [item]);
+  }
+  return itemsByKot;
+}
+
 /**
  * Every active KOT this session can see (RLS scopes it to accessible
  * outlets — a shared cloud kitchen legitimately shows every store's
@@ -45,21 +111,7 @@ export async function getActiveTickets(tx: RlsTx): Promise<Ticket[]> {
     sql`, `,
   );
 
-  const kotResult = await tx.execute<{
-    [key: string]: unknown;
-    kot_id: string;
-    kot_number: number;
-    kitchen_section: string;
-    status: string;
-    reprint_count: number;
-    fired_at: string;
-    bumped_at: string | null;
-    outlet_id: string;
-    outlet_name: string;
-    brand_name: string;
-    table_labels: string;
-    covers: number;
-  }>(sql`
+  const kotResult = await tx.execute<KotRow>(sql`
     select
       k.id as kot_id, k.kot_number, k.kitchen_section, k.status, k.reprint_count, k.fired_at, k.bumped_at,
       k.outlet_id, o.name as outlet_name, b.name as brand_name,
@@ -78,49 +130,44 @@ export async function getActiveTickets(tx: RlsTx): Promise<Ticket[]> {
     order by k.kot_number
   `);
 
-  const kotIds = kotResult.rows.map((r) => r.kot_id);
-  const itemsByKot = new Map<string, TicketItem[]>();
-  if (kotIds.length > 0) {
-    const kotIdList = sql.join(
-      kotIds.map((kid) => sql`${kid}`),
-      sql`, `,
-    );
-    const itemsResult = await tx.execute<{
-      [key: string]: unknown;
-      kot_id: string;
-      order_item_id: string;
-      name: string;
-      quantity: number;
-      prep_notes: string | null;
-    }>(sql`
-      select ki.kot_id, ki.order_item_id, mi.name, ki.quantity, ki.prep_notes
-      from kot_items ki
-      join order_items oi on oi.id = ki.order_item_id
-      join menu_items mi on mi.id = oi.menu_item_id
-      where ki.kot_id in (${kotIdList})
-      order by mi.name
-    `);
-    for (const r of itemsResult.rows) {
-      const bucket = itemsByKot.get(r.kot_id);
-      const item: TicketItem = { orderItemId: r.order_item_id, name: r.name, quantity: r.quantity, prepNotes: r.prep_notes };
-      if (bucket) bucket.push(item);
-      else itemsByKot.set(r.kot_id, [item]);
-    }
-  }
+  const itemsByKot = await loadItemsByKot(
+    tx,
+    kotResult.rows.map((r) => r.kot_id),
+  );
+  return kotResult.rows.map((r) => rowToTicket(r, itemsByKot.get(r.kot_id) ?? []));
+}
 
-  return kotResult.rows.map((r) => ({
-    kotId: r.kot_id,
-    kotNumber: r.kot_number,
-    kitchenSection: r.kitchen_section,
-    status: r.status,
-    reprintCount: r.reprint_count,
-    firedAt: r.fired_at,
-    bumpedAt: r.bumped_at,
-    outletId: r.outlet_id,
-    outletName: r.outlet_name,
-    brandName: r.brand_name,
-    tableLabels: r.table_labels,
-    covers: r.covers,
-    items: itemsByKot.get(r.kot_id) ?? [],
-  }));
+/**
+ * Bumped in the last `minutes` — the only way a `recall` (DOMAIN.md §3.3's
+ * one reverse transition) has anything to target, since a bumped ticket
+ * otherwise vanishes from the active board entirely the moment it's done.
+ * A short, fixed window on purpose: this is "I hit bump by mistake,"
+ * not a history browser — Phase 9's reporting is where a real bump
+ * history lives.
+ */
+export async function getRecentlyBumpedTickets(tx: RlsTx, minutes = 5): Promise<Ticket[]> {
+  const kotResult = await tx.execute<KotRow>(sql`
+    select
+      k.id as kot_id, k.kot_number, k.kitchen_section, k.status, k.reprint_count, k.fired_at, k.bumped_at,
+      k.outlet_id, o.name as outlet_name, b.name as brand_name,
+      string_agg(distinct t.label, ', ' order by t.label) as table_labels,
+      ts.covers
+    from kots k
+    join outlets o on o.id = k.outlet_id
+    join stores s on s.id = k.store_id
+    join brands b on b.id = s.brand_id
+    join table_sessions ts on ts.id = k.table_session_id
+    join table_session_tables tst on tst.table_session_id = ts.id
+    join tables t on t.id = tst.table_id
+    where k.status = 'bumped' and k.bumped_at > now() - (${minutes} || ' minutes')::interval
+    group by k.id, k.business_date, k.kot_number, k.kitchen_section, k.status, k.reprint_count, k.fired_at, k.bumped_at,
+             k.outlet_id, o.name, b.name, ts.covers
+    order by k.bumped_at desc
+  `);
+
+  const itemsByKot = await loadItemsByKot(
+    tx,
+    kotResult.rows.map((r) => r.kot_id),
+  );
+  return kotResult.rows.map((r) => rowToTicket(r, itemsByKot.get(r.kot_id) ?? []));
 }

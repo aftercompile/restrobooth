@@ -162,6 +162,13 @@
       "when": 1784300000000,
       "tag": "0022_order_status_events",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1784300100000,
+      "tag": "0023_kot_lifecycle_capability",
+      "breakpoints": true
     }
   ]
 }
