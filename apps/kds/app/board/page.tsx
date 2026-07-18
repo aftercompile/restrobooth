@@ -3,6 +3,7 @@ import { queryAsCurrentUser } from "../../lib/db";
 import { createClient } from "../../lib/supabase/server";
 import { getActiveTickets, getRecentlyBumpedTickets } from "./queries";
 import { TicketBoard } from "./TicketBoard";
+import { RealtimeSync } from "./RealtimeSync";
 
 export default async function BoardPage() {
   const supabase = await createClient();
@@ -18,6 +19,7 @@ export default async function BoardPage() {
 
   return (
     <KdsShell email={user?.email}>
+      <RealtimeSync />
       <TicketBoard tickets={tickets} recentlyBumped={recentlyBumped} multiBrandOutlet={multiBrandOutlet} />
     </KdsShell>
   );

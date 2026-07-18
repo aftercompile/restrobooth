@@ -1,0 +1,23 @@
+/* ADR-0005 §2: "unmissable." No animation on the pulse — POS/KDS are
+   zero-motion by standing rule — the colour and the words carry it. */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--signal-600);
+  color: var(--ink-900);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  letter-spacing: 0.03em;
+  padding: 10px var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ink-900);
+  flex-shrink: 0;
+}
