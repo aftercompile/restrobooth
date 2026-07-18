@@ -1,0 +1,131 @@
+.filterBar {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.filterButton {
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--text-base);
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  background: var(--ink-700);
+  border: 1px solid var(--ink-500);
+  border-radius: var(--radius);
+  color: var(--chalk-400);
+  cursor: pointer;
+}
+
+.filterButton[aria-current="true"] {
+  color: var(--chalk-50);
+  border-color: var(--brass-500);
+}
+
+.filterCount {
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  opacity: 0.75;
+}
+
+.empty {
+  color: var(--chalk-400);
+  font-size: var(--text-lg);
+  padding: var(--space-4) 0;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.ticket {
+  background: var(--ink-700);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ticketHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* Readable at 2 metres (ROADMAP.md's own Phase 4 gate) — the KOT number
+   and elapsed age are the two things a cook glances at from across a hot
+   line, so they get the largest type on the board, well past the KDS
+   density token's --text-xl ceiling (24px, tuned for denser secondary
+   text, not the primary glanceable numbers). */
+.kotNumber {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 48px;
+  line-height: 1;
+  color: var(--chalk-50);
+}
+
+.tableInfo {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--chalk-50);
+  flex: 1;
+}
+
+.age {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 48px;
+  line-height: 1;
+  color: var(--chalk-50);
+}
+
+.badgeRow {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.itemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 32px;
+  line-height: 1.25;
+}
+
+.itemQty {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--brass-500);
+  min-width: 1.6ch;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.itemName {
+  color: var(--chalk-50);
+  font-weight: 600;
+}
+
+.itemNotes {
+  color: var(--chalk-400);
+  font-size: var(--text-base);
+  font-style: italic;
+}

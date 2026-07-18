@@ -1,0 +1,59 @@
+/* KDS chrome: thin, dark, zero animation — the header is a strip, not a
+   destination. Almost every pixel below it belongs to tickets. */
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-2);
+  background: var(--ink-700);
+  border-bottom: 1px solid var(--ink-500);
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: var(--chalk-50);
+  flex-shrink: 0;
+}
+
+.markRail {
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--brass-500);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.userEmail {
+  color: var(--chalk-400);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.signOut {
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--ink-500);
+  border-radius: var(--radius);
+  color: var(--chalk-50);
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.main {
+  padding: var(--space-2);
+}

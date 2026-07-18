@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS } from "./rail";
+import { KOT_AGE_THRESHOLDS, rampStateForElapsed, TABLE_DWELL_THRESHOLDS } from "./rail";
 
 describe("rampStateForElapsed", () => {
   test("just seated is fresh", () => {
@@ -23,9 +23,14 @@ describe("rampStateForElapsed", () => {
     expect(rampStateForElapsed(5 * 60 * 60_000, TABLE_DWELL_THRESHOLDS)).toBe("critical");
   });
 
-  test("custom thresholds (e.g. a tighter KOT-aging clock) are respected", () => {
-    const kotThresholds = { warmingAfterMs: 5 * 60_000, hotAfterMs: 10 * 60_000, criticalAfterMs: 15 * 60_000 };
-    expect(rampStateForElapsed(6 * 60_000, kotThresholds)).toBe("warming");
+  test("KOT_AGE_THRESHOLDS is the same tighter clock used elsewhere, distinct from table dwell", () => {
+    expect(rampStateForElapsed(6 * 60_000, KOT_AGE_THRESHOLDS)).toBe("warming");
     expect(rampStateForElapsed(6 * 60_000, TABLE_DWELL_THRESHOLDS)).toBe("fresh");
+  });
+
+  test("KOT_AGE_THRESHOLDS boundaries: 5/10/15 minutes", () => {
+    expect(rampStateForElapsed(5 * 60_000, KOT_AGE_THRESHOLDS)).toBe("warming");
+    expect(rampStateForElapsed(10 * 60_000, KOT_AGE_THRESHOLDS)).toBe("hot");
+    expect(rampStateForElapsed(15 * 60_000, KOT_AGE_THRESHOLDS)).toBe("critical");
   });
 });

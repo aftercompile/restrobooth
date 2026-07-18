@@ -29,6 +29,17 @@ export const TABLE_DWELL_THRESHOLDS: RampThresholds = {
   criticalAfterMs: 60 * 60_000,
 };
 
+// A KOT's own cook clock (DOMAIN.md §3.3: age is computed from fired_at,
+// never printed_at or acknowledged_at — a jammed printer doesn't excuse
+// the guest's wait). Tighter than a table's dwell clock on purpose: a
+// ticket unstarted at 8 minutes is already an anomaly a cook needs to see,
+// in a way a table just sitting for 8 minutes is not.
+export const KOT_AGE_THRESHOLDS: RampThresholds = {
+  warmingAfterMs: 5 * 60_000,
+  hotAfterMs: 10 * 60_000,
+  criticalAfterMs: 15 * 60_000,
+};
+
 export function rampStateForElapsed(elapsedMs: number, thresholds: RampThresholds): RampState {
   if (elapsedMs >= thresholds.criticalAfterMs) return "critical";
   if (elapsedMs >= thresholds.hotAfterMs) return "hot";

@@ -1,11 +1,7 @@
+import { redirect } from "next/navigation";
+
 export default function Home() {
-  return (
-    <main>
-      <h1>RestroBooth KDS</h1>
-      <p>
-        Phase 1 scaffold checkpoint. The ticket rail, aging states, and
-        Realtime + polling fallback land in Phase 4.
-      </p>
-    </main>
-  );
+  // The ticket board is the KDS's home surface. Unauthenticated requests
+  // never reach here (the proxy redirects to /login first).
+  redirect("/board");
 }

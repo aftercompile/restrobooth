@@ -43,6 +43,7 @@ const PASSWORD = "restrobooth"; // dev-only; every seeded account shares it
 const ACCOUNTS = [
   { fixtureId: id.USER_ORG1_OWNER, email: "owner@restrobooth.test", label: "org_owner (can publish prices)" },
   { fixtureId: id.USER_AMD_CASHIER, email: "cashier@restrobooth.test", label: "cashier (cannot publish prices)" },
+  { fixtureId: id.USER_AMD_KITCHEN, email: "kitchen@restrobooth.test", label: "kitchen (Phase 4 KDS login)" },
 ];
 
 async function main() {
