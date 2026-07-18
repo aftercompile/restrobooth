@@ -1,12 +1,7 @@
 .list {
   display: flex;
   gap: var(--space-1);
-  border-bottom: 1px solid var(--border-on-dark);
-}
-
-[data-density="console"] .list,
-[data-density="booth"] .list {
-  border-bottom-color: var(--border-on-light);
+  border-bottom: 1px solid var(--border);
 }
 
 .tab {

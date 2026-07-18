@@ -2,17 +2,12 @@
   min-height: calc(var(--touch-target) * 2);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius);
-  border: 1px solid var(--border-on-dark);
+  border: 1px solid var(--border);
   background: transparent;
   color: inherit;
   font-family: var(--font-body);
   font-size: var(--text-base);
   resize: vertical;
-}
-
-[data-density="console"] .textarea,
-[data-density="booth"] .textarea {
-  border-color: var(--border-on-light);
 }
 
 .textarea:disabled {

@@ -3,6 +3,14 @@
 **Status: ✅ DECIDED — 2026-07-13. Direction B, "Service Board", is approved and is the design system.**
 A and C remain below as the record of what was considered and why they lost. **Do not re-litigate them; do not mix them.** The two grafts from A and C listed under the recommendation (the Booth split-flap board; the time-temperature ramp as the rail's fill) are **in scope** and are part of B.
 
+> **Amendment — 2026-07-19, "Phase 4.5" redesign.** After Phase 4, real use of the POS surfaced two layout bugs (floor-plan table cards overlapping, a white strip below short pages — both traced to missing global CSS, not to the design system) and the owner asked for a lighter, more minimalist re-skin with animation and doodles in the background. **This is a re-skin of Direction B, not a new direction** — the state rail, the three-density spacing/size/motion system, and the enamel/brass brand palette are unchanged. What changed:
+> - **Ground.** POS and KDS drop `--ink-900` (dark) for the same warm-paper ground Console/Booth already used. **One light theme across all four apps** — no more per-density dark/light fork in the token layer.
+> - **A second, quieter signature.** A fixed, CSS-only layer of low-opacity kitchen doodles (whisk, chilli, mint leaf, steam curl, fork+knife, cup, sparkle) sits behind all content in every app. It **coexists with, and never competes with, the state rail** — the rail still owns state; the doodles own nothing but ambience.
+> - **The zero-motion rule is refined, not repealed.** "POS/KDS have zero animation" (§"How B works at each density" below, and CLAUDE.md) now reads precisely: **zero motion on working content** (the floor, the bill, the KDS board — unchanged, still `transition: none` on the subtree) **but CSS-only ambient background motion is allowed on light/non-dense surfaces** — in practice, only `/login` routes, gated by the same `useMotionAllowed()` that already governs Console/Booth motion (which is itself gated on density and `prefers-reduced-motion`). A cashier's or captain's own login screen is still a work surface, not a marketing moment, so it stays static too — motion only actually appears on Console's login.
+> - See [DECISIONS.md](../DECISIONS.md) for the full rationale and the accessibility retuning this forced (e.g. the state rail's `critical` hatch, and KDS's `itemQty` accent colour, both had to move off tokens that were only AA-safe *because* the ground used to be dark).
+
+See "How B works at each density" below for the updated per-density table (Ground/Motion rows) reflecting this amendment.
+
 **Next:** Phase 1 implements the token layer and the first 10 UI primitives against this. The brass-fails-AA-on-light constraint (§Direction B) becomes a lint rule, not a code-review note.
 
 **Last updated:** 2026-07-13
@@ -89,14 +97,18 @@ The reference is not a diner — it's the Irani café, the railway refreshment r
 
 ### Tokens
 
+*Superseded by the 2026-07-19 amendment above — this is the token table as originally decided (dark POS/KDS ground). The live token set is `packages/ui/src/tokens/colors.css`; see the amendment for what changed.*
+
 | Token | Hex | Use |
 |---|---|---|
-| `--ink-900` | `#0C1517` | Dark ground (POS chrome, KDS) |
+| `--ink-900` | `#0C1517` | ~~Dark ground (POS chrome, KDS)~~ — retired; all four apps now share `--bg` |
 | `--enamel-700` | `#0E4F45` | Brand green. Headers, primary surfaces, **text on light** |
 | `--enamel-500` | `#17796A` | Live / fresh / OK state |
 | `--brass-500` | `#C89B3C` | **The one warm accent.** Primary action, focus ring, the rail. |
-| `--chalk-50` | `#EDF1EF` | Light ground (Console, Booth). Green-shifted — **not cream** |
+| `--chalk-50` | `#EDF1EF` | ~~Light ground (Console, Booth)~~ — retired; renamed/retuned to `--bg` (`#F6F4EF`), now the ground everywhere |
 | `--signal-600` | `#C63A2A` | Destructive: void, 86, critical age |
+
+**Current, live palette:** `--bg #F6F4EF` (warm paper ground, all apps) · `--surface #FFFFFF` (card fill) · `--surface-sunken #EFEDE7` · `--text #12201D` · `--text-muted #5C6B66` · `--border #E2E0D8` / `--border-strong #CDCBC2` · `--ambient-doodle #A8B6AC` (the background-doodle stroke). Enamel, brass, signal, and the ramp are unchanged from the table above.
 
 **Type:** display **Bricolage Grotesque** · body **Inter** · data **IBM Plex Mono** (tabular)
 
@@ -227,15 +239,16 @@ Same tokens. Three spacing scales, three motion budgets.
 
 | | **Booth** (guest) | **POS + KDS** | **Console** |
 |---|---|---|---|
-| Ground | `--chalk-50`, photographic | `--ink-900` | `--chalk-50` |
+| Ground | `--bg`, photographic | `--bg` *(was `--ink-900` — see 2026-07-19 amendment)* | `--bg` |
 | Spacing scale | 24 / 32 / 48 / 64 / 96 | **8 / 12 / 16 / 24 / 32** | 16 / 24 / 32 / 48 / 64 |
 | Base type | 18 px | 15 px, tabular numerals | 16 px |
 | Touch target | 48 px | **44 px minimum, enforced** | n/a (pointer) |
-| Motion | Full. Split-flap status board, staggered menu reveal, 200–400 ms spring | **ZERO.** `transition: none` on the entire subtree. Speed is the aesthetic. | Restrained. 150 ms, ease-out, opacity/transform only |
+| Working-content motion | Full. Split-flap status board, staggered menu reveal, 200–400 ms spring | **ZERO.** `transition: none` on the entire subtree. Speed is the aesthetic. | Restrained. 150 ms, ease-out, opacity/transform only |
+| Ambient background motion | Doodle layer animates freely | **ZERO everywhere**, including its own `/login` — a work surface stays calm even at the door | Doodle layer animates only on `/login`; static on dense working pages |
 | The rail | Glowing card edge on "your order" | 4 px, the primary state channel | 6 px on table rows |
 | Display face | Bricolage Grotesque, large | **never used** — Inter only | Bricolage Grotesque, restrained |
 
-**`prefers-reduced-motion` collapses Booth to the Console motion budget.** POS and KDS are already at zero, so they are unaffected — which is a small, pleasing proof that the animation-free decision was right on its own merits and not merely an accessibility concession.
+**`prefers-reduced-motion` collapses Booth to the Console motion budget, and disables the ambient doodle layer everywhere it would otherwise animate.** POS and KDS working content is already at zero, so it is unaffected — which is a small, pleasing proof that the animation-free decision was right on its own merits and not merely an accessibility concession. The ambient layer is governed by the same `useMotionAllowed()` used for Console/Booth content motion (`packages/ui/src/motion.tsx`), so this is one guard, not two.
 
 ---
 

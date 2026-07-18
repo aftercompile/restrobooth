@@ -36,7 +36,7 @@
    lint-brass.mjs rule enforces this mechanically. */
 .primary {
   background: var(--brass-500);
-  color: var(--ink-900);
+  color: var(--text);
 }
 .primary:hover:not(:disabled) {
   background: #d4a94a;
@@ -44,22 +44,12 @@
 
 .secondary {
   background: transparent;
-  border-color: var(--border-on-light);
+  border-color: var(--border);
   color: var(--enamel-700);
 }
 .secondary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--enamel-700) 6%, transparent);
   border-color: var(--enamel-700);
-}
-
-[data-density="pos"] .secondary,
-[data-density="kds"] .secondary {
-  border-color: var(--border-on-dark);
-  color: var(--chalk-50);
-}
-[data-density="pos"] .secondary:hover:not(:disabled),
-[data-density="kds"] .secondary:hover:not(:disabled) {
-  background: var(--ink-500);
 }
 
 /* Destructive actions use the semantic danger colour and are visually
@@ -71,6 +61,6 @@
 }
 .danger:hover:not(:disabled) {
   background: var(--signal-600);
-  color: var(--chalk-50);
+  color: #fff;
   border-color: var(--signal-600);
 }

@@ -2,16 +2,16 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--surface-light);
-  color: var(--text-on-light);
+  background: transparent;
+  color: var(--text);
 }
 
 /* The enamel header — the one saturated surface in the console. Everything
-   below it is chalk and quiet, which is what buys the state rail its
+   below it is paper and quiet, which is what buys the state rail its
    loudness (docs/DESIGN.md: "spend the boldness in one place"). */
 .header {
   background: var(--enamel-700);
-  color: var(--chalk-50);
+  color: #fff;
   border-bottom: 3px solid var(--brass-500); /* brass as a FILL, never text */
   position: sticky;
   top: 0;
@@ -38,7 +38,7 @@
   font-weight: 700;
   font-size: 18px;
   letter-spacing: var(--tracking-display);
-  color: var(--chalk-50);
+  color: #fff;
   text-decoration: none;
   flex-shrink: 0;
 }
@@ -77,7 +77,7 @@
   min-height: 38px;
   padding: 0 12px;
   border-radius: var(--radius);
-  color: rgb(237 241 239 / 72%);
+  color: rgb(255 255 255 / 72%);
   text-decoration: none;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -86,14 +86,14 @@
 }
 
 .navLink:hover {
-  color: var(--chalk-50);
-  background: rgb(237 241 239 / 8%);
+  color: #fff;
+  background: rgb(255 255 255 / 10%);
 }
 
 /* Current location is never signalled by colour alone — it also gets a
    brass underline (nav-state-active + color-not-only). */
 .navLink[aria-current="page"] {
-  color: var(--chalk-50);
+  color: #fff;
 }
 
 .navLink[aria-current="page"]::after {
@@ -119,7 +119,7 @@
 }
 
 .userEmail {
-  color: rgb(237 241 239 / 72%);
+  color: rgb(255 255 255 / 72%);
   font-variant-numeric: tabular-nums;
 }
 
@@ -155,7 +155,7 @@
 .pageSub {
   margin: 6px 0 0;
   font-size: var(--text-sm);
-  color: color-mix(in srgb, var(--enamel-700) 62%, var(--chalk-50));
+  color: var(--text-muted);
   max-width: 62ch; /* line-length rule: 60-75 chars */
   line-height: var(--leading-body);
 }

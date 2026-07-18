@@ -3,6 +3,7 @@ import { DensityProvider, ToastProvider } from "@restrobooth/ui";
 import { Bricolage_Grotesque, IBM_Plex_Mono, Inter } from "next/font/google";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { AmbientBackgroundRoute } from "./AmbientBackgroundRoute";
 
 /**
  * The three faces from docs/DESIGN.md, self-hosted by next/font at build
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${bricolage.variable} ${inter.variable} ${plexMono.variable}`}>
       <body>
+        <AmbientBackgroundRoute />
         <DensityProvider density="console">
           <ToastProvider>{children}</ToastProvider>
         </DensityProvider>

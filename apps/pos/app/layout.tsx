@@ -1,5 +1,5 @@
 import "@restrobooth/ui/src/tokens/index.css";
-import { DensityProvider, ToastProvider } from "@restrobooth/ui";
+import { AmbientBackground, DensityProvider, ToastProvider } from "@restrobooth/ui";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -24,6 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
       <body>
+        <AmbientBackground mode="static" />
         <DensityProvider density="pos">
           <ToastProvider>{children}</ToastProvider>
         </DensityProvider>

@@ -14,7 +14,7 @@
 }
 
 .sub {
-  color: var(--chalk-400);
+  color: var(--text-muted);
   font-size: var(--text-sm);
   margin: 2px 0 0 0;
 }
@@ -34,7 +34,7 @@
 .sectionTitle {
   font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--chalk-400);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: var(--space-2) 0 6px 0;
@@ -55,7 +55,7 @@
 .itemQty {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
-  color: var(--chalk-400);
+  color: var(--text-muted);
   font-size: var(--text-sm);
   min-width: 24px;
 }
@@ -76,9 +76,9 @@
 
 .reasonSelect {
   font-size: var(--text-sm);
-  background: var(--ink-900);
-  color: var(--chalk-50);
-  border: 1px solid var(--ink-500);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   min-height: 36px;
   padding: 0 6px;
@@ -110,7 +110,7 @@
 
 .alarm {
   background: var(--signal-600);
-  color: var(--chalk-50);
+  color: #fff;
   font-weight: 700;
   padding: 8px 10px;
   border-radius: var(--radius);
@@ -140,9 +140,9 @@
 
 .mergeSelect {
   font-size: var(--text-sm);
-  background: var(--ink-900);
-  color: var(--chalk-50);
-  border: 1px solid var(--ink-500);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   min-height: 44px;
   padding: 0 8px;

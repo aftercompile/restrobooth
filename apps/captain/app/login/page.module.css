@@ -1,8 +1,11 @@
-/* Same POS-density, zero-animation login shell as apps/pos — phone
-   viewport, so it's just narrower by default, not a different layout. */
+/* Captain density: zero animation, dense, light. No split-pane pitch — a
+   captain signing in table-side needs the two fields and the button, not
+   a marketing pane. lint-motion.mjs also blocks any framer-motion import
+   in this app, so this page can never reach for <Animate> even by
+   accident. */
 
 .page {
-  min-height: 100dvh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -25,7 +28,7 @@
   font-family: var(--font-body);
   font-weight: 700;
   font-size: var(--text-lg);
-  color: var(--chalk-50);
+  color: var(--text);
   margin: 0 0 var(--space-1) 0;
 }
 
@@ -37,13 +40,13 @@
 }
 
 .markDim {
-  color: var(--chalk-400);
+  color: var(--text-muted);
   font-weight: 400;
 }
 
 .sub {
   margin: 0 0 var(--space-1) 0;
-  color: var(--chalk-400);
+  color: var(--text-muted);
   font-size: var(--text-sm);
 }
 

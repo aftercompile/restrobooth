@@ -1,0 +1,41 @@
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.doodle {
+  position: absolute;
+  color: var(--ambient-doodle);
+  opacity: 0.16;
+}
+
+.doodle svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* CSS-only drift — no framer-motion import in this file, which is what
+   keeps scripts/lint-motion.mjs (no motion library in apps/pos, apps/kds,
+   apps/captain) valid even though this component is mounted in every app.
+   tokens/motion.css's global `prefers-reduced-motion` rule already forces
+   `animation: none !important` on everything, this layer included, so
+   there is no separate media query to maintain here. */
+.layer[data-motion="animate"] .doodle {
+  animation: rb-doodle-drift var(--dur, 28s) ease-in-out infinite alternate;
+}
+
+.layer[data-motion="static"] .doodle {
+  animation: none;
+}
+
+@keyframes rb-doodle-drift {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate(var(--dx, 10px), var(--dy, -10px)) rotate(var(--dr, 6deg));
+  }
+}

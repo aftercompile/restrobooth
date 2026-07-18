@@ -1,16 +1,20 @@
-/* Split screen: enamel on the left (the brand), chalk on the right (the
+/* Split screen: enamel on the left (the brand), paper on the right (the
    work). The one place the console is allowed a moment of composition —
    and it costs the dense screens nothing, because they never see it. */
 .page {
   min-height: 100dvh;
   display: grid;
   grid-template-columns: 1.05fr 1fr;
-  background: var(--surface-light);
+  /* No opaque background here on purpose: body already paints --bg, and
+     leaving this transparent is what lets the ambient doodle layer (fixed,
+     behind everything) show through on the one route it's allowed to
+     animate on. */
+  background: transparent;
 }
 
 .brandPane {
   background: var(--enamel-700);
-  color: var(--chalk-50);
+  color: #fff;
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -62,7 +66,7 @@
   margin: var(--space-2) 0 0;
   font-size: var(--text-base);
   line-height: var(--leading-body);
-  color: rgb(237 241 239 / 70%);
+  color: rgb(255 255 255 / 70%);
   max-width: 40ch;
 }
 
@@ -82,7 +86,7 @@
   align-items: center;
   gap: 10px;
   font-size: var(--text-sm);
-  color: rgb(237 241 239 / 74%);
+  color: rgb(255 255 255 / 74%);
 }
 
 .legendRail {
@@ -116,7 +120,7 @@
 .sub {
   margin: 0 0 var(--space-3);
   font-size: var(--text-sm);
-  color: color-mix(in srgb, var(--enamel-700) 60%, var(--chalk-50));
+  color: var(--text-muted);
 }
 
 .error {

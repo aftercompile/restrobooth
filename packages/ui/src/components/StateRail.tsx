@@ -24,8 +24,8 @@ const RAIL_COLOR: Record<RailState, string> = {
   warming: "var(--ramp-warming)",
   hot: "var(--ramp-hot)",
   critical: "var(--ramp-critical)",
-  idle: "var(--chalk-400)",
-  archived: "var(--chalk-200)",
+  idle: "var(--text-muted)",
+  archived: "var(--border-strong)",
 };
 
 /**

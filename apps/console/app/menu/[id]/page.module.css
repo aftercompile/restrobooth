@@ -26,6 +26,6 @@
   margin: 0 0 var(--space-2);
   font-size: var(--text-sm);
   line-height: var(--leading-body);
-  color: color-mix(in srgb, var(--enamel-700) 60%, var(--chalk-50));
+  color: var(--text-muted);
   max-width: 62ch;
 }

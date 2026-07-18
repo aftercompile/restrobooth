@@ -111,7 +111,7 @@ export default async function MenuPage() {
                 );
               })}
               {group.items.length === 0 && (
-                <p style={{ padding: "var(--space-2)", margin: 0, fontSize: "var(--text-sm)", color: "var(--chalk-400)" }}>
+                <p style={{ padding: "var(--space-2)", margin: 0, fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
                   Nothing in this category yet.
                 </p>
               )}
@@ -121,7 +121,7 @@ export default async function MenuPage() {
 
         {items.length === 0 && (
           <Card>
-            <p style={{ margin: 0, color: "var(--chalk-400)" }}>
+            <p style={{ margin: 0, color: "var(--text-muted)" }}>
               No menu items yet. Create the first one to get started.
             </p>
           </Card>

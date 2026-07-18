@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// docs/DESIGN.md: "--brass-500 is 2.2:1 on --chalk-50 and FAILS AA for
+// docs/DESIGN.md: "--brass-500 is 2.2:1 on --bg and FAILS AA for
 // text. It is a FILL only... never a text colour." Not Stylelint (no new
 // heavy dependency for one rule, matching the Phase 1 plan) — a small,
 // direct scan of the CSS this package actually ships.
@@ -41,7 +41,7 @@ for (const file of walk(srcDir)) {
 }
 
 if (violations.length > 0) {
-  console.error("brass-lint: --brass-500 used as a text `color` (fails AA on chalk-50 — fill only):\n");
+  console.error("brass-lint: --brass-500 used as a text `color` (fails AA on light grounds — fill only):\n");
   for (const v of violations) console.error("  " + v);
   console.error("\nUse --brass-500 for background/border/outline/fill, never `color`.");
   process.exit(1);

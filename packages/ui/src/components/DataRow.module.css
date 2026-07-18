@@ -5,12 +5,7 @@
   gap: var(--space-2);
   padding: 10px var(--space-2);
   min-height: var(--touch-target);
-  border-bottom: 1px solid var(--border-on-dark);
-}
-
-[data-density="console"] .row,
-[data-density="booth"] .row {
-  border-bottom-color: var(--border-on-light);
+  border-bottom: 1px solid var(--border);
 }
 
 .row:last-child {
@@ -42,12 +37,7 @@
 }
 
 .interactive:hover {
-  background: color-mix(in srgb, var(--chalk-50) 60%, #fff);
-}
-
-[data-density="pos"] .interactive:hover,
-[data-density="kds"] .interactive:hover {
-  background: var(--ink-500);
+  background: var(--surface-sunken);
 }
 
 /* The focus ring is the POS cashier's primary navigation affordance — it

@@ -9,26 +9,21 @@
 }
 
 .neutral {
-  background: var(--border-on-dark);
-  color: var(--chalk-50);
-}
-[data-density="console"] .neutral,
-[data-density="booth"] .neutral {
-  background: var(--chalk-200);
-  color: var(--ink-900);
+  background: var(--border-strong);
+  color: var(--text);
 }
 
 .live {
   background: var(--enamel-500);
-  color: var(--chalk-50);
+  color: #fff;
 }
 
 .warning {
   background: var(--ramp-warming);
-  color: var(--ink-900);
+  color: var(--text);
 }
 
 .critical {
   background: var(--signal-600);
-  color: var(--chalk-50);
+  color: #fff;
 }

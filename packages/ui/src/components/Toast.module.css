@@ -13,9 +13,10 @@
   max-width: 360px;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius);
-  background: var(--ink-700);
-  color: var(--chalk-50);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 32%);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgb(18 32 29 / 18%);
 }
 
 /* POS/KDS get zero transition globally (tokens/motion.css); Console/Booth

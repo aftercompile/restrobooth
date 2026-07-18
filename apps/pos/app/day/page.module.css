@@ -12,7 +12,7 @@
 }
 
 .meta {
-  color: var(--chalk-400);
+  color: var(--text-muted);
   font-size: var(--text-sm);
 }
 

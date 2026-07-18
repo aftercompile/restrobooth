@@ -3,21 +3,39 @@
 @import "./typography.css";
 @import "./motion.css";
 
+/* box-sizing reset (layout-bug fix): with no reset, any element at
+   width:100% plus padding/border overflows its box under the browser's
+   content-box default — this was the cause of the POS floor grid's
+   occupied table cards spilling into the neighbouring cell. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+/* Ground fix (layout-bug fix): the ground colour used to live only on the
+   inner [data-density] wrapper, which is only as tall as its content — a
+   short page revealed the browser's default white below it. Painting the
+   ground on html/body and making the wrapper transparent-but-full-height
+   fixes that AND gives the ambient doodle layer (behind the wrapper) a
+   consistent backdrop to show through. */
+html,
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
 [data-density] {
   font-family: var(--font-body);
   font-size: var(--text-base);
-}
-
-[data-density="pos"],
-[data-density="kds"] {
-  background: var(--surface-dark);
-  color: var(--text-on-dark);
-}
-
-[data-density="console"],
-[data-density="booth"] {
-  background: var(--surface-light);
-  color: var(--text-on-light);
+  background: transparent;
+  color: var(--text);
+  min-height: 100dvh;
+  position: relative;
 }
 
 /* The focus ring is the POS cashier's primary navigation affordance —

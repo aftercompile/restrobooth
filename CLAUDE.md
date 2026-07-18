@@ -52,7 +52,7 @@ The four acceptance tests that are the product:
 - **Menu overrides key on `store`, not `outlet`.** (`store` = brand × outlet.) The original brief said outlet; it was wrong.
 - **Price and availability resolve independently.** An 86 must not erase a price override.
 - **A printed invoice number is immutable.** Never renumber on sync. Gaps are permanent, explained, never reused.
-- **`prefers-reduced-motion` and 44px touch targets** on POS are floor, not polish. **POS/KDS have zero animation** — a 200 ms transition on a billing screen is a bug.
+- **`prefers-reduced-motion` and 44px touch targets** on POS are floor, not polish. **Zero motion on POS/KDS working content** — a 200 ms transition on a billing screen is a bug. (Amended 2026-07-19: an ambient CSS-only doodle background layer now exists behind all four apps' content and is allowed to animate on light/non-dense surfaces — in practice only Console's `/login` — via `useMotionAllowed()`. It never touches the floor/bill/board, and POS/KDS/Captain stay static even on their own login screens. See [docs/DESIGN.md](docs/DESIGN.md)'s amendment and [DECISIONS.md](DECISIONS.md).)
 
 ## Where things are
 

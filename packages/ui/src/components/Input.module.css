@@ -13,16 +13,11 @@
   min-height: var(--touch-target);
   padding: 0 var(--space-2);
   border-radius: var(--radius);
-  border: 1px solid var(--border-on-dark);
+  border: 1px solid var(--border);
   background: transparent;
   color: inherit;
   font-family: var(--font-body);
   font-size: var(--text-base);
-}
-
-[data-density="console"] .input,
-[data-density="booth"] .input {
-  border-color: var(--border-on-light);
 }
 
 .input:disabled {

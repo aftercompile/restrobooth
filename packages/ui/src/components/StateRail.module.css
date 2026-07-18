@@ -27,16 +27,16 @@
     -45deg,
     var(--ramp-critical),
     var(--ramp-critical) 2px,
-    var(--ink-900) 2px,
-    var(--ink-900) 4px
+    var(--bg) 2px,
+    var(--bg) 4px
   );
 }
 
 .rail[data-rail="archived"]::before {
   background-image: repeating-linear-gradient(
     to bottom,
-    var(--chalk-400),
-    var(--chalk-400) 3px,
+    var(--text-muted),
+    var(--text-muted) 3px,
     transparent 3px,
     transparent 7px
   );

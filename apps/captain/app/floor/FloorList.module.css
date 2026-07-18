@@ -5,7 +5,7 @@
 .outletName {
   font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--chalk-400);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0 0 var(--space-1) 0;
@@ -17,8 +17,8 @@
 
 .areaName {
   font-size: var(--text-sm);
-  color: var(--chalk-400);
-  margin: 0 0 8px 0;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-1) 0;
 }
 
 /* Single column, phone-first — the point of this list over apps/pos's
@@ -27,7 +27,7 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
 .tableButton {
@@ -38,13 +38,13 @@
   width: 100%;
   text-align: left;
   text-decoration: none;
-  background: var(--ink-700);
-  border: 1px solid var(--ink-500);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   min-height: 56px;
-  padding: 12px 14px;
-  color: var(--chalk-50);
+  padding: var(--space-2);
+  color: var(--text);
   font: inherit;
 }
 
@@ -55,7 +55,7 @@
 
 .tableMeta {
   font-size: var(--text-sm);
-  color: var(--chalk-400);
+  color: var(--text-muted);
   text-align: right;
 }
 
@@ -65,5 +65,5 @@
 }
 
 .empty {
-  color: var(--chalk-400);
+  color: var(--text-muted);
 }

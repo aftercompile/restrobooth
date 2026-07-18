@@ -7,8 +7,8 @@
   gap: var(--space-1);
   min-height: 52px;
   padding: 0 var(--space-2);
-  background: var(--ink-700);
-  border-bottom: 1px solid var(--ink-500);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 
 .mark {
@@ -17,7 +17,7 @@
   gap: 8px;
   font-weight: 700;
   font-size: var(--text-base);
-  color: var(--chalk-50);
+  color: var(--text);
   text-decoration: none;
   flex-shrink: 0;
 }
@@ -39,9 +39,9 @@
   font-size: var(--text-sm);
   cursor: pointer;
   background: transparent;
-  border: 1px solid var(--ink-500);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  color: var(--chalk-50);
+  color: var(--text);
   min-height: 44px;
   padding: 0 12px;
 }

@@ -5,7 +5,7 @@
 .categoryName {
   font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--chalk-400);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0 0 6px 0;
@@ -23,13 +23,13 @@
   justify-content: space-between;
   gap: var(--space-1);
   text-align: left;
-  background: var(--ink-700);
-  border: 1px solid var(--ink-500);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   min-height: 52px;
   padding: 10px 14px;
-  color: var(--chalk-50);
+  color: var(--text);
   font: inherit;
 }
 
@@ -47,5 +47,5 @@
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
   font-size: var(--text-sm);
-  color: var(--chalk-400);
+  color: var(--text-muted);
 }

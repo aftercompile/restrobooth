@@ -1,22 +1,12 @@
 .card {
   border-radius: var(--radius);
-  border: 1px solid var(--border-on-dark);
+  border: 1px solid var(--border);
+  background: var(--surface);
   overflow: hidden;
-}
-
-[data-density="console"] .card,
-[data-density="booth"] .card {
-  border-color: var(--border-on-light);
-  background: #fff;
   /* A single, consistent elevation step — not a random shadow value
      (elevation-consistent). Deliberately shallow: this is a back office,
      not a landing page. */
-  box-shadow: 0 1px 2px rgb(12 21 23 / 4%);
-}
-
-[data-density="pos"] .card,
-[data-density="kds"] .card {
-  background: var(--ink-700);
+  box-shadow: 0 1px 2px rgb(18 32 29 / 5%);
 }
 
 /* Padding is opt-in. A card wrapping a list of DataRows must NOT have
@@ -33,14 +23,8 @@
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--border-on-light);
-  background: color-mix(in srgb, var(--chalk-50) 55%, #fff);
-}
-
-[data-density="pos"] .cardHead,
-[data-density="kds"] .cardHead {
-  border-bottom-color: var(--border-on-dark);
-  background: var(--ink-900);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
 }
 
 .cardTitle {
@@ -52,16 +36,9 @@
   margin: 0;
 }
 
-[data-density="pos"] .cardTitle,
-[data-density="kds"] .cardTitle {
-  font-family: var(--font-body);
-  letter-spacing: normal;
-  color: var(--chalk-50);
-}
-
 .cardCount {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
   font-size: var(--text-sm);
-  color: var(--chalk-400);
+  color: var(--text-muted);
 }

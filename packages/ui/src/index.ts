@@ -17,6 +17,7 @@ export {
 } from "./motion";
 
 export { AppShell, PageHeader, shellClasses } from "./components/AppShell";
+export { AmbientBackground } from "./components/AmbientBackground";
 export { StateRail, type RailState } from "./components/StateRail";
 export { Button, type ButtonVariant } from "./components/Button";
 export { Input } from "./components/Input";

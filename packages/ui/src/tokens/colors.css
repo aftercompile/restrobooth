@@ -1,21 +1,29 @@
 /**
- * Direction B, "Service Board" (docs/DESIGN.md). Enamel green, graphite
- * steel, one brass accent — the material language of a working commercial
- * kitchen, not a diner and not a SaaS dashboard.
+ * Direction B, "Service Board" (docs/DESIGN.md), re-skinned light per the
+ * Phase 4.5 redesign: warm paper ground, enamel green + brass accent kept
+ * as the brand DNA, one light theme across all four apps (no more
+ * dark/light fork per density — see DECISIONS.md).
  *
  * Hard rule, enforced by scripts/lint-brass.mjs (not a CSS-only comment):
- * --brass-500 is 2.2:1 on --chalk-50 and FAILS AA for text. It is a FILL
- * only — rail, focus ring, a button face with dark text on it — never a
- * `color` on a light background. On dark grounds it reaches 6.4:1 and is
- * safe for text.
+ * --brass-500 is a FILL only — rail, focus ring, a button face with dark
+ * text on it — never a `color` on a light background (2.2:1, fails AA).
  */
 :root {
-  /* Ground */
-  --ink-900: #0c1517; /* dark ground: POS chrome, KDS */
-  --chalk-50: #edf1ef; /* light ground: Console, Booth — green-shifted, not cream */
+  /* Ground + surfaces */
+  --bg: #f6f4ef; /* warm paper — html/body and the [data-density] wrapper */
+  --surface: #ffffff; /* card fill */
+  --surface-sunken: #efede7; /* card headers, insets, subtle tint */
+
+  /* Text */
+  --text: #12201d; /* primary text (13.8:1 on --bg) */
+  --text-muted: #5c6b66; /* secondary text, still AA on --bg/--surface */
+
+  /* Borders */
+  --border: #e2e0d8;
+  --border-strong: #cdcbc2;
 
   /* Brand */
-  --enamel-700: #0e4f45; /* headers, primary surfaces, text-on-light (7.6:1 on chalk-50) */
+  --enamel-700: #0e4f45; /* headers, primary surfaces, brand text (7.6:1 on --bg) */
   --enamel-500: #17796a; /* live / fresh / OK state */
   --brass-500: #c89b3c; /* the one warm accent — FILL ONLY, see header comment */
   --signal-600: #c63a2a; /* destructive: void, 86, critical age */
@@ -26,19 +34,12 @@
   --ramp-hot: #d2622a;
   --ramp-critical: #c63a2a;
 
-  /* Neutrals derived from the two grounds, for borders/dividers/disabled */
-  --ink-700: #1b262a;
-  --ink-500: #2e3d42;
-  --chalk-200: #d7dedb;
-  --chalk-400: #aab6b1;
-
   /* Semantic aliases — components reference these, never raw hex */
-  --surface-dark: var(--ink-900);
-  --surface-light: var(--chalk-50);
-  --text-on-dark: var(--chalk-50);
-  --text-on-light: var(--enamel-700);
-  --border-on-dark: var(--ink-500);
-  --border-on-light: var(--chalk-200);
   --focus-ring: var(--brass-500);
   --danger: var(--signal-600);
+
+  /* The ambient doodle background layer (AmbientBackground) — a muted
+     sage, deliberately quieter than any semantic token above so it never
+     competes with content. */
+  --ambient-doodle: #a8b6ac;
 }

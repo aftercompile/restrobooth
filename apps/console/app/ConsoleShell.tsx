@@ -60,9 +60,9 @@ function SignOutButton() {
           fontSize: "var(--text-sm)",
           cursor: "pointer",
           background: "transparent",
-          border: "1px solid rgb(237 241 239 / 28%)",
+          border: "1px solid rgb(255 255 255 / 28%)",
           borderRadius: "var(--radius)",
-          color: "var(--chalk-50)",
+          color: "#fff",
           minHeight: 36,
           padding: "0 12px",
         }}
