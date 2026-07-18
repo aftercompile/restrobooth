@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { StateRail } from "@restrobooth/ui";
+import { Badge, RefreshIcon, StateRail } from "@restrobooth/ui";
 import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS } from "@restrobooth/domain";
 import { createClient } from "../../lib/supabase/client";
 import type { FloorTable } from "./queries";
@@ -24,6 +24,10 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
   // the first paint, or React discards the server HTML as a mismatch.
   const [now, setNow] = useState<number | null>(null);
   const [seating, setSeating] = useState<FloorTable | null>(null);
+
+  function handleRefresh() {
+    router.refresh();
+  }
 
   useEffect(() => {
     const tick = () => setNow(Date.now());
@@ -64,12 +68,28 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
     return outlets;
   }, [tables]);
 
+  const runningCount = tables.filter((t) => t.sessionId).length;
+  const availableCount = tables.length - runningCount;
+
   if (tables.length === 0) {
     return <p className={styles.empty}>No tables at any outlet you have access to.</p>;
   }
 
   return (
     <>
+      <div className={styles.header}>
+        <h1 className={styles.title}>
+          Table view
+          <span className={styles.counts}>
+            {runningCount} running · {availableCount} available
+          </span>
+        </h1>
+        <button type="button" className={styles.refreshButton} onClick={handleRefresh}>
+          <RefreshIcon />
+          Refresh
+        </button>
+      </div>
+
       {Array.from(byOutlet.values()).map((outlet) => (
         <div key={outlet.outletName} className={styles.outlet}>
           <p className={styles.outletName}>{outlet.outletName}</p>
@@ -95,10 +115,22 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                     <StateRail key={t.tableId} state={rampState} label={`${t.sessionStatus}, ${elapsedLabel}`}>
                       <Link href={`/floor/${t.sessionId}`} className={styles.tableButton}>
                         <span className={styles.tableLabel}>{t.label}</span>
-                        <span className={styles.tableMeta}>
-                          {t.covers} cover{t.covers === 1 ? "" : "s"} · {t.sessionStatus}
-                          <br />
-                          <span className={styles.tableTimer}>{elapsedLabel}</span>
+                        <span className={styles.tableMetaGroup}>
+                          {/* Same "second signal, not folded into the rail" reasoning as
+                              apps/pos/app/floor/FloorMap.tsx — the rail stays pure elapsed
+                              time, this badge is the bill's own lifecycle. Captain has no
+                              bill screen of its own (billing is a POS/cashier capability),
+                              so it's a badge only, no quick-link. */}
+                          {t.billStatus && (
+                            <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
+                              {t.billStatus === "paid" ? "Paid" : "Printed"}
+                            </Badge>
+                          )}
+                          <span className={styles.tableMeta}>
+                            {t.covers} cover{t.covers === 1 ? "" : "s"} · {t.sessionStatus}
+                            <br />
+                            <span className={styles.tableTimer}>{elapsedLabel}</span>
+                          </span>
                         </span>
                       </Link>
                     </StateRail>

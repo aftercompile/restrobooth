@@ -14,6 +14,10 @@ export interface FloorTable {
   covers: number | null;
   openedAt: string | null;
   storeId: string | null;
+  /** null = no active bill yet; "printed" = a finalised bill still owes
+   *  money; "paid" = every non-voided bill on this session is settled.
+   *  Same aggregation as apps/pos/app/floor/queries.ts's getFloor(). */
+  billStatus: "printed" | "paid" | null;
 }
 
 interface FloorRow {
@@ -30,6 +34,7 @@ interface FloorRow {
   covers: number | null;
   opened_at: string | null;
   store_id: string | null;
+  bill_status: "printed" | "paid" | null;
 }
 
 /**
@@ -45,7 +50,8 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       t.id as table_id, t.label, t.capacity,
       t.outlet_id, o.name as outlet_name,
       t.area_id, a.name as area_name,
-      ts.id as session_id, ts.status as session_status, ts.covers, ts.opened_at, ts.store_id
+      ts.id as session_id, ts.status as session_status, ts.covers, ts.opened_at, ts.store_id,
+      bs.bill_status
     from tables t
     join areas a on a.id = t.area_id
     join outlets o on o.id = t.outlet_id
@@ -57,6 +63,20 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
         and ts2.status not in ('closed', 'abandoned', 'merged_into')
       limit 1
     ) ts on true
+    -- Same split-bill-aware summary as apps/pos's getFloor() — see that
+    -- file's comment.
+    left join lateral (
+      select case
+        when count(*) filter (where b.status not in ('voided', 'discarded')) > 0
+         and count(*) filter (where b.status not in ('voided', 'discarded', 'settled')) = 0
+          then 'paid'
+        when count(*) filter (where b.status = 'finalised') > 0
+          then 'printed'
+        else null
+      end as bill_status
+      from bills b
+      where b.table_session_id = ts.id
+    ) bs on true
     where t.status = 'available'
     order by o.name, a.name, t.label
   `);
@@ -74,5 +94,6 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     covers: r.covers,
     openedAt: r.opened_at,
     storeId: r.store_id,
+    billStatus: r.bill_status,
   }));
 }

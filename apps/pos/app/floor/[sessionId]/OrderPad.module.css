@@ -19,6 +19,14 @@
   margin: 2px 0 0 0;
 }
 
+.goToBillBar {
+  margin: var(--space-2) 0;
+}
+
+.goToBillButton {
+  width: 100%;
+}
+
 .columns {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -53,6 +53,13 @@
   font-size: var(--text-lg);
 }
 
+.tableMetaGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
 .tableMeta {
   font-size: var(--text-sm);
   color: var(--text-muted);
@@ -62,6 +69,49 @@
 .tableTimer {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.counts {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.refreshButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.refreshButton svg {
+  width: 16px;
+  height: 16px;
 }
 
 .empty {

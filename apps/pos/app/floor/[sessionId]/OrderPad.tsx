@@ -162,9 +162,11 @@ export function OrderPad({
         <div className={styles.total}>₹{formatRupees(total.toString())}</div>
       </div>
 
-      <Button type="button" variant="secondary" onClick={onGoToBill}>
-        Go to bill →
-      </Button>
+      <div className={styles.goToBillBar}>
+        <Button type="button" variant="secondary" className={styles.goToBillButton} onClick={onGoToBill}>
+          Go to bill →
+        </Button>
+      </div>
 
       <div className={styles.columns}>
         <div>

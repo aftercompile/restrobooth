@@ -3,12 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { StateRail } from "@restrobooth/ui";
+import { Badge, RampLegend, ReceiptIcon, RefreshIcon, StateRail } from "@restrobooth/ui";
 import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS } from "@restrobooth/domain";
 import { createClient } from "../../lib/supabase/client";
 import type { FloorTable } from "./queries";
 import { SeatTableDialog } from "./SeatTableDialog";
 import styles from "./FloorMap.module.css";
+
+const DWELL_LEGEND = [
+  { label: "Available", color: "var(--text-muted)" },
+  { label: "Fresh", color: "var(--ramp-fresh)" },
+  { label: "Warming (15m+)", color: "var(--ramp-warming)" },
+  { label: "Hot (30m+)", color: "var(--ramp-hot)" },
+  { label: "Critical (60m+)", color: "var(--ramp-critical)" },
+];
 
 function formatElapsed(ms: number): string {
   const totalMinutes = Math.floor(ms / 60_000);
@@ -29,6 +37,18 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
   // apply to.
   const [now, setNow] = useState<number | null>(null);
   const [seating, setSeating] = useState<FloorTable | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  function handleRefresh() {
+    setRefreshing(true);
+    router.refresh();
+    // No completion event from router.refresh() itself — the realtime
+    // subscription below already keeps this view current on its own; this
+    // button is a manual "I don't want to wait" escape hatch, so a short,
+    // fixed pulse is enough to confirm the tap registered without wiring
+    // up a real request-lifecycle signal for what is a fire-and-forget call.
+    setTimeout(() => setRefreshing(false), 600);
+  }
 
   // Table dwell is a minutes-scale clock — a 30s tick is plenty to keep the
   // rail's ramp state current without repainting every second (POS is
@@ -83,12 +103,31 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
     return outlets;
   }, [tables]);
 
+  const runningCount = tables.filter((t) => t.sessionId).length;
+  const availableCount = tables.length - runningCount;
+
   if (tables.length === 0) {
     return <p className={styles.empty}>No tables at any outlet you have access to.</p>;
   }
 
   return (
     <>
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>Table view</h1>
+          <span className={styles.counts}>
+            {runningCount} running · {availableCount} available
+          </span>
+        </div>
+        <div className={styles.headerLeft}>
+          <RampLegend items={DWELL_LEGEND} />
+          <button type="button" className={styles.refreshButton} data-spinning={refreshing} onClick={handleRefresh}>
+            <RefreshIcon />
+            Refresh
+          </button>
+        </div>
+      </div>
+
       {Array.from(byOutlet.values()).map((outlet) => (
         <div key={outlet.outletName} className={styles.outlet}>
           <p className={styles.outletName}>{outlet.outletName}</p>
@@ -117,13 +156,31 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                   const elapsedLabel = elapsedMs === null ? "…" : formatElapsed(elapsedMs);
                   return (
                     <StateRail key={t.tableId} state={rampState} label={`${t.sessionStatus}, ${elapsedLabel}`}>
-                      <Link href={`/floor/${t.sessionId}`} className={styles.tableButton}>
-                        <div className={styles.tableLabel}>{t.label}</div>
-                        <div className={styles.tableMeta}>
-                          {t.covers} cover{t.covers === 1 ? "" : "s"} · {t.sessionStatus} ·{" "}
-                          <span className={styles.tableTimer}>{elapsedLabel}</span>
-                        </div>
-                      </Link>
+                      <div className={styles.tableCard}>
+                        <Link href={`/floor/${t.sessionId}`} className={styles.tableLink}>
+                          <div className={styles.tableLabel}>{t.label}</div>
+                          <div className={styles.tableMeta}>
+                            {t.covers} cover{t.covers === 1 ? "" : "s"} · {t.sessionStatus} ·{" "}
+                            <span className={styles.tableTimer}>{elapsedLabel}</span>
+                          </div>
+                        </Link>
+                        {/* Bill lifecycle is a SECOND signal, deliberately not folded into
+                            the rail (DESIGN.md: "only the rail encodes state with colour") —
+                            the rail stays pure elapsed-time, this badge is the bill's own
+                            status, and the two can disagree (a fresh table can already have
+                            a printed bill if service was fast). */}
+                        {t.billStatus && (
+                          <div className={styles.tableFooter}>
+                            <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
+                              {t.billStatus === "paid" ? "Paid" : "Printed"}
+                            </Badge>
+                            <Link href={`/floor/${t.sessionId}/bill`} className={styles.billLink}>
+                              <ReceiptIcon />
+                              View bill
+                            </Link>
+                          </div>
+                        )}
+                      </div>
                     </StateRail>
                   );
                 })}
