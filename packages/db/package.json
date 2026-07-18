@@ -18,7 +18,8 @@
     "seed": "tsx scripts/seed-believable-chain.ts",
     "seed:auth": "tsx scripts/seed-auth-users.ts",
     "seed:categories": "tsx scripts/seed-categories.ts",
-    "seed:kitchen-sections": "tsx scripts/seed-kitchen-sections.ts"
+    "seed:kitchen-sections": "tsx scripts/seed-kitchen-sections.ts",
+    "purge": "tsx scripts/purge-order-data.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
