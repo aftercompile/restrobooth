@@ -4,6 +4,21 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-19 — A front-door app (`apps/hub`), and a Menu tab in POS
+
+**Decided by:** Mohammed ("merge all these apps on one page... a page where it asks to select either POS, KDS, Captain. Also, add Menu to POS"), scoped via `AskUserQuestion` before building: a new minimal app rather than attaching the picker to Console's login-gated root (KDS/captain staff may not have Console accounts), and POS's Menu tab does browse + a real 86 toggle rather than staying read-only, since 86'ing is already inside a cashier's granted capability (TENANCY.md §4).
+
+**Why a new app, not a page inside an existing one:** POS/KDS/Captain are three separate Next.js deployments (separate ports in dev, presumably separate domains in prod — ADR-0001 doesn't specify subdomains, but each app is its own Vercel project). A "pick one" page is a front door that has to exist *before* any of the three logins, so it can't live behind one of their auth gates. `apps/hub` has no auth, no database access, and no state of its own — three tiles, each a plain cross-origin link to `NEXT_PUBLIC_{POS,KDS,CAPTAIN}_URL` (falling back to the dev ports, 3001/3002/3003, when unset). It mounts `AmbientBackground` unconditionally in "animate" mode — this page IS the "one place allowed a moment of composition" DESIGN.md already carves out for Console's login, not a working screen with the calm-screens rule to honour.
+
+**What shipped:**
+
+1. **`apps/hub`** — same scaffold as every other app (tsconfig/eslint extending `@restrobooth/config`, `transpilePackages: ["@restrobooth/ui"]`), booth density (spacious, motion-rich), no `DATABASE_URL`/Supabase client at all since it never touches data.
+2. **POS `/menu`** (`apps/pos/app/menu/`): `getMenuOverview()` is `getOrderableMenu()`'s LATERAL-join-per-store pattern *without* the `where rm.is_available` filter — the whole point of this screen is showing 86'd items too, not hiding them. Grouped outlet → store/brand → category, mirroring the floor view's own grouping rather than inventing a new layout. Each row is a `DataRow` composing `StateRail` — `"fresh"` for available, `"archived"` for 86'd, which is the literal case `StateRail.tsx`'s own docstring names ("draft, live, **86'd**, or archived"), not a new state invented for this feature.
+3. **The 86 toggle** (`apps/pos/app/menu/actions.ts`) is the exact same mutation as Console's `setAvailability` — an insert into `menu_item_overrides`, capability-open to any staff with store scope (only `price_paise` is DB-trigger-guarded, per `drizzle/0012_menu_capability.sql`). Writes to `menu_audit_log` too (`apps/pos/lib/audit.ts`, duplicated from `apps/console/lib/audit.ts` — same "each app owns its own action layer" precedent as `getFloor()`): TENANCY.md §7.5 says every override transition is audited *regardless of which app made it*, so a cashier 86'ing an item from the POS floor needed the same trail an owner's Console edit already gets.
+4. **Not built:** price editing (still Console/owner-manager only, matching the capability trigger), and no fake reservation/delivery buttons on the hub page — same "don't ship what isn't real" call made earlier this session for the floor-view redesign.
+
+---
+
 ## 2026-07-19 — Redesign: one light theme, an ambient doodle layer, two layout bugs fixed
 
 **Decided by:** Mohammed ("fix the design... I want it to be light themed and minimalist but wth animations and doodles in the bg... fix it first before moving to any phase"), scoped via `AskUserQuestion` into two explicit choices before building: motion stays off working screens ("calm working screens" — the alternative offered was full-surface motion, rejected), and all four apps redone in one pass rather than staged ("all surfaces now").

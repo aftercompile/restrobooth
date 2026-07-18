@@ -1,0 +1,108 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  text-align: center;
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: var(--tracking-display);
+  color: var(--enamel-700);
+  margin-bottom: var(--space-2);
+}
+
+.markRail {
+  width: 5px;
+  height: 28px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to bottom,
+    var(--ramp-fresh) 0%,
+    var(--ramp-fresh) 40%,
+    var(--ramp-warming) 40%,
+    var(--ramp-warming) 70%,
+    var(--ramp-hot) 70%,
+    var(--ramp-hot) 100%
+  );
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  margin: 0 0 6px;
+}
+
+.sub {
+  color: var(--text-muted);
+  font-size: var(--text-base);
+  margin: 0 0 var(--space-4);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 280px));
+  gap: var(--space-3);
+}
+
+@media (width <= 760px) {
+  .grid {
+    grid-template-columns: minmax(220px, 320px);
+  }
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  text-align: left;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  min-height: 160px;
+  transition: border-color var(--motion-duration) var(--motion-easing),
+    transform var(--motion-duration) var(--motion-easing);
+}
+
+.tile:hover {
+  border-color: var(--brass-500);
+}
+
+.tile:active {
+  transform: scale(0.99);
+}
+
+.tileLabel {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  color: var(--enamel-700);
+}
+
+.tileTagline {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  flex: 1;
+}
+
+.tileArrow {
+  align-self: flex-end;
+  font-size: var(--text-lg);
+  color: var(--brass-500);
+}

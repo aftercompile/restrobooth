@@ -1,0 +1,77 @@
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.counts {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.outlet {
+  margin-bottom: var(--space-3);
+}
+
+.outletName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--space-1) 0;
+}
+
+.store {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.brandName {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0 0 6px 0;
+}
+
+.diet {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.price {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+  text-align: right;
+}
+
+.toggleButton {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: var(--text-sm);
+}
+
+.error {
+  color: var(--signal-600);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  color: var(--text-muted);
+}

@@ -9,6 +9,7 @@ import styles from "./PosShell.module.css";
 
 const NAV = [
   { href: "/floor", label: "Floor" },
+  { href: "/menu", label: "Menu" },
   { href: "/day", label: "Day" },
 ];
 
