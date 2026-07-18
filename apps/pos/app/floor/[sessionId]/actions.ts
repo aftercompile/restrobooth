@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, schema, sql, withIdempotency, type RlsTx } from "@restrobooth/db";
+import { eq, emitOrderStatusEvent, schema, sql, withIdempotency, type RlsTx } from "@restrobooth/db";
 import { assertOrderItemTransition, assertSessionTransition, groupByKitchenSection } from "@restrobooth/domain";
 import { queryAsCurrentUser } from "../../../lib/db";
 import { mockPrinterBridge } from "../../../lib/printerBridge";
@@ -215,6 +215,7 @@ export async function applyFireOrder(idempotencyKey: string, input: FireOrderInp
         const kotIds: string[] = [];
         for (const group of groups) {
           const kotId = crypto.randomUUID();
+          const kotNumber = nextKotNumber++;
           kotIds.push(kotId);
           await tx.insert(schema.kots).values({
             id: kotId,
@@ -224,7 +225,7 @@ export async function applyFireOrder(idempotencyKey: string, input: FireOrderInp
             tableSessionId: sessionId,
             orderId: order.id,
             kitchenSection: group.section,
-            kotNumber: nextKotNumber++,
+            kotNumber,
             status: "queued",
             idempotencyKey: crypto.randomUUID(),
           });
@@ -253,6 +254,18 @@ export async function applyFireOrder(idempotencyKey: string, input: FireOrderInp
             sql`, `,
           );
           await tx.execute(sql`update order_items set status = 'fired' where id in (${itemIds})`);
+
+          // ADR-0005: the event a KDS reconnect catches up from. Same
+          // transaction as the KOT insert above — there is no way to
+          // create a KOT without this committing alongside it.
+          await emitOrderStatusEvent(tx, {
+            outletId: session.outletId,
+            businessDate,
+            entityType: "kot",
+            entityId: kotId,
+            eventType: "kot.fired",
+            payload: { kitchenSection: group.section, kotNumber },
+          });
         }
 
         if (session.status === "ordering") {
@@ -403,8 +416,22 @@ export async function reprintKot(_prev: ActionState, formData: FormData): Promis
 
   try {
     await queryAsCurrentUser(async (tx) => {
-      const result = await tx.execute(sql`update kots set reprint_count = reprint_count + 1 where id = ${kotId}`);
-      if (result.rowCount === 0) throw new Error("KOT not found");
+      const kot = (await tx.select().from(schema.kots).where(eq(schema.kots.id, kotId)))[0];
+      if (!kot) throw new Error("KOT not found");
+
+      await tx.execute(sql`update kots set reprint_count = reprint_count + 1 where id = ${kotId}`);
+
+      // Closes Phase 3a's deferred gap: a reprint never created a KOT
+      // event at all before this. Still never a second KOT (DOMAIN.md §2)
+      // — reprint_count is the only thing that changed.
+      await emitOrderStatusEvent(tx, {
+        outletId: kot.outletId,
+        businessDate: kot.businessDate,
+        entityType: "kot",
+        entityId: kotId,
+        eventType: "kot.reprinted",
+        payload: { kitchenSection: kot.kitchenSection, kotNumber: kot.kotNumber, reprintCount: kot.reprintCount + 1 },
+      });
     });
   } catch (err) {
     return { error: fullErrorMessage(err) || "Could not reprint." };

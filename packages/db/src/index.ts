@@ -1,6 +1,7 @@
 export { createDbClient, type Database } from "./client.js";
 export { withUser, type RlsTx } from "./rls.js";
 export { withIdempotency, IdempotencyConflictError, type IdempotencyResult } from "./idempotency.js";
+export { emitOrderStatusEvent, type OrderStatusEntityType, type EmitOrderStatusEventParams } from "./orderStatusEvents.js";
 export * as schema from "./schema/index.js";
 
 // Re-exported so consumers build query conditions without taking a direct

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, schema, sql, type RlsTx } from "@restrobooth/db";
+import { eq, emitOrderStatusEvent, schema, sql, type RlsTx } from "@restrobooth/db";
 import { assertOrderItemTransition, assertSessionTransition, groupByKitchenSection } from "@restrobooth/domain";
 import { queryAsCurrentUser } from "../../../lib/db";
 import { mockPrinterBridge } from "../../../lib/printerBridge";
@@ -152,6 +152,7 @@ export async function fireOrder(_prev: ActionState, formData: FormData): Promise
 
       for (const group of groups) {
         const kotId = crypto.randomUUID();
+        const kotNumber = nextKotNumber++;
         await tx.insert(schema.kots).values({
           id: kotId,
           businessDate,
@@ -160,7 +161,7 @@ export async function fireOrder(_prev: ActionState, formData: FormData): Promise
           tableSessionId: sessionId,
           orderId: order.id,
           kitchenSection: group.section,
-          kotNumber: nextKotNumber++,
+          kotNumber,
           status: "queued",
           idempotencyKey: crypto.randomUUID(),
         });
@@ -185,6 +186,17 @@ export async function fireOrder(_prev: ActionState, formData: FormData): Promise
           sql`, `,
         );
         await tx.execute(sql`update order_items set status = 'fired' where id in (${itemIds})`);
+
+        // ADR-0005: same event apps/pos's fireOrder emits — the KDS
+        // doesn't know or care which app fired the ticket.
+        await emitOrderStatusEvent(tx, {
+          outletId: session.outletId,
+          businessDate,
+          entityType: "kot",
+          entityId: kotId,
+          eventType: "kot.fired",
+          payload: { kitchenSection: group.section, kotNumber },
+        });
       }
 
       if (session.status === "ordering") {
