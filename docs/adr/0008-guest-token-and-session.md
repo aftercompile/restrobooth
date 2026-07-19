@@ -3,6 +3,14 @@
 **Status:** Accepted
 **Date:** 2026-07-19
 
+## ⚠️ Amendment — 2026-07-19 (later)
+
+**The original decision required a table to already have an open `table_session` before a scan would succeed — staff had to seat the table first.** Owner feedback, direct and correct: this defeats the point of self-service QR ordering — it re-adds exactly the staff dependency the Booth exists to remove. **Reversed.** A guest's scan now opens the table itself (`apps/booth/lib/scan-queries.ts`'s `seatOrJoinTableSession`) if nobody has yet, rather than being denied.
+
+**The trade-off, named rather than silently dropped:** the open-table-session check doubled as this ADR's off-premises defense (a screenshotted QR pointed at an unserved table was worthless). Removing it means a still-valid, unrotated token can open a session from anywhere, not just the table — the same trust model most real-world QR-ordering apps (Zomato, Swiggy Dineout) actually use. **Confirmed and accepted**, with one mitigation: a `table_sessions.opened_via` column (`'staff' | 'guest'`, migration `0027`) surfaces as a "Guest-opened" badge on the POS/Captain floor map, so staff notice a table that opened itself. Not a blocker, not added guest friction — a quiet safety net.
+
+**What's unchanged:** the token/hash/rotation design, the cookie/GUC identity mechanism, and the session TTL — all below, as originally decided. What changed is narrower: token *validity* (`evaluateGuestTokenAccess`) and table *seat eligibility* (`evaluateGuestSeatEligibility`, new) are now two separate pure functions in `packages/domain/src/qrToken.ts` instead of one conflated check, and seat eligibility is now about the *outlet* (is there an open business day, is the table flagged `out_of_service`) rather than about *prior staff action*.
+
 ## Context
 
 Phase 5 (ROADMAP.md) needs "signed per-table QR tokens (rotating, replay-proof)." TENANCY.md §6's A14 names the required *consequence* ("an expired/replayed token is denied at the token layer before RLS"), and ERD.md §7 sketches the `qr_tokens`/`guest_sessions` table shapes — but no doc decides the actual mechanism: signing algorithm, rotation cadence, or how a scanned token becomes an RLS-scoped session. Per CLAUDE.md's "never invent an API contract" rule, that gap gets closed here, in writing, rather than silently in code.
@@ -30,9 +38,11 @@ Guests have no Supabase Auth account at all (there is no email/password, and Sup
 
 ### The A14 gate: reject before any RLS-scoped query, and before a session exists
 
-`packages/domain/src/qrToken.ts`'s `evaluateGuestTokenAccess()` is the pure decision (100% branch-covered): a scanned token is denied if the hash isn't found, if `revoked_at` is set, if `now > rotates_at`, **or if the table has no open `table_session` under an open `business_day`.** That last check is deliberate and is the actual replay/off-premises defense: a screenshotted QR, used from home or after the table has turned over, points at a table nobody is currently serving, so `findOpenTableSession()` (`apps/booth/lib/scan-queries.ts`) returns nothing and access is denied — no geofencing, no device fingerprinting, no expiring-every-few-minutes rotation that would need hardware at every table.
+`packages/domain/src/qrToken.ts`'s `evaluateGuestTokenAccess()` is the pure token-validity decision (100% branch-covered): a scanned token is denied if the hash isn't found, if `revoked_at` is set, or if `now > rotates_at`. That's the whole check — no table-state involved, since (per the amendment above) a valid token is now allowed to open a table itself rather than requiring one to already be open.
 
-All of this runs in `apps/booth/app/t/[token]/route.ts` against a plain, privileged `Database` connection — **before** a `guest_sessions` row exists and **before** any `withGuest`-scoped (RLS-enforced) query runs. Only once `evaluateGuestTokenAccess` returns `ok: true` does a `guest_sessions` row get created and the cookie get set.
+A second, separate pure function, `evaluateGuestSeatEligibility()`, answers a different question once the token is valid: can a guest's scan actually seat/join *this* table right now? Denied if the outlet has no open `business_day` (CLAUDE.md's "no open day → no bill" rule extends here — a table can't be opened at all if the day hasn't started), or if the table is flagged `tables.status = 'out_of_service'` (a maintenance flag, not occupancy). `apps/booth/lib/scan-queries.ts`'s `seatOrJoinTableSession()` implements this against real DB state: row-locks the table (`select ... for update`) so two guests scanning the same table at the same instant can't race into two separate sessions, joins an existing non-terminal session if one exists, or opens a new one (`opened_via: 'guest'`) if none does.
+
+All of this runs in `apps/booth/app/t/[token]/route.ts` against a plain, privileged `Database` connection — **before** a `guest_sessions` row exists and **before** any `withGuest`-scoped (RLS-enforced) query runs. Only once both checks pass does a `guest_sessions` row get created and the cookie get set.
 
 ### Session TTL
 
@@ -40,6 +50,7 @@ All of this runs in `apps/booth/app/t/[token]/route.ts` against a plain, privile
 
 ## What this deliberately does not do (yet)
 
-- **No geofencing / IP-based "off-premises" detection.** The open-table-session check is the off-premises defense; it's simpler, needs no third-party IP-geolocation data, and directly encodes the actual invariant that matters ("is this table being served"), rather than a proxy for it.
-- **No per-scan single-use token.** The printed token is reusable by design (a guest may need to reload the page, or a second guest at the same table scans the same tent) — it's the *session* that's short-lived and the *table's* open/closed state that's the real gate, not the token's use-count.
+- **No geofencing / IP-based "off-premises" detection.** Accepted gap post-amendment (see above) — token rotation/revocation is the only off-premises defense now, mitigated by the floor map's "Guest-opened" visibility, not blocked at the guest.
+- **No per-scan single-use token.** The printed token is reusable by design (a guest may need to reload the page, or a second guest at the same table scans the same tent) — it's the *session* that's short-lived, not the token's use-count.
+- **No "un-claim" flow.** If a guest auto-seats a table by mistake (wrong QR, walked away), the table stays `opened_via: 'guest'` until staff close it normally — same lifecycle as any other seated table, no special guest-initiated-session teardown.
 - **Real Razorpay integration** is out of scope for this ADR — see PROGRESS.md's Phase 5 plan; the payment gateway sits behind an interface and is a separate decision.

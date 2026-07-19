@@ -24,6 +24,11 @@ export interface FloorTable {
    *  guest PII the moment it's non-null, see DECISIONS.md. Never required,
    *  never shown for an idle table (there's no session to attach it to). */
   guestName: string | null;
+  /** 'guest' when a Booth scan opened this table itself, no staff seating
+   *  (ADR-0008 amendment) — the staff-visibility safety net that trade
+   *  accepted. Surfaced as a badge, not folded into the state chip (same
+   *  "one channel encodes state with colour" rule the bill badge follows). */
+  openedVia: "staff" | "guest" | null;
 }
 
 interface FloorRow {
@@ -42,6 +47,7 @@ interface FloorRow {
   store_id: string | null;
   bill_status: "printed" | "paid" | null;
   guest_name: string | null;
+  opened_via: "staff" | "guest" | null;
 }
 
 /**
@@ -58,7 +64,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       t.outlet_id, o.name as outlet_name,
       t.area_id, a.name as area_name,
       ts.id as session_id, ts.status as session_status, ts.covers, ts.opened_at, ts.store_id,
-      ts.guest_name,
+      ts.guest_name, ts.opened_via,
       bs.bill_status
     from tables t
     join areas a on a.id = t.area_id
@@ -72,7 +78,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     -- only the single currently-active session per table, guaranteeing
     -- exactly one row per table regardless of turnover history.
     left join lateral (
-      select ts2.id, ts2.status, ts2.covers, ts2.opened_at, ts2.store_id, ts2.guest_name
+      select ts2.id, ts2.status, ts2.covers, ts2.opened_at, ts2.store_id, ts2.guest_name, ts2.opened_via
       from table_session_tables tst2
       join table_sessions ts2 on ts2.id = tst2.table_session_id
       where tst2.table_id = t.id
@@ -115,6 +121,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     storeId: r.store_id,
     billStatus: r.bill_status,
     guestName: r.guest_name,
+    openedVia: r.opened_via,
   }));
 }
 

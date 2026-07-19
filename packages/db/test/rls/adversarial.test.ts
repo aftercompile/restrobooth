@@ -311,9 +311,11 @@ describe("A11-A13: anonymous Booth guest at table T5 (AMD)", () => {
 // once before, per PROGRESS.md's Phase 3a note on domain's resolution
 // mode). So THIS suite's job is the other half of A14's proof: that the
 // real values evaluateGuestTokenAccess would be fed — not_found,
-// revoked_at, rotates_at, an open table_session — actually round-trip
-// correctly through real Postgres via the real
-// packages/db/src/guestToken.ts functions. The full wiring (both packages
+// revoked_at, rotates_at — actually round-trip correctly through real
+// Postgres via the real packages/db/src/guestToken.ts functions. (Seat
+// eligibility — whether the TABLE is open, a separate question since the
+// ADR-0008 amendment — is apps/booth/lib/scan-queries.ts's job, proven by
+// driving the real app, not this suite.) The full wiring (both packages
 // together, feeding real DB values into the real decision function) is
 // exercised by apps/booth/app/t/[token]/route.ts directly — a bundler-mode
 // Next app, like apps/pos, which is exactly where domain is meant to be
@@ -341,9 +343,14 @@ describe("A14: expired/replayed QR token — the real data the token-layer gate 
     expect(tokenRow!.rotatesAt.getTime()).toBeLessThan(Date.now());
   });
 
-  test("A14d: a fresh token is neither revoked nor expired, and its table has no open session — the screenshot-from-home case", async () => {
-    // T1/T2 (TABLE_AMD_1/2) both have open sessions in this fixture; find
-    // one of AMD's other seeded tables (T3-T8) that has none.
+  // ADR-0008 amendment: whether the table has an open session is no longer
+  // part of the token-layer decision (a guest's scan can open the table
+  // itself now — apps/booth/lib/scan-queries.ts's seatOrJoinTableSession,
+  // proven end-to-end by driving the real app, not here). A14d/e used to
+  // assert on table_session state; that assertion moved out with the
+  // behavior it was testing. What's left for THIS suite: a fresh token,
+  // for ANY table regardless of seating, round-trips as valid.
+  test("A14d: a fresh token for an unseated table still round-trips clean — no seat requirement at the token layer", async () => {
     const unseated = await client.query<{ id: string }>(
       `select t.id from tables t
        where t.outlet_id = $1
@@ -362,30 +369,14 @@ describe("A14: expired/replayed QR token — the real data the token-layer gate 
     expect(tokenRow).not.toBeNull();
     expect(tokenRow?.revokedAt).toBeNull();
     expect(tokenRow!.rotatesAt.getTime()).toBeGreaterThan(Date.now());
-
-    const openSession = await client.query(
-      `select ts.id from table_session_tables tst
-       join table_sessions ts on ts.id = tst.table_session_id
-       where tst.table_id = $1 and ts.status not in ('closed','abandoned','merged_into')`,
-      [unseated.rows[0]!.id],
-    );
-    expect(openSession.rows).toHaveLength(0);
   });
 
-  test("A14e: a fresh token for T2 (which HAS an open session) round-trips clean — positive control", async () => {
+  test("A14e: a fresh token for T2 (already seated) round-trips clean too — the token layer doesn't care either way", async () => {
     const minted = await mintTableToken(db, { outletId: id.OUTLET_AMD, tableId: id.TABLE_AMD_2 });
     const tokenRow = await lookupTokenByHash(db, hashToken(minted.rawToken));
     expect(tokenRow).not.toBeNull();
     expect(tokenRow?.revokedAt).toBeNull();
     expect(tokenRow!.rotatesAt.getTime()).toBeGreaterThan(Date.now());
-
-    const openSession = await client.query(
-      `select ts.id from table_session_tables tst
-       join table_sessions ts on ts.id = tst.table_session_id
-       where tst.table_id = $1 and ts.status not in ('closed','abandoned','merged_into')`,
-      [id.TABLE_AMD_2],
-    );
-    expect(openSession.rows.length).toBeGreaterThan(0);
   });
 });
 

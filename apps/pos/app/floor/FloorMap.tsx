@@ -271,20 +271,27 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                               <span className={styles.tableTimer}>{elapsedLabel}</span>
                             </div>
                           </Link>
-                          {/* Bill lifecycle is a SECOND signal, deliberately not folded into
-                              the chip (DESIGN.md: "only one channel encodes state with
-                              colour") — the chip stays pure elapsed-time, this badge is the
-                              bill's own status, and the two can disagree (a fresh table can
-                              already have a printed bill if service was fast). */}
-                          {t.billStatus && (
+                          {/* Bill lifecycle and "who opened this" are SEPARATE signals,
+                              deliberately not folded into the chip (DESIGN.md: "only one
+                              channel encodes state with colour") — the chip stays pure
+                              elapsed-time, these badges are their own axes and can
+                              disagree with it independently. */}
+                          {(t.billStatus || t.openedVia === "guest") && (
                             <div className={styles.tableFooter}>
-                              <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
-                                {t.billStatus === "paid" ? "Paid" : "Printed"}
-                              </Badge>
-                              <Link href={`/floor/${t.sessionId}/bill`} className={styles.billLink}>
-                                <ReceiptIcon />
-                                View bill
-                              </Link>
+                              {t.openedVia === "guest" && (
+                                <Badge tone="neutral">Guest-opened</Badge>
+                              )}
+                              {t.billStatus && (
+                                <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
+                                  {t.billStatus === "paid" ? "Paid" : "Printed"}
+                                </Badge>
+                              )}
+                              {t.billStatus && (
+                                <Link href={`/floor/${t.sessionId}/bill`} className={styles.billLink}>
+                                  <ReceiptIcon />
+                                  View bill
+                                </Link>
+                              )}
                             </div>
                           )}
                         </div>

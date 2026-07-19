@@ -190,6 +190,13 @@
       "when": 1784473643196,
       "tag": "0026_guest_order_read_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1784488309245,
+      "tag": "0027_table_session_opened_via",
+      "breakpoints": true
     }
   ]
 }

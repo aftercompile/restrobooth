@@ -1,0 +1,2 @@
+ALTER TABLE "table_sessions" ADD COLUMN "opened_via" text DEFAULT 'staff' NOT NULL;--> statement-breakpoint
+ALTER TABLE "table_sessions" ADD CONSTRAINT "opened_via_valid" CHECK ("table_sessions"."opened_via" in ('staff','guest'));

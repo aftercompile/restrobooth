@@ -121,6 +121,12 @@ export const tableSessions = pgTable(
     guestName: text("guest_name"),
     guestPhone: text("guest_phone"),
     guestNotes: text("guest_notes"),
+    // Phase 5 Slice 2a-follow-up (ADR-0008 amendment): a guest's own scan
+    // can now open a table directly, no staff seating required — this is
+    // the staff-visibility safety net that trade accepted. 'staff' is the
+    // default (every pre-existing seating path) so no backfill is needed;
+    // only apps/booth's scan-gate route ever writes 'guest'.
+    openedVia: text("opened_via").notNull().default("staff"),
   },
   (t) => [
     unique().on(t.idempotencyKey),
@@ -136,6 +142,7 @@ export const tableSessions = pgTable(
       "abandoned_reason_required",
       sql`(${t.status} = 'abandoned' and ${t.abandonedReason} is not null) or (${t.status} != 'abandoned')`,
     ),
+    check("opened_via_valid", sql`${t.openedVia} in ('staff','guest')`),
     // BENCH-01 Q4 (floor map) found this table had NO index beyond its PK
     // — every "sessions for outlet X, today" query was a full sequential
     // scan, p95 up to 43x over threshold even with RLS bypassed entirely.

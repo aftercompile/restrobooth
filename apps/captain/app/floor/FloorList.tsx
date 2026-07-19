@@ -131,9 +131,10 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                         <span className={styles.tableMetaGroup}>
                           {/* Same "second signal, not folded into the rail" reasoning as
                               apps/pos/app/floor/FloorMap.tsx — the rail stays pure elapsed
-                              time, this badge is the bill's own lifecycle. Captain has no
+                              time, these badges are their own axes. Captain has no
                               bill screen of its own (billing is a POS/cashier capability),
-                              so it's a badge only, no quick-link. */}
+                              so bill status is a badge only, no quick-link. */}
+                          {t.openedVia === "guest" && <Badge tone="neutral">Guest-opened</Badge>}
                           {t.billStatus && (
                             <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
                               {t.billStatus === "paid" ? "Paid" : "Printed"}

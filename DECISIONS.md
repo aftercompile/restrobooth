@@ -4,6 +4,25 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-19 (even later) — ADR-0008 reversed: guest scans auto-seat, no staff pre-seating required
+
+**Decided by:** Mohammed, after actually using the live deployment: *"I don't want it to work only when 'seated'. That increases work for whoever is handling POS. Customers should directly be able to get in the table QR ordering without the need to select seated."* Correct, and acted on immediately rather than defended — ADR-0008's original "table must already have an open session" check was a real design decision made deliberately during Slice 1's planning, but it optimized for a security property (off-premises defense) at the cost of the actual product goal (self-service, staff-workload reduction), and the owner is right that the trade was wrong.
+
+**The trade-off named explicitly, not silently dropped** (confirmed via `AskUserQuestion` before touching the security-sensitive code): removing the pre-seat requirement means a still-valid, unrotated token can now open a session from off-premises, not just at the table — token rotation/revocation is the only defense left, the same trust model most real-world QR-ordering apps (Zomato, Swiggy Dineout) already use. **Accepted**, with a staff-visibility mitigation rather than a guest-facing blocker: a new `table_sessions.opened_via` column (`'staff'`/`'guest'`, migration `0027`) surfaces as a "Guest-opened" badge on the POS and Captain floor maps, so a captain glancing at the floor notices a table that opened itself.
+
+**What shipped:**
+1. `packages/domain/src/qrToken.ts` split into two pure functions: `evaluateGuestTokenAccess()` (token validity alone — hash/revoked/expired) and a new `evaluateGuestSeatEligibility()` (is the outlet's business day open, is the table `out_of_service`) — previously conflated into one function that also required a pre-existing table_session.
+2. `apps/booth/lib/scan-queries.ts`'s `seatOrJoinTableSession()` replaces `findOpenTableSession()` — mirrors `apps/pos/app/floor/actions.ts`'s `applySeatTable` (open business day, exactly-one-active-store resolution) but **opens** a table_session when none exists instead of erroring. Row-locks the table (`select ... for update`) for the transaction's duration specifically to prevent two guests scanning the same table at the same instant from racing into two separate sessions.
+3. POS's and Captain's floor queries/UI both got the "Guest-opened" badge, in the same slot as the existing bill-status badge (a second, independent signal — DESIGN.md's "only one channel encodes state with colour" rule keeps both out of the state chip/rail).
+4. RLS adversarial suite's A14 block updated — A14d/e no longer assert on table_session state (that assertion moved out with the behavior it was testing); still 46/46 passing.
+5. ADR-0008 amended in place with a changelog banner at the top, same pattern RESTROBOOTH_BRIEF.md's own Phase 0 amendments use — the reversal and its reasoning are preserved, not overwritten.
+
+**Verified end-to-end, not just typecheck/lint/build:** minted a token for a table that had never been seated by anyone, scanned it cold from outside any staff flow — it opened correctly, and the real POS floor (logged in as the seeded owner account, screenshot-confirmed) showed it with a "Fresh" state chip and a clear "Guest-opened" badge. Re-scanning the same token joined the existing session rather than creating a second one.
+
+Full detail: [docs/adr/0008-guest-token-and-session.md](docs/adr/0008-guest-token-and-session.md)'s amendment, [PROGRESS.md](PROGRESS.md).
+
+---
+
 ## 2026-07-19 (later) — Phase 5 Slice 2a: Booth menu browse + live status board, sub-sliced from ordering
 
 **Decided by:** Mohammed ("proceed to Slice 2"). Entered plan mode per CLAUDE.md's "plan before code"; re-explored (three parallel Explore agents: menu resolution + the order-item write path, the event log + polling, and the UI/Direction-B system) rather than assuming Slice 1's plan-mode findings still applied.

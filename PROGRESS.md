@@ -4,6 +4,19 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
+## Where things stand — 2026-07-19 (even later), ADR-0008 amendment: guest scans auto-seat, no staff pre-seating
+
+**Owner feedback after driving the live deployment, correct and acted on immediately:** requiring staff to seat a table in POS/Captain before a guest's QR scan would work defeated the point of self-service ordering. Reversed — see [docs/adr/0008-guest-token-and-session.md](docs/adr/0008-guest-token-and-session.md)'s amendment banner for the full trade-off writeup (this touches a security assumption, not just UX, so it's documented as a real amendment, not a silent behavior change).
+
+**What changed:**
+- A guest's scan now **opens the table itself** if nobody has yet (`apps/booth/lib/scan-queries.ts`'s `seatOrJoinTableSession`) — same shape as `apps/pos/app/floor/actions.ts`'s `applySeatTable` (check for a live session, resolve the open business day, resolve the one active store), but opens one instead of erroring when none exists. Row-locks the table (`select ... for update`) for the transaction's duration so two guests scanning the same table at the same instant can't race into two separate sessions — the second waits, then joins what the first created.
+- **Token validity and seat eligibility are now two separate pure functions** in `packages/domain/src/qrToken.ts`: `evaluateGuestTokenAccess()` (hash found / not revoked / not expired — unchanged) and the new `evaluateGuestSeatEligibility()` (is there an open business day at the outlet, is the table flagged `out_of_service`). The old conflated "table must already have an open session" check is gone entirely.
+- **New column `table_sessions.opened_via` (`'staff' | 'guest'`, migration `0027`, default `'staff'`)** — the accepted mitigation for the weakened off-premises defense (a still-valid, unrotated token can now open a session from anywhere, not just the table — named and accepted, not silently dropped). Surfaces as a **"Guest-opened" badge** on both `apps/pos`'s and `apps/captain`'s floor views (same "separate signal, not folded into the state chip" pattern the bill-status badge already uses), so staff notice a table that opened itself.
+- RLS adversarial suite's A14 block updated (46/46 still passing) — A14d/e no longer assert on table_session state, since that's not the token layer's concern anymore.
+- **Verified end-to-end for real**: minted a token for a table that had genuinely never been seated by anyone, scanned it cold — it auto-opened, showed up correctly on the live POS floor with the "Guest-opened" badge (screenshot-confirmed), and a second scan of the same token joined the existing session rather than creating a duplicate.
+
+---
+
 ## Where things stand — 2026-07-19 (later), Phase 5 Slice 2a (Booth menu browse + live status board)
 
 **Slice 2a is done: the Booth's first real UI.** Sub-sliced deliberately (owner-confirmed via `AskUserQuestion`) into 2a (read-only: menu browse + the live status board) and 2b (guest self-service order-writes — not started, see below) — because an anonymous guest **cannot currently write order data** (both `order_item_isolation` and the restrictive `order_item_take_capability` policy require a staff `memberships` row), so guest ordering is a new security surface deserving its own focused pass, same as Slice 1 was for the token gate.
