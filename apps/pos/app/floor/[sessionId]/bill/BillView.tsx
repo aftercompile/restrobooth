@@ -22,6 +22,28 @@ function formatRupees(paise: string | bigint): string {
   return `${negative ? "-" : ""}₹${abs / 100n}.${(abs % 100n).toString().padStart(2, "0")}`;
 }
 
+/** Discarding a rejected outbox entry is a local IndexedDB delete (no
+ *  network round trip), but still gets the same static disabled+label-swap
+ *  treatment as every other button here for a consistent feel and to
+ *  guard against a double click. */
+function DiscardButton({ id, small }: { id: string; small?: boolean }) {
+  const [pending, setPending] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      className={small ? styles.smallButton : undefined}
+      disabled={pending}
+      onClick={async () => {
+        setPending(true);
+        await discardRejected(id);
+      }}
+    >
+      {pending ? "Discarding…" : "Discard"}
+    </Button>
+  );
+}
+
 function sumLocalPaid(entries: OutboxEntry[]): bigint {
   return entries.reduce((sum, e) => {
     const amountRupees = (e.payload as { amountRupees: string }).amountRupees;
@@ -435,9 +457,7 @@ function PendingFinalizeCard({ sessionId, entry, localSettles }: { sessionId: st
       {entry.status === "rejected" && (
         <>
           <p className={styles.error}>{entry.errorMessage}</p>
-          <Button type="button" variant="secondary" onClick={() => discardRejected(entry.id)}>
-            Discard
-          </Button>
+          <DiscardButton id={entry.id} />
         </>
       )}
       {entry.status !== "rejected" && (
@@ -498,9 +518,7 @@ function SettleView({ sessionId, bill, localSettles }: { sessionId: string; bill
       {rejected.map((e) => (
         <p key={e.id} className={styles.error}>
           A queued payment failed to sync: {e.errorMessage}{" "}
-          <Button type="button" variant="secondary" className={styles.smallButton} onClick={() => discardRejected(e.id)}>
-            Discard
-          </Button>
+          <DiscardButton id={e.id} small />
         </p>
       ))}
 

@@ -24,9 +24,16 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
   // the first paint, or React discards the server HTML as a mismatch.
   const [now, setNow] = useState<number | null>(null);
   const [seating, setSeating] = useState<FloorTable | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   function handleRefresh() {
+    setRefreshing(true);
     router.refresh();
+    // Same fixed-pulse pattern as apps/pos/app/floor/FloorMap.tsx —
+    // router.refresh() gives no completion signal, and this button is a
+    // manual "I don't want to wait" escape hatch, not a real request
+    // lifecycle worth wiring up.
+    setTimeout(() => setRefreshing(false), 600);
   }
 
   useEffect(() => {
@@ -84,7 +91,7 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
             {runningCount} running · {availableCount} available
           </span>
         </h1>
-        <button type="button" className={styles.refreshButton} onClick={handleRefresh}>
+        <button type="button" className={styles.refreshButton} data-spinning={refreshing} onClick={handleRefresh}>
           <RefreshIcon />
           Refresh
         </button>

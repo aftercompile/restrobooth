@@ -130,6 +130,12 @@
   height: 16px;
 }
 
+.refreshButton[data-spinning="true"] svg {
+  /* A discrete state swap (icon dimmed briefly), not a transition — same
+     pattern as apps/pos/app/floor/FloorMap.module.css's refresh button. */
+  opacity: 0.5;
+}
+
 .empty {
   color: var(--text-muted);
 }

@@ -21,6 +21,27 @@ import styles from "./OfflineStatusBar.module.css";
  * this is the ONE place in the app that owns "when do we try to sync,"
  * so `enqueue()` callers don't each need their own retry logic.
  */
+/** Local IndexedDB delete, no network round trip — same static
+ *  disabled+label-swap treatment as everywhere else, mainly to guard
+ *  against a double click. */
+function DiscardButton({ id }: { id: string }) {
+  const [pending, setPending] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      className={styles.smallButton}
+      disabled={pending}
+      onClick={async () => {
+        setPending(true);
+        await discardRejected(id);
+      }}
+    >
+      {pending ? "Discarding…" : "Discard"}
+    </Button>
+  );
+}
+
 export function OfflineStatusBar() {
   const router = useRouter();
   const online = useOnlineStatus();
@@ -95,9 +116,7 @@ export function OfflineStatusBar() {
               <span>
                 {e.mutationType}: {e.errorMessage}
               </span>
-              <Button type="button" variant="secondary" className={styles.smallButton} onClick={() => discardRejected(e.id)}>
-                Discard
-              </Button>
+              <DiscardButton id={e.id} />
             </div>
           ))}
         </div>

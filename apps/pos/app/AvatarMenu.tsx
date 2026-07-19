@@ -1,9 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { ChevronDownIcon } from "@restrobooth/ui";
 import { signOut } from "./auth-actions";
 import styles from "./AvatarMenu.module.css";
+
+/** useFormStatus only sees the <form> it's nested inside, not the component
+ *  that renders that <form> — hence the split. Static label swap, no
+ *  transition, matching the rest of POS's zero-motion pending convention. */
+function SignOutSubmit() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className={styles.signOut} role="menuitem" disabled={pending}>
+      {pending ? "Signing out…" : "Sign out"}
+    </button>
+  );
+}
 
 /**
  * Replaces the bare "email + Sign out button" pair with a single trigger,
@@ -44,9 +57,7 @@ export function AvatarMenu({ email }: { email?: string | undefined }) {
         <div className={styles.menu} role="menu">
           {email && <div className={styles.email}>{email}</div>}
           <form action={signOut}>
-            <button type="submit" className={styles.signOut} role="menuitem">
-              Sign out
-            </button>
+            <SignOutSubmit />
           </form>
         </div>
       )}

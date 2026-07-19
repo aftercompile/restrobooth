@@ -63,7 +63,7 @@ function AddOptionGroupForm({ itemId }: { itemId: string }) {
         </>
       )}
       <Button type="submit" variant="secondary" disabled={pending}>
-        Add group
+        {pending ? "Adding…" : "Add group"}
       </Button>
       {state.error && (
         <span role="alert" style={{ color: "var(--signal-600)", fontSize: "var(--text-sm)" }}>
@@ -87,7 +87,7 @@ function AddOptionItemForm({ itemId, optionGroupId }: { itemId: string; optionGr
       <MoneyInput label="Price" valuePaise={null} onChangePaise={(_p, raw) => setPriceRaw(raw)} />
       <input type="hidden" name="pricePaise" value={paise !== null ? paise.toString() : ""} />
       <Button type="submit" variant="secondary" disabled={pending}>
-        Add
+        {pending ? "Adding…" : "Add"}
       </Button>
       {state.error && (
         <span role="alert" style={{ color: "var(--signal-600)", fontSize: "var(--text-sm)" }}>

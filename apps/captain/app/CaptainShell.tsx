@@ -2,8 +2,20 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useFormStatus } from "react-dom";
 import { signOut } from "./auth-actions";
 import styles from "./CaptainShell.module.css";
+
+/** useFormStatus must be read from inside the <form> it tracks, hence the
+ *  split from CaptainShell. Static label swap only — Captain is zero-motion. */
+function SignOutSubmit() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className={styles.signOut} disabled={pending}>
+      {pending ? "Signing out…" : "Sign out"}
+    </button>
+  );
+}
 
 /**
  * Deliberately no nav bar — the captain app is one flow (floor -> order),
@@ -20,9 +32,7 @@ export function CaptainShell({ children }: { children: ReactNode }) {
         </Link>
         <span className={styles.spacer} />
         <form action={signOut}>
-          <button type="submit" className={styles.signOut}>
-            Sign out
-          </button>
+          <SignOutSubmit />
         </form>
       </header>
       <main className={styles.main}>{children}</main>

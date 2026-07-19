@@ -48,9 +48,10 @@ export function HeaderSearch() {
         placeholder="Table or invoice…"
         className={styles.input}
         aria-label="Search table or invoice"
+        disabled={pending}
       />
       {state.error && <span className={styles.error}>{state.error}</span>}
-      {pending && <span className={styles.pending}>…</span>}
+      {pending && <span className={styles.pending}>Searching…</span>}
     </form>
   );
 }

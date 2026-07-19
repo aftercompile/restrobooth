@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppShell, shellClasses } from "@restrobooth/ui";
 import type { ReactNode } from "react";
+import { useFormStatus } from "react-dom";
 import { signOut } from "./auth-actions";
 
 const NAV = [
@@ -52,23 +53,34 @@ export function ConsoleShell({ email, children }: { email?: string | undefined; 
 function SignOutButton() {
   return (
     <form action={signOut}>
-      <button
-        type="submit"
-        style={{
-          font: "inherit",
-          fontWeight: 600,
-          fontSize: "var(--text-sm)",
-          cursor: "pointer",
-          background: "transparent",
-          border: "1px solid rgb(255 255 255 / 28%)",
-          borderRadius: "var(--radius)",
-          color: "#fff",
-          minHeight: 36,
-          padding: "0 12px",
-        }}
-      >
-        Sign out
-      </button>
+      <SignOutSubmit />
     </form>
+  );
+}
+
+/** useFormStatus must be read from inside the <form> it tracks, hence the
+ *  split from SignOutButton. */
+function SignOutSubmit() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      style={{
+        font: "inherit",
+        fontWeight: 600,
+        fontSize: "var(--text-sm)",
+        cursor: pending ? "not-allowed" : "pointer",
+        opacity: pending ? 0.6 : 1,
+        background: "transparent",
+        border: "1px solid rgb(255 255 255 / 28%)",
+        borderRadius: "var(--radius)",
+        color: "#fff",
+        minHeight: 36,
+        padding: "0 12px",
+      }}
+    >
+      {pending ? "Signing out…" : "Sign out"}
+    </button>
   );
 }
