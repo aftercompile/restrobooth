@@ -18,8 +18,12 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 8px 12px;
+  padding: var(--space-1) var(--space-2);
   font-size: var(--text-sm);
+  /* A hairline between line items — and, since totals immediately follow
+     in the same unpadded card, it doubles as the divider between "what
+     was ordered" and "what it comes to," which used to be implicit. */
+  border-bottom: 1px solid var(--border);
 }
 
 .lineName {
@@ -41,11 +45,15 @@
 }
 
 .totalsRow.grand {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   font-weight: 700;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-strong);
   margin-top: 4px;
-  padding-top: 10px;
+  padding: var(--space-2);
+  /* The one number this whole card exists to show — a filled band, not
+     just a bigger font, is what makes it read as THE total rather than
+     one more row in the stack. */
+  background: var(--surface-sunken);
 }
 
 .controls {
@@ -62,7 +70,7 @@
 
 .select {
   min-height: 44px;
-  background: var(--surface);
+  background: var(--surface-sunken);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -78,8 +86,13 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 8px 12px;
+  padding: var(--space-1) var(--space-2);
   font-size: var(--text-sm);
+  border-bottom: 1px solid var(--border);
+}
+
+.paymentRow:last-child {
+  border-bottom: none;
 }
 
 .billList {

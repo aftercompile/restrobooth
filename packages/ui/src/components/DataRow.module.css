@@ -33,11 +33,17 @@
   text-decoration: none;
   color: inherit;
   display: block;
-  transition: background var(--motion-duration) var(--motion-easing);
+  transition: background var(--motion-duration) var(--motion-easing), box-shadow var(--motion-duration) var(--motion-easing);
 }
 
 .interactive:hover {
   background: var(--surface-sunken);
+  /* A top highlight, not a left accent — DataRow is often already wrapped
+     in a StateRail (a left-edge rail sits in its own padding, outside
+     this box); a second left-edge accent here would read as a doubled
+     rail on hover, which is exactly the "colour means one thing" rule
+     DESIGN.md is protecting. */
+  box-shadow: var(--highlight-top);
 }
 
 /* The focus ring is the POS cashier's primary navigation affordance — it

@@ -1,0 +1,66 @@
+.form {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 200px;
+  height: 40px;
+  padding: 0 10px;
+  /* Recessed, matching every other input on the form screens (Part A's
+     surface-hierarchy pair) — a search field is a hole to type into. */
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.pending {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.error {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--elevation-2);
+  color: var(--signal-600);
+  font-size: var(--text-sm);
+  z-index: 60;
+}
+
+@media (width <= 900px) {
+  .form {
+    min-width: 140px;
+  }
+}

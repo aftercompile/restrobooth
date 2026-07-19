@@ -20,7 +20,18 @@ export { AppShell, PageHeader, shellClasses } from "./components/AppShell";
 export { AmbientBackground } from "./components/AmbientBackground";
 export { StateRail, type RailState } from "./components/StateRail";
 export { RampLegend, type RampLegendItem } from "./components/RampLegend";
-export { RefreshIcon, ReceiptIcon, FloorIcon, MenuBookIcon, CalendarIcon, SeatIcon, ChevronDownIcon, CashIcon } from "./components/icons";
+export {
+  RefreshIcon,
+  ReceiptIcon,
+  FloorIcon,
+  MenuBookIcon,
+  CalendarIcon,
+  SeatIcon,
+  ChevronDownIcon,
+  CashIcon,
+  SearchIcon,
+  BellIcon,
+} from "./components/icons";
 export { Button, type ButtonVariant } from "./components/Button";
 export { Input } from "./components/Input";
 export { Select } from "./components/Select";

@@ -3,6 +3,7 @@ import { queryAsCurrentUser } from "../../lib/db";
 import { createClient } from "../../lib/supabase/server";
 import { getDayStatuses } from "./queries";
 import { DayList } from "./DayList";
+import styles from "./page.module.css";
 
 export default async function DayPage() {
   const supabase = await createClient();
@@ -14,7 +15,10 @@ export default async function DayPage() {
 
   return (
     <PosShell email={user?.email}>
-      <h1>Business day</h1>
+      <div className={styles.pageHead}>
+        <h1 className={styles.pageTitle}>Business day</h1>
+        <p className={styles.pageSub}>Open a day before billing; close it once every session and bill is resolved.</p>
+      </div>
       <DayList days={days} />
     </PosShell>
   );

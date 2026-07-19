@@ -12,7 +12,21 @@
   /* Ground + surfaces */
   --bg: #f6f4ef; /* warm paper — html/body and the [data-density] wrapper */
   --surface: #ffffff; /* card fill */
-  --surface-sunken: #efede7; /* card headers, insets, subtle tint */
+  --surface-sunken: #ebe8df; /* recessed: inputs, insets, card headers — deepened from #efede7 so a raised card and a recessed input read as opposite directions, not two shades of the same flat. Kept to this value, not deeper: #e8e5dc measured 4.45:1 for --text-muted, just under AA; this is 4.57:1. */
+
+  /* Elevation (2026-07-19, "richer/more pronounced" — DECISIONS.md).
+     Two-layer soft shadow (a tight contact shadow + a soft ambient one) is
+     what makes a shadow read as a real light source instead of a sticker
+     outline; --highlight-top is the top inner edge that sells "raised
+     surface with physical thickness." One consistent 3-step ramp, reused
+     everywhere via Card's `interactive` variant — never a bespoke shadow
+     value per component. Alpha is carried on --text's own RGB triplet so
+     the shadow always reads as "ink," not an arbitrary grey. */
+  --shadow-rgb: 18 32 29;
+  --highlight-top: inset 0 1px 0 rgb(255 255 255 / 65%);
+  --elevation-1: 0 1px 2px rgb(var(--shadow-rgb) / 6%), 0 3px 8px rgb(var(--shadow-rgb) / 6%);
+  --elevation-2: 0 2px 4px rgb(var(--shadow-rgb) / 8%), 0 10px 24px rgb(var(--shadow-rgb) / 10%);
+  --elevation-3: 0 4px 8px rgb(var(--shadow-rgb) / 10%), 0 18px 48px rgb(var(--shadow-rgb) / 16%);
 
   /* Text */
   --text: #12201d; /* primary text (13.8:1 on --bg) */

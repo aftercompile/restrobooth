@@ -52,7 +52,20 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 8px 10px;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.itemRow:last-child {
+  border-bottom: none;
+}
+
+/* No hover treatment existed on these rows at all before — the "app feels
+   unresponsive" complaint. Instant on POS (tokens/motion.css's blanket
+   kill-switch), so this is a snap, not an animation. */
+.itemRow:hover {
+  background: var(--surface-sunken);
+  transition: background var(--motion-duration) var(--motion-easing);
 }
 
 .itemName {
@@ -84,7 +97,11 @@
 
 .reasonSelect {
   font-size: var(--text-sm);
-  background: var(--surface);
+  /* Recessed, not raised — an input reads as a hole to type/pick INTO,
+     the opposite direction from a card's raised surface (Part A's
+     surface-hierarchy pair: --surface for "up," --surface-sunken for
+     "down"). */
+  background: var(--surface-sunken);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -102,7 +119,17 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 8px 10px;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.kotRow:last-child {
+  border-bottom: none;
+}
+
+.kotRow:hover {
+  background: var(--surface-sunken);
+  transition: background var(--motion-duration) var(--motion-easing);
 }
 
 .kotMeta {
@@ -120,9 +147,10 @@
   background: var(--signal-600);
   color: #fff;
   font-weight: 700;
-  padding: 8px 10px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius);
   margin-bottom: 6px;
+  box-shadow: var(--elevation-2);
 }
 
 .fireBar {
@@ -148,7 +176,7 @@
 
 .mergeSelect {
   font-size: var(--text-sm);
-  background: var(--surface);
+  background: var(--surface-sunken);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);

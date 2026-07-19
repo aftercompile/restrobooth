@@ -3,10 +3,20 @@
   border: 1px solid var(--border);
   background: var(--surface);
   overflow: hidden;
-  /* A single, consistent elevation step — not a random shadow value
-     (elevation-consistent). Deliberately shallow: this is a back office,
-     not a landing page. */
-  box-shadow: 0 1px 2px rgb(18 32 29 / 5%);
+  /* Amended 2026-07-19 (DECISIONS.md): "engineered depth," not the
+     original single-shadow restraint — a top inner highlight plus the
+     token layer's 3-step elevation ramp, still one consistent recipe
+     reused everywhere rather than a bespoke shadow per component. */
+  box-shadow: var(--highlight-top), var(--elevation-1);
+}
+
+.interactive {
+  transition: box-shadow var(--motion-duration) var(--motion-easing), border-color var(--motion-duration) var(--motion-easing);
+}
+
+.interactive:hover {
+  box-shadow: var(--highlight-top), var(--elevation-2);
+  border-color: var(--border-strong);
 }
 
 /* Padding is opt-in. A card wrapping a list of DataRows must NOT have

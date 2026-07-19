@@ -32,54 +32,67 @@ function formatTimeIST(iso: string): string {
 
 export function DayList({ days }: { days: DayStatus[] }) {
   return (
-    <Card padded={false}>
+    <div className={styles.grid}>
       {days.map((day) => (
-        <DayRow key={day.outletId} day={day} />
+        <DayCard key={day.outletId} day={day} />
       ))}
-    </Card>
+    </div>
   );
 }
 
-function DayRow({ day }: { day: DayStatus }) {
+function DayCard({ day }: { day: DayStatus }) {
   const [expanded, setExpanded] = useState(false);
+  const isOpen = day.status === "open";
 
-  if (day.status === "closed") {
-    return (
-      <div className={styles.outletRow}>
+  return (
+    <Card interactive className={styles.dayCard}>
+      <div className={styles.dayCardHead}>
         <span className={styles.outletName}>{day.outletName}</span>
-        <Badge tone="neutral">no open day</Badge>
+        <Badge tone={isOpen ? "live" : "neutral"}>{isOpen ? "open" : "no open day"}</Badge>
+      </div>
+
+      {isOpen ? (
+        <div className={styles.dayMetrics}>
+          <div className={styles.metric}>
+            <span className={styles.metricValue}>{formatRupees(day.openingFloatPaise)}</span>
+            <span className={styles.metricLabel}>Opening float</span>
+          </div>
+          <div className={styles.metric}>
+            <span className={styles.metricValue}>{day.openedAt ? formatTimeIST(day.openedAt) : "—"}</span>
+            <span className={styles.metricLabel}>Opened at</span>
+          </div>
+          <div className={styles.metric}>
+            <span className={styles.metricValue}>{day.businessDate ?? "—"}</span>
+            <span className={styles.metricLabel}>Business date</span>
+          </div>
+        </div>
+      ) : (
+        <p className={styles.dayEmptyNote}>Nothing can be billed here until a day is opened.</p>
+      )}
+
+      <div className={styles.dayCardFoot}>
         {expanded ? (
-          <OpenDayForm outletId={day.outletId} onDone={() => setExpanded(false)} />
+          isOpen ? (
+            <CloseDayForm day={day} onDone={() => setExpanded(false)} />
+          ) : (
+            <OpenDayForm outletId={day.outletId} onDone={() => setExpanded(false)} />
+          )
+        ) : isOpen ? (
+          <Button type="button" variant="secondary" onClick={() => setExpanded(true)}>
+            Close day
+          </Button>
         ) : (
           <Button type="button" variant="primary" onClick={() => setExpanded(true)}>
             Open day
           </Button>
         )}
       </div>
-    );
-  }
-
-  return (
-    <div className={styles.outletRow}>
-      <span className={styles.outletName}>{day.outletName}</span>
-      <span className={styles.meta}>
-        {day.businessDate} · opened {day.openedAt ? formatTimeIST(day.openedAt) : ""} · float{" "}
-        {formatRupees(day.openingFloatPaise)}
-      </span>
-      <Badge tone="live">open</Badge>
-      {expanded ? (
-        <CloseDayForm day={day} onDone={() => setExpanded(false)} />
-      ) : (
-        <Button type="button" variant="secondary" onClick={() => setExpanded(true)}>
-          Close day
-        </Button>
-      )}
-    </div>
+    </Card>
   );
 }
 
 function OpenDayForm({ outletId, onDone }: { outletId: string; onDone: () => void }) {
-  // Success is signalled by revalidatePath replacing this row entirely
+  // Success is signalled by revalidatePath replacing this card entirely
   // (status flips to "open") — no local success state to track here.
   const [state, formAction, pending] = useActionState(openDay, INITIAL);
   return (

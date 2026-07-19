@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Badge, Card, CardHeader, CashIcon, FloorIcon, RampLegend, ReceiptIcon, RefreshIcon, SeatIcon } from "@restrobooth/ui";
 import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS, type RampState } from "@restrobooth/domain";
@@ -42,6 +42,11 @@ function formatElapsed(ms: number): string {
 
 export function FloorMap({ tables }: { tables: FloorTable[] }) {
   const router = useRouter();
+  // Header search's table-label branch (HeaderSearch.tsx) — a label isn't
+  // unique across outlets, so it can't redirect to one page; it hands off
+  // to this query param instead, and this page filters its own grid.
+  const searchParams = useSearchParams();
+  const query = (searchParams.get("q") ?? "").trim().toLowerCase();
   // Starts null, not Date.now(): the initial value has to be IDENTICAL on
   // the server render and the client's first paint, or React logs a
   // hydration mismatch (server and client call Date.now() at different
@@ -114,6 +119,7 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
   const byOutlet = useMemo(() => {
     const outlets = new Map<string, { outletName: string; areas: Map<string, { areaName: string; tables: FloorTable[] }> }>();
     for (const t of tables) {
+      if (query && !t.label.toLowerCase().includes(query)) continue;
       let outlet = outlets.get(t.outletId);
       if (!outlet) {
         outlet = { outletName: t.outletName, areas: new Map() };
@@ -127,8 +133,10 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
       area.tables.push(t);
     }
     return outlets;
-  }, [tables]);
+  }, [tables, query]);
 
+  // KPIs stay computed from the UNFILTERED set — a search is "help me
+  // find a table," not "pretend the other 13 don't exist."
   const runningCount = tables.filter((t) => t.sessionId).length;
   const availableCount = tables.length - runningCount;
   const awaitingPaymentCount = tables.filter((t) => t.billStatus === "printed").length;
@@ -147,6 +155,14 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
     // blanket POS kill-switch instead of fighting it.
     <div className={styles.floorMotionScope}>
       <div className={styles.header}>
+        {query && (
+          <div className={styles.searchBanner}>
+            Showing tables matching &ldquo;{searchParams.get("q")}&rdquo;
+            <button type="button" className={styles.searchClear} onClick={() => router.push("/floor")}>
+              Clear
+            </button>
+          </div>
+        )}
         <div className={styles.headerTop}>
           <h1 className={styles.title}>Table view</h1>
           <div className={styles.headerActions}>
@@ -192,6 +208,8 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
           </div>
         </div>
       </div>
+
+      {query && byOutlet.size === 0 && <p className={styles.empty}>No table matches &ldquo;{searchParams.get("q")}&rdquo;.</p>}
 
       {Array.from(byOutlet.values()).map((outlet) => {
         const outletTableCount = Array.from(outlet.areas.values()).reduce((sum, a) => sum + a.tables.length, 0);
