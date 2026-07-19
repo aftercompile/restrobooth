@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Badge, Button, Card, CardHeader, useToast, type ToastTone } from "@restrobooth/ui";
+import { Badge, Button, Card, CardHeader, Input, Select, useToast, type ToastTone } from "@restrobooth/ui";
 import { computeBill, type BillLineInput, type TaxRateInput } from "@restrobooth/domain";
 import { getOfflineDb, type OutboxEntry } from "../../../../lib/offline/db";
 import { enqueue, discardRejected } from "../../../../lib/offline/outbox";
@@ -209,33 +209,36 @@ function OneBillControls({ sessionId, preview }: { sessionId: string; preview: B
   return (
     <form action={handleSubmit}>
       <div className={styles.controls}>
-        <label>
-          Discount
-          <select
-            name="discountKind"
-            className={styles.select}
-            value={discountKind}
-            onChange={(e) => setDiscountKind(e.target.value as typeof discountKind)}
-          >
-            <option value="none">None</option>
-            <option value="flat">Flat (₹)</option>
-            <option value="percent">Percent (%)</option>
-          </select>
-        </label>
+        <Select
+          label="Discount"
+          name="discountKind"
+          className={styles.narrowInput}
+          value={discountKind}
+          onChange={(e) => setDiscountKind(e.target.value as typeof discountKind)}
+        >
+          <option value="none">None</option>
+          <option value="flat">Flat (₹)</option>
+          <option value="percent">Percent (%)</option>
+        </Select>
         {discountKind !== "none" && (
-          <input
+          <Input
+            label={discountKind === "flat" ? "Amount (₹)" : "Percent (%)"}
             type="number"
             name="discountValue"
             step="0.01"
             min={0}
             className={styles.narrowInput}
-            placeholder={discountKind === "flat" ? "Amount ₹" : "Percent %"}
           />
         )}
-        <label>
-          Service charge %
-          <input type="number" name="serviceChargeBps" step="1" min={0} defaultValue={0} className={styles.narrowInput} />
-        </label>
+        <Input
+          label="Service charge (%)"
+          type="number"
+          name="serviceChargeBps"
+          step="1"
+          min={0}
+          defaultValue={0}
+          className={styles.narrowInput}
+        />
         <Button type="submit" variant="primary" disabled={pending || preview.lines.length === 0}>
           {pending ? "Finalising…" : "Finalise bill"}
         </Button>

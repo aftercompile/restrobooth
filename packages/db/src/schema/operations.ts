@@ -112,6 +112,15 @@ export const tableSessions = pgTable(
     closedAt: timestamp("closed_at", { withTimezone: true }),
     abandonedReason: text("abandoned_reason"),
     idempotencyKey: uuid("idempotency_key").notNull(),
+    // Guest details (2026-07-19) — always optional (a walk-in with no name
+    // given is normal, not an error state), captured once at seat time by
+    // whoever seats the table (captain or cashier) and never required
+    // again after. This is real guest PII the moment a name is actually
+    // typed in — ADR-0001's "first real guest PII → Supabase Pro" trigger
+    // is not hypothetical once this column has a non-null row in it.
+    guestName: text("guest_name"),
+    guestPhone: text("guest_phone"),
+    guestNotes: text("guest_notes"),
   },
   (t) => [
     unique().on(t.idempotencyKey),

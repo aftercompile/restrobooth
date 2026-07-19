@@ -26,6 +26,12 @@ export function SeatTableDialog({ table, onClose }: { table: FloorTable; onClose
           required
           autoFocus
         />
+        {/* All optional — a walk-in with nothing given is normal, not a
+            validation error. Worth filling in for a known regular or a
+            reservation; skippable with one tap otherwise. */}
+        <Input label="Guest name (optional)" name="guestName" />
+        <Input label="Phone (optional)" name="guestPhone" type="tel" />
+        <Input label="Notes (optional)" name="guestNotes" />
         {state.error && (
           <p role="alert" style={{ color: "var(--signal-600)", fontSize: "var(--text-sm)", margin: 0 }}>
             {state.error}

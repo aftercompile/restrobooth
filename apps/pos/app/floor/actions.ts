@@ -25,6 +25,12 @@ export interface SeatTableInput {
   tableId: string;
   outletId: string;
   covers: number;
+  /** All optional — a walk-in with nothing given is the normal case, not
+   *  an error. Real guest PII the moment any of these is non-empty
+   *  (ADR-0001's "first real guest PII" trigger). */
+  guestName?: string | null;
+  guestPhone?: string | null;
+  guestNotes?: string | null;
 }
 
 /**
@@ -42,7 +48,7 @@ export interface SeatTableInput {
  * is the ONLY caller; `SeatTableDialog.tsx` enqueues, it doesn't call this.
  */
 export async function applySeatTable(idempotencyKey: string, input: SeatTableInput): Promise<{ sessionId: string }> {
-  const { sessionId, tableId, outletId, covers } = input;
+  const { sessionId, tableId, outletId, covers, guestName, guestPhone, guestNotes } = input;
   if (!sessionId || !tableId || !outletId || !Number.isFinite(covers) || covers < 1) {
     throw new Error("missing or invalid seating details");
   }
@@ -93,6 +99,9 @@ export async function applySeatTable(idempotencyKey: string, input: SeatTableInp
           status: "open",
           covers,
           idempotencyKey,
+          guestName: guestName?.trim() || null,
+          guestPhone: guestPhone?.trim() || null,
+          guestNotes: guestNotes?.trim() || null,
         });
         await tx.insert(schema.tableSessionTables).values({ tableSessionId: sessionId, tableId });
 

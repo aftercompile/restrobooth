@@ -42,7 +42,10 @@ async function applyMutation(entry: OutboxEntry): Promise<unknown> {
   const p = entry.payload;
   switch (entry.mutationType) {
     case "seatTable":
-      return applySeatTable(entry.id, p as { sessionId: string; tableId: string; outletId: string; covers: number });
+      return applySeatTable(
+        entry.id,
+        p as { sessionId: string; tableId: string; outletId: string; covers: number; guestName?: string; guestPhone?: string; guestNotes?: string },
+      );
     case "addOrderItem":
       return applyAddOrderItem(
         entry.id,

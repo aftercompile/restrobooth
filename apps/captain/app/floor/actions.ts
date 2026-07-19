@@ -24,6 +24,11 @@ export async function seatTable(_prev: ActionState, formData: FormData): Promise
   const tableId = String(formData.get("tableId") ?? "");
   const outletId = String(formData.get("outletId") ?? "");
   const covers = Number(formData.get("covers") ?? 1);
+  // All optional (TENANCY.md-adjacent PII note in DECISIONS.md's guest-details
+  // entry) — a walk-in with nothing given is normal, not a validation error.
+  const guestName = String(formData.get("guestName") ?? "").trim() || null;
+  const guestPhone = String(formData.get("guestPhone") ?? "").trim() || null;
+  const guestNotes = String(formData.get("guestNotes") ?? "").trim() || null;
 
   if (!tableId || !outletId || !Number.isFinite(covers) || covers < 1) {
     return { error: "Missing or invalid seating details." };
@@ -66,6 +71,9 @@ export async function seatTable(_prev: ActionState, formData: FormData): Promise
         status: "open",
         covers,
         idempotencyKey: crypto.randomUUID(),
+        guestName,
+        guestPhone,
+        guestNotes,
       });
       await tx.insert(schema.tableSessionTables).values({ tableSessionId: id, tableId });
 

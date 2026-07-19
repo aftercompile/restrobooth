@@ -14,6 +14,17 @@
   margin: 2px 0 0 0;
 }
 
+.guestName {
+  color: var(--enamel-700);
+}
+
+.guestNotes {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+  margin: 2px 0 0 0;
+}
+
 .total {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;

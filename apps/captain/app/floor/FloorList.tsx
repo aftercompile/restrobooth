@@ -114,7 +114,13 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                   return (
                     <StateRail key={t.tableId} state={rampState} label={`${t.sessionStatus}, ${elapsedLabel}`}>
                       <Link href={`/floor/${t.sessionId}`} className={styles.tableButton}>
-                        <span className={styles.tableLabel}>{t.label}</span>
+                        <span className={styles.tableLabelGroup}>
+                          <span className={styles.tableLabel}>{t.label}</span>
+                          {/* Optional — most walk-ins won't have one; the row is
+                              the same height either way, just one line taller
+                              when it's set. */}
+                          {t.guestName && <span className={styles.guestName}>{t.guestName}</span>}
+                        </span>
                         <span className={styles.tableMetaGroup}>
                           {/* Same "second signal, not folded into the rail" reasoning as
                               apps/pos/app/floor/FloorMap.tsx — the rail stays pure elapsed

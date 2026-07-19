@@ -4,6 +4,27 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-19 — Guest details (name/phone/notes) captured at seating, and two POS bill-flow bugs
+
+**Decided by:** Mohammed. Two forks confirmed via `AskUserQuestion` before touching schema: **(1)** field scope — name + phone + notes (the richest of three offered options; explicitly **not** the minimal "name only" one), **(2)** Booth scope — capture happens at Captain/POS seating only this pass; Booth (still its own "Phase 1 scaffold checkpoint... guest QR ordering lands in Phase 5" stub, no real ordering flow to attach a field to) is deliberately deferred, not built ahead of schedule.
+
+**A real, not hypothetical, consequence of fork (1):** ADR-0001 already names "first real guest PII" as one of two triggers to move off Supabase's free tier (`--elevation-1`-shallow theoretical until now — the moment a real phone number lands in `guest_phone`, that trigger condition is met for real, not as a someday-concern). Recorded here so a future session doesn't rediscover this by surprise; it does not change anything about *this* pass, since the project is still pre-pilot / dev-only, but the next person to read ADR-0001 should know the clock has meaning now.
+
+**What shipped:**
+
+1. **Schema** (`packages/db/drizzle/0024_guest_details.sql`, generated via `drizzle-kit generate` then reviewed, not hand-written from scratch): three nullable `text` columns on `table_sessions` — `guest_name`, `guest_phone`, `guest_notes`. All optional; a walk-in with nothing given is the normal case, not a validation error, everywhere this is read. Applied to both local Postgres instances (docker-compose 54329 and Supabase-local 54322 — the one the apps actually run against), per the standing "migrate both in tandem" convention.
+2. **Captured at seat time**, both places a table actually gets seated today: POS's `SeatTableDialog.tsx` (wired through the existing offline outbox — `applySeatTable()` in `apps/pos/app/floor/actions.ts` — so seating offline still carries guest details, same as covers already did) and Captain's `SeatTableDialog.tsx` (a plain server action, no offline queue — Captain's `seatTable` was never given the ADR-0004 offline treatment, so this didn't need it either).
+3. **Surfaced on floor cards** (`FloorMap.tsx`'s POS grid, `FloorList.tsx`'s Captain list) as a distinct, truncating line — never appended into the existing covers/timer meta line, so it reads at a glance and doesn't crowd the card when absent (most walk-ins won't have one; the card is one line shorter, not restructured). **Not** folded into the state chip/rail — same "colour/state channel stays pure" reasoning as the bill-status badge two passes ago.
+4. **Surfaced on the order pad / order screen header** (`OrderPad.tsx` for POS, `OrderScreen.tsx` for Captain) — name inline with the table label, phone appended to the existing meta line, notes as its own italic line when present. Both apps' `getSessionDetail()` queries updated identically (same duplicated-per-app precedent as `getFloor()`).
+5. **The offline-seating fallback** (`apps/pos/app/floor/[sessionId]/page.tsx`'s `fallbackSession`, used for the brief window between an offline `seatTable` enqueue and its sync) renders guest fields as `null` rather than threading them through the URL the way `covers` already is — avoids URL-encoding free-text notes for a gap that self-heals the moment the queued mutation actually drains, consistent with how that object already treats `businessDayId`.
+6. **Not built:** any edit-after-seating UI (guest details are set once, at seating, and that's the only mutation path this pass adds — editing later is a real, reasonable follow-up, just not this pass); anything in Booth.
+
+**Also fixed, same session, unrelated to guest details:**
+- **The finalize-bill page's control row** (`OneBillControls` in `apps/pos/app/floor/[sessionId]/bill/BillView.tsx`) looked visually broken — "some up, some down" — because it hand-rolled bare `<label>text<select>`/`<input>` pairs instead of using the app's own `Select`/`Input` components, so its children had inconsistent internal heights inside a `flex; align-items: flex-end` row. Fixed by routing all three fields through the real components, which already render a consistent stacked label-over-control block.
+- **"Go to bill" / "Back to order"** were full-width bars sitting alone between a page's header and its content — moved into the header itself, next to the total they're derived from, as compact (not full-width) buttons. One less thing to scroll past, always in view.
+
+---
+
 ## 2026-07-19 — Surface hierarchy & elevation tokens, the POS form screens, and a real Live Header
 
 **Decided by:** Mohammed, acting as design consultant for a token-layer + depth-recipe request ("Surface Hierarchy," "Card Depth," a "Live Header"). Scoped via `AskUserQuestion` before building: **(1)** land on the token layer + the POS form screens (order pad/bill/day/menu) specifically, not KDS/Captain — the floor view already got this treatment in the prior pass; **(2)** the Live Header's search/alerts wire to real signals only, not a shell with logic deferred; **(3)** push depth **richer/more pronounced**, explicitly overriding `Card.module.css`'s documented "deliberately shallow… not a landing page" restraint.

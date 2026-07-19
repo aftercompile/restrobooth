@@ -19,12 +19,22 @@
   margin: 2px 0 0 0;
 }
 
-.goToBillBar {
-  margin: var(--space-2) 0;
+.guestName {
+  color: var(--enamel-700);
 }
 
-.goToBillButton {
-  width: 100%;
+.guestNotes {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+  margin: 2px 0 0 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .columns {

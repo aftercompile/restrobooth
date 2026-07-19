@@ -169,6 +169,13 @@
       "when": 1784300100000,
       "tag": "0023_kot_lifecycle_capability",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1784438616177,
+      "tag": "0024_guest_details",
+      "breakpoints": true
     }
   ]
 }

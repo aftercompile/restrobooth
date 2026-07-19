@@ -42,10 +42,15 @@ export function OrderScreen({
   return (
     <>
       <div className={styles.header}>
-        <h1 className={styles.title}>{session.tableLabels}</h1>
+        <h1 className={styles.title}>
+          {session.tableLabels}
+          {session.guestName && <span className={styles.guestName}> — {session.guestName}</span>}
+        </h1>
         <p className={styles.sub}>
           {session.brandName} · {session.covers} cover{session.covers === 1 ? "" : "s"} · {session.status}
+          {session.guestPhone && ` · ${session.guestPhone}`}
         </p>
+        {session.guestNotes && <p className={styles.guestNotes}>Note: {session.guestNotes}</p>}
         <div className={styles.total}>₹{formatRupees(total.toString())}</div>
       </div>
 

@@ -11,6 +11,9 @@ export interface SessionDetail {
   openedAt: string;
   tableLabels: string;
   brandName: string;
+  guestName: string | null;
+  guestPhone: string | null;
+  guestNotes: string | null;
 }
 
 /** Same query as apps/pos's getSessionDetail. */
@@ -26,9 +29,13 @@ export async function getSessionDetail(tx: RlsTx, sessionId: string): Promise<Se
     opened_at: string;
     table_labels: string;
     brand_name: string;
+    guest_name: string | null;
+    guest_phone: string | null;
+    guest_notes: string | null;
   }>(sql`
     select
       ts.id as session_id, ts.status, ts.store_id, ts.outlet_id, ts.business_day_id, ts.covers, ts.opened_at,
+      ts.guest_name, ts.guest_phone, ts.guest_notes,
       string_agg(distinct t.label, ', ' order by t.label) as table_labels,
       b.name as brand_name
     from table_sessions ts
@@ -51,6 +58,9 @@ export async function getSessionDetail(tx: RlsTx, sessionId: string): Promise<Se
     openedAt: row.opened_at,
     tableLabels: row.table_labels,
     brandName: row.brand_name,
+    guestName: row.guest_name,
+    guestPhone: row.guest_phone,
+    guestNotes: row.guest_notes,
   };
 }
 

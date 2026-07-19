@@ -17,6 +17,9 @@ import type { FloorTable } from "./queries";
 export function SeatTableDialog({ table, onClose }: { table: FloorTable; onClose: () => void }) {
   const router = useRouter();
   const [covers, setCovers] = useState(Math.min(2, table.capacity));
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestNotes, setGuestNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -29,7 +32,15 @@ export function SeatTableDialog({ table, onClose }: { table: FloorTable; onClose
     setPending(true);
     const sessionId = uuid7();
     try {
-      await enqueue("seatTable", sessionId, { sessionId, tableId: table.tableId, outletId: table.outletId, covers });
+      await enqueue("seatTable", sessionId, {
+        sessionId,
+        tableId: table.tableId,
+        outletId: table.outletId,
+        covers,
+        guestName: guestName.trim() || undefined,
+        guestPhone: guestPhone.trim() || undefined,
+        guestNotes: guestNotes.trim() || undefined,
+      });
     } catch (err) {
       setPending(false);
       setError(err instanceof Error ? err.message : "Could not seat the table.");
@@ -53,6 +64,13 @@ export function SeatTableDialog({ table, onClose }: { table: FloorTable; onClose
           required
           autoFocus
         />
+        {/* All optional, all skippable in one tap — a walk-in with no name
+            given is the normal case, not a validation error. Worth typing
+            in when it's a known regular or a reservation; not worth
+            slowing a rush down for. */}
+        <Input label="Guest name (optional)" name="guestName" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+        <Input label="Phone (optional)" name="guestPhone" type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} />
+        <Input label="Notes (optional)" name="guestNotes" value={guestNotes} onChange={(e) => setGuestNotes(e.target.value)} />
         {error && (
           <p role="alert" style={{ color: "var(--signal-600)", fontSize: "var(--text-sm)", margin: 0 }}>
             {error}

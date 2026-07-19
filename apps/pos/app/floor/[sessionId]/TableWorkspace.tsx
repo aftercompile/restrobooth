@@ -105,11 +105,11 @@ export function TableWorkspace({
             <h1 className={styles.title}>Bill — {session.tableLabels}</h1>
             <p className={styles.sub}>{session.brandName}</p>
           </div>
-        </div>
-        <div className={styles.goToBillBar}>
-          <Button type="button" variant="secondary" className={styles.goToBillButton} onClick={() => setView("order")}>
-            ← Back to order
-          </Button>
+          <div className={styles.headerRight}>
+            <Button type="button" variant="secondary" onClick={() => setView("order")}>
+              ← Back to order
+            </Button>
+          </div>
         </div>
         <BillView sessionId={session.sessionId} preview={preview} bills={bills} />
       </>

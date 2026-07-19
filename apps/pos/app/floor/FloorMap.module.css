@@ -240,6 +240,15 @@
   font-size: var(--text-lg);
 }
 
+.guestName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .tableMeta {
   display: flex;
   align-items: center;

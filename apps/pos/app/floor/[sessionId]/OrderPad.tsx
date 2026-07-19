@@ -154,18 +154,25 @@ export function OrderPad({
 
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>{session.tableLabels}</h1>
+          <h1 className={styles.title}>
+            {session.tableLabels}
+            {session.guestName && <span className={styles.guestName}> — {session.guestName}</span>}
+          </h1>
           <p className={styles.sub}>
             {session.brandName} · {session.covers} cover{session.covers === 1 ? "" : "s"} · {session.status}
+            {session.guestPhone && ` · ${session.guestPhone}`}
           </p>
+          {session.guestNotes && <p className={styles.guestNotes}>Note: {session.guestNotes}</p>}
         </div>
-        <div className={styles.total}>₹{formatRupees(total.toString())}</div>
-      </div>
-
-      <div className={styles.goToBillBar}>
-        <Button type="button" variant="secondary" className={styles.goToBillButton} onClick={onGoToBill}>
-          Go to bill →
-        </Button>
+        {/* Was a full-width bar between the header and the columns below —
+            moved next to the total it's derived from, compact, always in
+            view without scrolling past an empty-looking strip. */}
+        <div className={styles.headerRight}>
+          <div className={styles.total}>₹{formatRupees(total.toString())}</div>
+          <Button type="button" variant="secondary" onClick={onGoToBill}>
+            Go to bill →
+          </Button>
+        </div>
       </div>
 
       <div className={styles.columns}>

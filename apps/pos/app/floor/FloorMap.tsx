@@ -259,6 +259,12 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                                 {CHIP_LABEL[rampState]}
                               </span>
                             </div>
+                            {/* Guest name is a SECOND, separate line from the covers/timer
+                                meta — not appended into it — so it reads clearly at a
+                                glance and truncates independently if long. Optional: most
+                                walk-ins won't have one, and the card layout is identical
+                                either way, just one line shorter. */}
+                            {t.guestName && <div className={styles.guestName}>{t.guestName}</div>}
                             <div className={styles.tableMeta}>
                               <SeatIcon className={styles.metaIcon} />
                               {t.covers} cover{t.covers === 1 ? "" : "s"} ·{" "}

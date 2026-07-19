@@ -48,9 +48,25 @@
   font: inherit;
 }
 
+.tableLabelGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .tableLabel {
   font-weight: 700;
   font-size: var(--text-lg);
+}
+
+.guestName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tableMetaGroup {

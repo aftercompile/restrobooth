@@ -58,6 +58,13 @@ export default async function OrderPadPage({
       openedAt: new Date().toISOString(),
       tableLabels: ctx.tableLabel,
       brandName: ctx.brandName,
+      // Genuinely unknown until the queued seatTable mutation syncs and
+      // this page re-fetches the real row — not carried through the URL
+      // the way `covers` is, to avoid URL-encoding free-text guest notes.
+      // Self-heals within the same drain window everything else here does.
+      guestName: null,
+      guestPhone: null,
+      guestNotes: null,
     };
     return { session: fallbackSession, order: null, kots: [], menu, mergeTargets: [], bills: [] };
   });

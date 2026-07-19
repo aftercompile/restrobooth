@@ -18,6 +18,9 @@ export interface FloorTable {
    *  money; "paid" = every non-voided bill on this session is settled.
    *  Same aggregation as apps/pos/app/floor/queries.ts's getFloor(). */
   billStatus: "printed" | "paid" | null;
+  /** Optional guest name captured at seat time — real guest PII the
+   *  moment it's non-null, see DECISIONS.md. */
+  guestName: string | null;
 }
 
 interface FloorRow {
@@ -35,6 +38,7 @@ interface FloorRow {
   opened_at: string | null;
   store_id: string | null;
   bill_status: "printed" | "paid" | null;
+  guest_name: string | null;
 }
 
 /**
@@ -51,12 +55,13 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       t.outlet_id, o.name as outlet_name,
       t.area_id, a.name as area_name,
       ts.id as session_id, ts.status as session_status, ts.covers, ts.opened_at, ts.store_id,
+      ts.guest_name,
       bs.bill_status
     from tables t
     join areas a on a.id = t.area_id
     join outlets o on o.id = t.outlet_id
     left join lateral (
-      select ts2.id, ts2.status, ts2.covers, ts2.opened_at, ts2.store_id
+      select ts2.id, ts2.status, ts2.covers, ts2.opened_at, ts2.store_id, ts2.guest_name
       from table_session_tables tst2
       join table_sessions ts2 on ts2.id = tst2.table_session_id
       where tst2.table_id = t.id
@@ -95,5 +100,6 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     openedAt: r.opened_at,
     storeId: r.store_id,
     billStatus: r.bill_status,
+    guestName: r.guest_name,
   }));
 }
