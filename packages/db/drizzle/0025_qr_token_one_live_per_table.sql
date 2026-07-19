@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "one_live_token_per_table" ON "qr_tokens" USING btree ("table_id") WHERE "qr_tokens"."revoked_at" is null;

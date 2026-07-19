@@ -12,3 +12,4 @@ export * from "./money";
 export * from "./bill";
 export * from "./splitBill";
 export * from "./invoiceNumber";
+export * from "./qrToken";

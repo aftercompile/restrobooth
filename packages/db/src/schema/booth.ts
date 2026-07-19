@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, timestamp, unique, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, unique, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { outlets, tables, stores } from "./tenancy.js";
 import { tableSessions } from "./operations.js";
 
@@ -16,7 +17,17 @@ export const qrTokens = pgTable(
     rotatesAt: timestamp("rotates_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
   },
-  (t) => [unique().on(t.tokenHash)],
+  (t) => [
+    unique().on(t.tokenHash),
+    // Phase 5: mintTableToken() revokes the old row before minting a
+    // replacement (same "rotate, don't reuse" shape as invoice blocks), so
+    // this is a belt-and-suspenders DB-level guarantee against ever
+    // printing two live QR codes for one table — same pattern as
+    // operations.ts's "one_open_day_per_outlet".
+    uniqueIndex("one_live_token_per_table")
+      .on(t.tableId)
+      .where(sql`${t.revokedAt} is null`),
+  ],
 );
 
 // Anonymous guest session. preferenceVector keys the Booth Host's response
