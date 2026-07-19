@@ -4,6 +4,17 @@
  * absolute zero, and it applies even under prefers-reduced-motion (they're
  * already at the floor, which is itself proof the decision was right on
  * its own merits, not just an accessibility concession — docs/DESIGN.md).
+ *
+ * One narrow, deliberate exception exists: apps/pos/app/floor/
+ * FloorMap.module.css's `.floorMotionScope` re-enables restrained
+ * transitions for the floor grid's table cards specifically (hover
+ * elevation, press scale, status-chip colour change) — docs/DESIGN.md's
+ * 2026-07-19 "Amendment 2". It works by out-specifying the blanket rule
+ * below rather than editing it, and re-derives the reduced-motion
+ * guarantee independently (it doesn't rely on this file's own
+ * `@media (prefers-reduced-motion: reduce)` block, which has LOWER
+ * specificity than any class selector and would otherwise lose to it).
+ * Every other POS/KDS surface is untouched by that exception.
  */
 :root,
 [data-density="console"] {

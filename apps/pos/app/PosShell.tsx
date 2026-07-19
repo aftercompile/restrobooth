@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { signOut } from "./auth-actions";
+import { CalendarIcon, FloorIcon, MenuBookIcon } from "@restrobooth/ui";
+import { AvatarMenu } from "./AvatarMenu";
 import { OfflineStatusBar } from "./OfflineStatusBar";
 import styles from "./PosShell.module.css";
 
 const NAV = [
-  { href: "/floor", label: "Floor" },
-  { href: "/menu", label: "Menu" },
-  { href: "/day", label: "Day" },
+  { href: "/floor", label: "Floor", Icon: FloorIcon },
+  { href: "/menu", label: "Menu", Icon: MenuBookIcon },
+  { href: "/day", label: "Day", Icon: CalendarIcon },
 ];
 
 export function PosShell({ email, children }: { email?: string | undefined; children: ReactNode }) {
@@ -23,6 +24,9 @@ export function PosShell({ email, children }: { email?: string | undefined; chil
           <span className={styles.markRail} aria-hidden="true" />
           RestroBooth POS
         </Link>
+        {/* A segmented track, not an underline — the active tab gets its
+            own pill so it reads as "this is where you are" at a glance,
+            not just a thin rule under some text. */}
         <nav className={styles.nav}>
           {NAV.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -33,18 +37,14 @@ export function PosShell({ email, children }: { email?: string | undefined; chil
                 className={styles.navLink}
                 aria-current={active ? "page" : undefined}
               >
+                <item.Icon className={styles.navIcon} />
                 {item.label}
               </Link>
             );
           })}
         </nav>
         <span className={styles.spacer} />
-        {email && <span className={styles.userEmail}>{email}</span>}
-        <form action={signOut}>
-          <button type="submit" className={styles.signOut}>
-            Sign out
-          </button>
-        </form>
+        <AvatarMenu email={email} />
       </header>
       <OfflineStatusBar />
       <main className={styles.main}>{children}</main>

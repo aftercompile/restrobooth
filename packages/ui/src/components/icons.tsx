@@ -38,3 +38,59 @@ export function ReceiptIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function FloorIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="1" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1" />
+    </svg>
+  );
+}
+
+export function MenuBookIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 4.5c2-1 5-1 8 0v15c-3-1-6-1-8 0v-15Z" />
+      <path d="M20 4.5c-2-1-5-1-8 0v15c3-1 6-1 8 0v-15Z" />
+    </svg>
+  );
+}
+
+export function CalendarIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3.5" y="4.5" width="17" height="16" rx="2" />
+      <path d="M3.5 9.5h17M8 2.5v4M16 2.5v4" />
+    </svg>
+  );
+}
+
+export function SeatIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="6" r="3" />
+      <path d="M6 21v-3a6 6 0 0 1 12 0v3" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 8.5 12 15.5 19 8.5" />
+    </svg>
+  );
+}
+
+export function CashIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="2.5" y="6.5" width="19" height="11" rx="1.5" />
+      <circle cx="12" cy="12" r="2.75" />
+      <path d="M5.5 6.5v11M18.5 6.5v11" />
+    </svg>
+  );
+}

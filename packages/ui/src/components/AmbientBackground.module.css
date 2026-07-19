@@ -9,7 +9,7 @@
 .doodle {
   position: absolute;
   color: var(--ambient-doodle);
-  opacity: 0.16;
+  opacity: 0.11;
 }
 
 .doodle svg {

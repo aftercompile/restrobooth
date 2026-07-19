@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Badge, RampLegend, ReceiptIcon, RefreshIcon, StateRail } from "@restrobooth/ui";
-import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS } from "@restrobooth/domain";
+import { Badge, Card, CardHeader, CashIcon, FloorIcon, RampLegend, ReceiptIcon, RefreshIcon, SeatIcon } from "@restrobooth/ui";
+import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS, type RampState } from "@restrobooth/domain";
 import { createClient } from "../../lib/supabase/client";
 import type { FloorTable } from "./queries";
 import { SeatTableDialog } from "./SeatTableDialog";
@@ -13,10 +13,25 @@ import styles from "./FloorMap.module.css";
 const DWELL_LEGEND = [
   { label: "Available", color: "var(--text-muted)" },
   { label: "Fresh", color: "var(--ramp-fresh)" },
-  { label: "Warming (15m+)", color: "var(--ramp-warming)" },
-  { label: "Hot (30m+)", color: "var(--ramp-hot)" },
-  { label: "Critical (60m+)", color: "var(--ramp-critical)" },
+  { label: "Warming", color: "var(--ramp-warming)", detail: "15m+" },
+  { label: "Hot", color: "var(--ramp-hot)", detail: "30m+" },
+  { label: "Critical", color: "var(--ramp-critical)", detail: "60m+" },
 ];
+
+const CHIP_LABEL: Record<RampState | "idle", string> = {
+  idle: "Available",
+  fresh: "Fresh",
+  warming: "Warming",
+  hot: "Hot",
+  critical: "Critical",
+};
+
+// Same 20s cadence as the manual button's own "don't wait" framing — a
+// floor view is glance-driven, not scroll-driven, so a poll this frequent
+// costs nothing and the realtime subscription below already does the
+// heavy lifting; this is a backstop for the rare missed message, not the
+// primary transport (see KDS's own poll-as-backstop precedent).
+const AUTO_REFRESH_MS = 20_000;
 
 function formatElapsed(ms: number): string {
   const totalMinutes = Math.floor(ms / 60_000);
@@ -38,6 +53,7 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
   const [now, setNow] = useState<number | null>(null);
   const [seating, setSeating] = useState<FloorTable | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   function handleRefresh() {
     setRefreshing(true);
@@ -85,6 +101,16 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
     };
   }, [router]);
 
+  // A backstop, not the primary transport — see AUTO_REFRESH_MS's comment.
+  // A visible toggle (not a silent background poll) so a cashier who wants
+  // the screen to hold still for a second — mid-tap on a small target —
+  // can turn it off rather than fight a moving target.
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const id = setInterval(() => router.refresh(), AUTO_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [autoRefresh, router]);
+
   const byOutlet = useMemo(() => {
     const outlets = new Map<string, { outletName: string; areas: Map<string, { areaName: string; tables: FloorTable[] }> }>();
     for (const t of tables) {
@@ -105,92 +131,150 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
 
   const runningCount = tables.filter((t) => t.sessionId).length;
   const availableCount = tables.length - runningCount;
+  const awaitingPaymentCount = tables.filter((t) => t.billStatus === "printed").length;
 
   if (tables.length === 0) {
     return <p className={styles.empty}>No tables at any outlet you have access to.</p>;
   }
 
   return (
-    <>
+    // Motion is OFF everywhere else in POS (order pad, bill, menu) by the
+    // same standing rule as ever — this wrapper is the one, deliberate,
+    // documented exception (docs/DESIGN.md's 2026-07-19 addendum): the
+    // floor grid's own card lifecycle (hover, press, status change) gets
+    // restrained motion, nothing else does. See FloorMap.module.css's
+    // .floorMotionScope rule for how it out-specifies tokens/motion.css's
+    // blanket POS kill-switch instead of fighting it.
+    <div className={styles.floorMotionScope}>
       <div className={styles.header}>
-        <div className={styles.headerLeft}>
+        <div className={styles.headerTop}>
           <h1 className={styles.title}>Table view</h1>
-          <span className={styles.counts}>
-            {runningCount} running · {availableCount} available
-          </span>
+          <div className={styles.headerActions}>
+            <RampLegend items={DWELL_LEGEND} />
+            <button
+              type="button"
+              className={styles.autoRefreshToggle}
+              data-on={autoRefresh}
+              onClick={() => setAutoRefresh((v) => !v)}
+              aria-pressed={autoRefresh}
+            >
+              <span className={styles.autoRefreshDot} aria-hidden="true" />
+              Auto-refresh {autoRefresh ? "on" : "off"}
+            </button>
+            <button type="button" className={styles.refreshButton} data-spinning={refreshing} onClick={handleRefresh}>
+              <RefreshIcon />
+              Refresh
+            </button>
+          </div>
         </div>
-        <div className={styles.headerLeft}>
-          <RampLegend items={DWELL_LEGEND} />
-          <button type="button" className={styles.refreshButton} data-spinning={refreshing} onClick={handleRefresh}>
-            <RefreshIcon />
-            Refresh
-          </button>
+
+        <div className={styles.kpiRow}>
+          <div className={styles.kpiTile}>
+            <FloorIcon className={styles.kpiIcon} />
+            <div>
+              <div className={styles.kpiValue}>{runningCount}</div>
+              <div className={styles.kpiLabel}>Running</div>
+            </div>
+          </div>
+          <div className={styles.kpiTile}>
+            <SeatIcon className={styles.kpiIcon} />
+            <div>
+              <div className={styles.kpiValue}>{availableCount}</div>
+              <div className={styles.kpiLabel}>Available</div>
+            </div>
+          </div>
+          <div className={styles.kpiTile} data-attention={awaitingPaymentCount > 0}>
+            <CashIcon className={styles.kpiIcon} />
+            <div>
+              <div className={styles.kpiValue}>{awaitingPaymentCount}</div>
+              <div className={styles.kpiLabel}>Awaiting payment</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {Array.from(byOutlet.values()).map((outlet) => (
-        <div key={outlet.outletName} className={styles.outlet}>
-          <p className={styles.outletName}>{outlet.outletName}</p>
-          {Array.from(outlet.areas.values()).map((area) => (
-            <div key={area.areaName} className={styles.area}>
-              <p className={styles.areaName}>{area.areaName}</p>
-              <div className={styles.grid}>
-                {area.tables.map((t) => {
-                  if (!t.sessionId || !t.openedAt) {
-                    return (
-                      <StateRail key={t.tableId} state="idle" label="Available">
-                        <button type="button" className={styles.tableButton} onClick={() => setSeating(t)}>
-                          <div className={styles.tableLabel}>{t.label}</div>
-                          <div className={styles.tableMeta}>Seats {t.capacity} · available</div>
-                        </button>
-                      </StateRail>
-                    );
-                  }
-                  // now === null only for the first paint, before the
-                  // client clock effect runs (identical on server and
-                  // client — see the useState comment above). "fresh" is a
-                  // safe placeholder rail state for that one frame; it's
-                  // replaced within a tick once `now` is set.
-                  const elapsedMs = now === null ? null : now - new Date(t.openedAt).getTime();
-                  const rampState = elapsedMs === null ? "fresh" : rampStateForElapsed(elapsedMs, TABLE_DWELL_THRESHOLDS);
-                  const elapsedLabel = elapsedMs === null ? "…" : formatElapsed(elapsedMs);
-                  return (
-                    <StateRail key={t.tableId} state={rampState} label={`${t.sessionStatus}, ${elapsedLabel}`}>
-                      <div className={styles.tableCard}>
-                        <Link href={`/floor/${t.sessionId}`} className={styles.tableLink}>
-                          <div className={styles.tableLabel}>{t.label}</div>
-                          <div className={styles.tableMeta}>
-                            {t.covers} cover{t.covers === 1 ? "" : "s"} · {t.sessionStatus} ·{" "}
-                            <span className={styles.tableTimer}>{elapsedLabel}</span>
+      {Array.from(byOutlet.values()).map((outlet) => {
+        const outletTableCount = Array.from(outlet.areas.values()).reduce((sum, a) => sum + a.tables.length, 0);
+        return (
+          <Card key={outlet.outletName} padded={false} className={styles.outletCard}>
+            <CardHeader title={outlet.outletName} count={`${outletTableCount} tables`} />
+            <div className={styles.outletBody}>
+              {Array.from(outlet.areas.values()).map((area) => (
+                <div key={area.areaName} className={styles.area}>
+                  <p className={styles.areaName}>{area.areaName}</p>
+                  <div className={styles.grid}>
+                    {area.tables.map((t) => {
+                      if (!t.sessionId || !t.openedAt) {
+                        return (
+                          <div key={t.tableId} className={styles.tableCard} data-state="idle">
+                            <button type="button" className={styles.tableCardInner} onClick={() => setSeating(t)}>
+                              <div className={styles.cardTop}>
+                                <span className={styles.tableLabel}>{t.label}</span>
+                                <span className={styles.chip} data-state="idle">
+                                  <span className={styles.chipDot} aria-hidden="true" />
+                                  {CHIP_LABEL.idle}
+                                </span>
+                              </div>
+                              <div className={styles.tableMeta}>
+                                <SeatIcon className={styles.metaIcon} />
+                                Seats {t.capacity}
+                              </div>
+                            </button>
                           </div>
-                        </Link>
-                        {/* Bill lifecycle is a SECOND signal, deliberately not folded into
-                            the rail (DESIGN.md: "only the rail encodes state with colour") —
-                            the rail stays pure elapsed-time, this badge is the bill's own
-                            status, and the two can disagree (a fresh table can already have
-                            a printed bill if service was fast). */}
-                        {t.billStatus && (
-                          <div className={styles.tableFooter}>
-                            <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
-                              {t.billStatus === "paid" ? "Paid" : "Printed"}
-                            </Badge>
-                            <Link href={`/floor/${t.sessionId}/bill`} className={styles.billLink}>
-                              <ReceiptIcon />
-                              View bill
-                            </Link>
-                          </div>
-                        )}
-                      </div>
-                    </StateRail>
-                  );
-                })}
-              </div>
+                        );
+                      }
+                      // now === null only for the first paint, before the
+                      // client clock effect runs (identical on server and
+                      // client — see the useState comment above). "fresh" is a
+                      // safe placeholder rail state for that one frame; it's
+                      // replaced within a tick once `now` is set.
+                      const elapsedMs = now === null ? null : now - new Date(t.openedAt).getTime();
+                      const rampState = elapsedMs === null ? "fresh" : rampStateForElapsed(elapsedMs, TABLE_DWELL_THRESHOLDS);
+                      const elapsedLabel = elapsedMs === null ? "…" : formatElapsed(elapsedMs);
+                      return (
+                        <div key={t.tableId} className={styles.tableCard} data-state={rampState}>
+                          <Link href={`/floor/${t.sessionId}`} className={styles.tableCardInner}>
+                            <div className={styles.cardTop}>
+                              <span className={styles.tableLabel}>{t.label}</span>
+                              <span className={styles.chip} data-state={rampState} title={`${t.sessionStatus}, ${elapsedLabel}`}>
+                                <span className={styles.chipDot} aria-hidden="true" />
+                                {CHIP_LABEL[rampState]}
+                              </span>
+                            </div>
+                            <div className={styles.tableMeta}>
+                              <SeatIcon className={styles.metaIcon} />
+                              {t.covers} cover{t.covers === 1 ? "" : "s"} ·{" "}
+                              <span className={styles.tableTimer}>{elapsedLabel}</span>
+                            </div>
+                          </Link>
+                          {/* Bill lifecycle is a SECOND signal, deliberately not folded into
+                              the chip (DESIGN.md: "only one channel encodes state with
+                              colour") — the chip stays pure elapsed-time, this badge is the
+                              bill's own status, and the two can disagree (a fresh table can
+                              already have a printed bill if service was fast). */}
+                          {t.billStatus && (
+                            <div className={styles.tableFooter}>
+                              <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
+                                {t.billStatus === "paid" ? "Paid" : "Printed"}
+                              </Badge>
+                              <Link href={`/floor/${t.sessionId}/bill`} className={styles.billLink}>
+                                <ReceiptIcon />
+                                View bill
+                              </Link>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ))}
+          </Card>
+        );
+      })}
 
       {seating && <SeatTableDialog table={seating} onClose={() => setSeating(null)} />}
-    </>
+    </div>
   );
 }
