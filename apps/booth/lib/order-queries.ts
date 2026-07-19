@@ -7,6 +7,7 @@ export interface GuestOrderItem {
   name: string;
   quantity: number;
   status: string; // pending | fired | served | void_requested (voided is excluded)
+  unitPricePaise: string;
 }
 
 export interface GuestKot {
@@ -40,8 +41,9 @@ export async function getGuestOrderStatus(guestSessionId: string): Promise<Guest
       name: string;
       quantity: number;
       status: string;
+      unit_price_paise: string;
     }>(sql`
-      select oi.id as order_item_id, mi.name, oi.quantity, oi.status
+      select oi.id as order_item_id, mi.name, oi.quantity, oi.status, oi.unit_price_paise
       from order_items oi
       join menu_items mi on mi.id = oi.menu_item_id
       join orders o on o.id = oi.order_id
@@ -74,6 +76,7 @@ export async function getGuestOrderStatus(guestSessionId: string): Promise<Guest
         name: r.name,
         quantity: r.quantity,
         status: r.status,
+        unitPricePaise: r.unit_price_paise,
       })),
       kots: kotsResult.rows.map((r) => ({
         kotId: r.kot_id,

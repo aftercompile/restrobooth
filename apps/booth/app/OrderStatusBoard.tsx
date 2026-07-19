@@ -4,13 +4,12 @@ import { AnimatePresence, BOOTH_TRANSITION, motion, StateRail, useMotionAllowed,
 import type { GuestOrderItem } from "../lib/order-queries";
 import styles from "./OrderStatusBoard.module.css";
 
-/** order_item.status (pending/fired/served/void_requested — packages/domain
- *  doesn't own this mapping, it's guest-facing presentation, not a business
- *  rule) to a friendly label + the rail state that carries it. */
+/** order_item.status (fired/served/void_requested — pending items live in
+ *  CartSection.tsx instead, not here) to a friendly label + the rail
+ *  state that carries it. packages/domain doesn't own this mapping, it's
+ *  guest-facing presentation, not a business rule. */
 function guestStatus(status: string): { label: string; rail: RailState } {
   switch (status) {
-    case "pending":
-      return { label: "Order received", rail: "idle" };
     case "fired":
       return { label: "Cooking", rail: "warming" };
     case "served":
@@ -29,13 +28,16 @@ function guestStatus(status: string): { label: string; rail: RailState } {
  * gated structurally on useMotionAllowed(), per packages/ui/src/motion.tsx's
  * own instruction for anything beyond <Animate> — importing `motion`
  * directly here, exactly as that file's header describes.
+ *
+ * Only items already sent to the kitchen (fired/served/void_requested)
+ * render here — a still-editable cart line lives in CartSection.tsx
+ * instead, since "in your cart" isn't kitchen status, it's an order the
+ * guest can still change.
  */
 export function OrderStatusBoard({ items }: { items: GuestOrderItem[] }) {
   const motionAllowed = useMotionAllowed();
 
-  if (items.length === 0) {
-    return <p className={styles.empty}>No items yet — your server will add them shortly.</p>;
-  }
+  if (items.length === 0) return null;
 
   return (
     <StateRail state="fresh" glow>

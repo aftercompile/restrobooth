@@ -1,0 +1,75 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* Room for the fixed cart bar so the last item isn't hidden behind it. */
+  padding-bottom: 72px;
+}
+
+.category {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.categoryName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.itemButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-height: var(--touch-target);
+  padding: var(--space-1) var(--space-2);
+  color: var(--text);
+  font: inherit;
+  box-shadow: var(--highlight-top), var(--elevation-1);
+}
+
+.itemButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.itemName {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.itemPrice {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.cartBar {
+  position: fixed;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  background: var(--enamel-700);
+  color: #fff;
+  font-weight: 700;
+  border-radius: var(--radius);
+  text-decoration: none;
+  box-shadow: var(--elevation-2);
+}

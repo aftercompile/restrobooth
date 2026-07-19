@@ -4,6 +4,29 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
+## Where things stand — 2026-07-19 (latest), Phase 5 Slice 2b: guest self-service ordering
+
+**The Booth can now take a real order end to end: scan → auto-seat → browse → add to cart → place order → real KOT.** See [docs/adr/0009-guest-order-writes.md](docs/adr/0009-guest-order-writes.md) for the full design writeup. Slice 2b's "Next up" scope from the previous entry is now built (ordering half; call-waiter is still deferred, see below).
+
+**The core design decision — a server-side cart:** owner requirement was that the table stays open and re-joinable until an order is actually fired, since a guest might minimize the tab or switch browsers before ordering. This falls out for free from making the cart real server state: tapping "add" writes a `pending` `order_item` immediately (the exact staff model, pending → fired) rather than anything living in browser storage. **Verified for real, not just reasoned about**: opened two completely separate browser contexts against the same table's QR — the second one landed on the exact same cart the first had built, before either had placed the order.
+
+**The write-path mechanism (owner-confirmed via `AskUserQuestion`, choosing between two established patterns):** an anonymous guest cannot write order data today at three layers (table grants are SELECT-only for `anon`; RLS write policies require a staff `memberships` row; the KOT-firing sequence function isn't grantable to `anon`). Rather than open a six-table, two-restrictive-policy `anon`-write surface, guest writes go through a **privileged server action with an app-level ownership check** (`apps/booth/lib/order-mutations.ts`) — every mutation resolves the caller's own table_session from the `rb_guest_session` cookie first, inside the same transaction as the write, so a guest can only ever affect their own table by construction. This is a deliberate, ADR-recorded exception to non-negotiable #7 ("RLS is the security model"), scoped to exactly these three functions — Booth reads and every staff path are unchanged.
+
+**What shipped:**
+- `apps/booth/lib/order-mutations.ts` — `addToCart`, `removeFromCart`, `placeOrder`. `placeOrder` is a direct port of `apps/captain`'s `fireOrder` (same kitchen-section grouping, same KOT/event-emit logic) minus the printer-bridge call (a physical-terminal concept a phone has no equivalent of). Added one real hardening the staff paths don't have: `placeOrder` locks the outlet's `business_days` row (`SELECT ... FOR UPDATE`, the same idiom `seatOrJoinTableSession` already uses) before allocating `kot_number`, since guest + staff can now fire the same outlet concurrently — the staff-only `MAX+1` allocation never needed this when only one terminal at a time could plausibly fire.
+- **The menu is now tappable** (`apps/booth/app/menu/MenuBrowser.tsx`) — same tap-to-add-1, no-stepper UX as `apps/captain`'s `AddItemPicker` (this design system's established quantity pattern everywhere).
+- **"Your order" split into two sections**: `CartSection.tsx` (pending items — editable, removable, a running total, "Place order") above `OrderStatusBoard.tsx` (now fired/served only — the split-flap board keeps its job of showing kitchen status, not cart contents).
+- No migration. `channel_code` stays `'dinein'` (a Booth guest is a dine-in order in every sense `resolve_menu` and tax care about; `table_sessions.opened_via='guest'` from the prior amendment already records Booth origin at the session level).
+- **Verified end-to-end with a real Playwright script** (`tools/booth-order-test.mjs`, left untracked per this repo's established throwaway-script convention): scanned a fresh unseated table, added 2 items, confirmed the cart total (₹450.00 = ₹150 + ₹300, correct), confirmed a second browser context scanning the same QR saw the identical cart, removed one item, placed the order, confirmed the remaining item's tile flipped to "Cooking" — and confirmed directly in Postgres that a real `kots` row landed (`status: queued`, same as any staff-fired ticket) and the session transitioned to `dining`.
+
+### Still deferred
+- **Call-waiter** — no existing signal/notification concept anywhere in the codebase (confirmed net-new in Slice 2a's exploration); not part of "order from the QR," stays out of scope.
+- **Guest editing/voiding a *fired* item** — a guest can only remove from the cart (pending, before firing); once fired it's a staff/manager capability, unchanged.
+- **Hardening staff-side `fireOrder`/`applyFireOrder` with the same `business_days` row lock** — flagged in ADR-0009 as a fast-follow (the same concurrent-kot-number risk now technically applies staff-side too, since a guest can fire alongside them), not done this pass.
+- Payment/feedback remain Slice 3.
+
+---
+
 ## Where things stand — 2026-07-19 (even later), ADR-0008 amendment: guest scans auto-seat, no staff pre-seating
 
 **Owner feedback after driving the live deployment, correct and acted on immediately:** requiring staff to seat a table in POS/Captain before a guest's QR scan would work defeated the point of self-service ordering. Reversed — see [docs/adr/0008-guest-token-and-session.md](docs/adr/0008-guest-token-and-session.md)'s amendment banner for the full trade-off writeup (this touches a security assumption, not just UX, so it's documented as a real amendment, not a silent behavior change).
@@ -197,13 +220,13 @@ Docker Desktop was found fully stopped partway through this session (not just th
 
 ---
 
-## Next up: Phase 5 Slice 2b — guest self-service ordering + call-waiter
+## Next up: Phase 5 Slice 2c — call-waiter, then Slice 3 (payment/feedback)
 
-**Slices 1 (token gate) and 2a (menu browse + live status board) are done** — see the two 2026-07-19 sections above, [docs/adr/0008-guest-token-and-session.md](docs/adr/0008-guest-token-and-session.md), and migration `0026`. Phase 5 is not yet "pilot-ready"; that's Slice 3's payment work, still ahead.
+**Slices 1 (token gate), 2a (menu browse + live status board), and 2b (self-service ordering) are all done** — see the 2026-07-19 sections above, ADR-0008, ADR-0009, and migration `0026`. A guest can scan, browse, order, and watch their KOT cook, entirely unassisted. Phase 5 is not yet "pilot-ready"; that's Slice 3's payment work, still ahead.
 
-Next up is **Slice 2b**: guest self-service **add-to-order** and **call-waiter**. Write an approved, detailed plan before starting — this is a genuinely new security surface (confirmed via exploration: an anonymous guest cannot currently write order data at all; both `order_item_isolation` and the restrictive `order_item_take_capability` policy require a staff `memberships` row), so it needs its own ADR (mirroring ADR-0008's shape) plus new adversarial write tests proving a guest can only ever write to their own table's order — not just a policy tweak bolted onto Slice 2a. Concrete open decisions to resolve in that plan: (1) the write mechanism — a `security definer` RPC vs. a new `to anon` INSERT policy stacked with a capability exception; (2) `booth` vs `dinein` `channel_code` (schema is permissive either way — no CHECK constraint exists — it's purely an application convention question); (3) call-waiter has no existing signal concept anywhere in the codebase (checked — genuinely net-new), though `order_status_events`' `event_type` column is free text so emitting one needs no schema change; surfacing it on the POS floor does need new query/UI work, since KDS's realtime subscription reacts to any INSERT but only ever re-queries `kots`, not a content router.
+Next up is **call-waiter** — net-new (confirmed no existing signal/notification concept anywhere in the codebase). `order_status_events`' `event_type` column is free text, so emitting one needs no schema change, but surfacing it on the POS/Captain floor does need new query/UI work: the KDS's realtime subscription reacts to any INSERT but only ever re-queries `kots`, it isn't a content router — the same would be true for POS/Captain, so a "guest called" signal needs its own read query and its own UI surface (plausibly the floor card, next to the "Guest-opened" badge from the ADR-0008 amendment), not just an event emit. Write an approved plan before starting.
 
-Also outstanding from Slice 2a: **deploy `apps/booth` to Vercel** (root `apps/booth`, Function Region `icn1`, single env var `DATABASE_URL` — no Supabase client needed).
+Also outstanding: **deploy `apps/booth` to Vercel** (root `apps/booth`, Function Region `icn1`, single env var `DATABASE_URL` — no Supabase client needed) — the live deployment currently only has pos/kds/captain/console/hub; **hardening staff-side `fireOrder`/`applyFireOrder` with the same `business_days` row lock** ADR-0009 added to the guest path (flagged there as a fast-follow, not done).
 
 **ADR-0001 still says Phase 5 (specifically Slice 3's payment feature) triggers the move to Vercel Pro + Supabase Pro (~$45/mo)** — accepting a REAL guest payment is commercial use by Vercel's own fair-use definition. This session's live deployment stays free-tier-legal precisely because Slice 3 (the only payment-processing slice) hasn't been built yet, and when it is, the plan is a mock gateway + the real (accountless) UPI deep-link first — see the confirmed decision in DECISIONS.md. Budget for the Pro move before wiring a real Razorpay account, not at "first paying customer."
 

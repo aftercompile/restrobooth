@@ -1,0 +1,72 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--border);
+}
+
+.name {
+  font-weight: 600;
+}
+
+.qty {
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.removeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.removeButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border-strong);
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+.placeOrderButton {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.error {
+  color: var(--signal-600);
+  font-size: var(--text-sm);
+}
