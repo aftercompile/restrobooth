@@ -4,6 +4,42 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
+## Where things stand — 2026-07-19, live test deployment + Phase 5 Slice 1 (Booth token gate)
+
+**Two threads this session: (1) the app is now deployed live for testing (Vercel Hobby + Supabase Free), (2) Phase 5 (the Booth) has begun — Slice 1 (the guest QR token gate, ADR-0008's A14) is built and verified; Slices 2-3 are not.**
+
+### Live deployment — for testing only, not the pilot
+
+- **Five Vercel Hobby projects** (`restrobooth-pos`, `-kds`, `-captain`, `-console`, `-hub`), each rooted at its `apps/*` directory, GitHub-integration deploy (push to `main` auto-redeploys). Function Region pinned to **`icn1` (Seoul)** on every project — matches the Supabase project's region; leaving it on the `iad1` default caused a real, measured 3-5s-per-click latency (every DB round trip crossed the Pacific). `apps/booth` is **not** deployed yet (Slice 1 has no user-facing UI to deploy).
+- **A real Supabase Free project**, `sehgfgusiqxnmearhuzl.supabase.co`, region `ap-northeast-2`. All migrations through `0025` applied. Seeded with the believable-chain fixture + real GoTrue accounts (`owner@`/`cashier@`/`kitchen@restrobooth.test`, password `restrobooth`, same as local). Credentials (DB password, anon key, service_role key) were shared in-conversation, not committed anywhere — if picking this up cold, ask Mohammed for them again rather than searching the repo.
+- **`turbo.json`'s `build` task now declares `DATABASE_URL` in `env`** — Vercel's strict env-var checking flagged it as set-but-undeclared. `NEXT_PUBLIC_*` vars needed no change (auto-included via Next.js framework inference).
+- **Static, instant pending-state feedback** (disabled + label swap, e.g. "Saving…") was added to the ~9 action buttons that had none (every app's sign-out button, POS's rejected-outbox "Discard" buttons, Captain's floor "Refresh") — **no spinner, no new motion exception**; POS/KDS/Captain's zero-motion rule is unchanged. Everywhere else already had this via `useActionState`.
+- **The live cloud DB's table/order data was purged** (13 tables, `table_sessions` → `payments`) via a one-off script, keeping menu/orgs/users and — deliberately — the open `business_day` rows, so the floor is immediately usable. Invoice numbering was **not** reset (gaps are permanent by design).
+- **`CLAUDE.md`'s git workflow rule changed mid-session**: no longer pushes automatically after a commit — every commit from here on needs an explicit "push" ask. This is now the standing behavior, not a one-off.
+- Full narrative: [DECISIONS.md](DECISIONS.md)'s 2026-07-19 "Live test deployment" entry.
+
+### Phase 5 Slice 1 — the Booth's guest QR token gate
+
+**What exists and works right now:**
+- **`packages/domain/src/qrToken.ts`** — `evaluateGuestTokenAccess()`, the pure A14 decision rule (unknown/revoked/expired/no-open-session → denied, in that precedence). 100% line/branch covered.
+- **`packages/db/src/guestToken.ts`** — `mintTableToken()` (mints + rotates, revoking any prior live token for that table), `lookupTokenByHash()`, `withGuest()` (the guest-side twin of `withUser`: `set local role anon` + the `request.jwt.claim.guest_session_id` GUC the Phase-1-era RLS policies already read). Migration `0025` adds a DB-level `one_live_token_per_table` partial unique index.
+- **`apps/booth`**: `/t/[token]/route.ts` is the actual scan gate — validates before any RLS-scoped query runs, then mints a `guest_sessions` row and sets an opaque `rb_guest_session` cookie (no JWT signing — deliberately reuses the same GUC-based RLS-scoping mechanism the staff path already has; see ADR-0008 for why a real signed JWT would have been redundant infrastructure). `proxy.ts` (this Next version's renamed `middleware.ts`) gates every other route behind having that cookie. `/invalid` is where a denied scan or a missing cookie lands.
+- **`packages/db/scripts/mint-table-tokens.ts`** (`pnpm --filter @restrobooth/db tokens:mint [outletCode]`) — provisions/rotates the printed per-table QR tokens; prints the raw `${BOOTH_URL}/t/{token}` URLs once (never stored, never retrievable again).
+- **A14 is un-skipped** in the RLS adversarial suite (`packages/db/test/rls/adversarial.test.ts`) — 5 new cases (A14a-e), 42/42 total passing against real Postgres. Note: A14's cases deliberately do NOT import `packages/domain` (see the "not yet independently CI-verified" section below for why) — they prove the real DB round-trip; `evaluateGuestTokenAccess` itself is proven separately and exhaustively in `packages/domain`'s own suite, and the two are only combined inside `apps/booth` (a bundler-mode Next app, like `apps/pos`).
+- Full design writeup, including what was already decided vs. genuinely new: [docs/adr/0008-guest-token-and-session.md](docs/adr/0008-guest-token-and-session.md).
+
+**A real architectural constraint found while building:** `packages/db` cannot depend on `packages/domain` — they use incompatible TypeScript module-resolution modes on purpose (`domain` ships raw source for Next's bundler; `db` compiles to a real dist for Node). Don't add `@restrobooth/domain` as a `packages/db` dependency again without re-solving this; it breaks immediately (`tsc` complains about missing `.js` extensions on `domain`'s own internal exports, which must stay extensionless for Next app consumption).
+
+**Known gap, not silently closed:** this Next.js version (16.2.10) renamed `middleware.ts` to `proxy.ts` — worth double-checking against the actual installed Next version before assuming either name in future work; it was caught this session only by checking how `apps/pos`/`apps/console` already do it.
+
+### Slices 2-3 — not built, outlined only
+
+- **Slice 2** (menu browse via the existing `resolveMenu()`, cart, add-to-order, call-waiter, the live split-flap status board per DESIGN.md Direction B, `apps/booth` getting its own Vercel project): not started. Open item to resolve when picking this up: whether guest-added order items get a new `booth` `channel_code` value or ride under `dinein` — currently enumerated values (`dinein/zomato/swiggy/ondc/direct/captain`) don't include one.
+- **Slice 3** (payment — `PaymentGateway` interface + mock + real `upi://pay` deep-link + cash, real Razorpay stubbed behind the interface; a new `feedback` table, which doesn't exist anywhere in the schema yet): not started.
+- Neither slice has an approved detailed plan yet — only the shape agreed via `AskUserQuestion` (see DECISIONS.md). Write the detailed plan for Slice 2 before starting it, same as Slice 1 got one.
+
+---
+
 ## Where things stand — 2026-07-18, Phase 4 (KDS) COMPLETE
 
 **Phases 1–4 are all done and pushed.** Phase 4 — the kitchen display — shipped in full across four checkpoint commits: the ADR-0005 event log (finally written to, after sitting empty since Phase 1), the KDS app shell + static ticket board, bump/recall from the kitchen side, and — the actual gate — the Realtime + heartbeat/polling transport, verified against the literal ROADMAP.md/ADR-0005 acceptance test: KDS network killed for real for a full 30 seconds, 5 KOTs fired from a separate online POS terminal during the outage, zero tickets appeared while genuinely offline, the "reconnecting" banner stayed visible throughout, and on reconnect all 5 appeared correctly ordered with real ages and zero duplicates. Full account in DECISIONS.md's 2026-07-18 entry.
@@ -127,8 +163,12 @@ Docker Desktop was found fully stopped partway through this session (not just th
 
 ---
 
-## Next up: Phase 5 — The Booth
+## Next up: Phase 5 Slice 2 — the Booth's guest experience
 
-**Phase 4 is done. Per ROADMAP.md §2's plan of record (1 → 2 → 3a → 3b → 4 → 5 → PILOT), Phase 5 is next — and it is explicitly marked "pilot-ready after this."** Check [docs/ROADMAP.md](docs/ROADMAP.md) §Phase 5 for its actual scope before starting; not restated here since it wasn't touched this session, beyond the one thing worth flagging now: **ADR-0001 says this phase triggers the move to Vercel Pro + Supabase Pro (~$45/mo)** — accepting a guest payment is commercial use by Vercel's own fair-use definition, and CLAUDE.md's own standing "traps that will bite" section calls this out by name. Budget for it before Phase 5 starts, not at "first paying customer."
+**Slice 1 (the QR token gate + guest sessions, A14) is done — see the 2026-07-19 section above and [docs/adr/0008-guest-token-and-session.md](docs/adr/0008-guest-token-and-session.md).** Phase 5 is not yet "pilot-ready"; that's Slice 3's payment work, still ahead.
 
-Before starting Phase 5, worth a conscious look rather than assuming carry-forward: Phase 3b's offline-path gaps (new-table-seating-while-offline needs a service worker; void/refund/split-bill/day-close are online-only) and Phase 4's own gaps above are real, scoped-out-on-purpose limits, not oversights — re-confirm they're still acceptable, rather than silently working around them. The Booth is a guest-facing, unauthenticated surface — a genuinely different trust boundary than anything built so far (POS/KDS/Captain are all staff-authenticated), so TENANCY.md's guest-session RLS model (A14, still the one remaining `test.skip` in the adversarial suite) finally gets a real code path to enforce against.
+Next up is **Slice 2**: menu browse (reuse `resolveMenu()` — never a second menu source), cart, add-to-order, call-waiter, and the live split-flap order-status board (DESIGN.md Direction B — this is the one Booth surface where motion belongs). Write an approved, detailed plan for this slice before starting it, the same way Slice 1 got one — don't assume the outline in the section above is sufficient to build from directly. One concrete open decision to resolve in that plan: whether guest-added order items get a new `booth` `channel_code` value or ride under the existing `dinein` value.
+
+**ADR-0001 still says Phase 5 (specifically Slice 3's payment feature) triggers the move to Vercel Pro + Supabase Pro (~$45/mo)** — accepting a REAL guest payment is commercial use by Vercel's own fair-use definition. This session's live deployment stays free-tier-legal precisely because Slice 3 (the only payment-processing slice) hasn't been built yet, and when it is, the plan is a mock gateway + the real (accountless) UPI deep-link first — see the confirmed decision in DECISIONS.md. Budget for the Pro move before wiring a real Razorpay account, not at "first paying customer."
+
+Before starting Slice 2, worth a conscious look rather than assuming carry-forward: Phase 3b's offline-path gaps (new-table-seating-while-offline needs a service worker; void/refund/split-bill/day-close are online-only) and Phase 4's own gaps are real, scoped-out-on-purpose limits, not oversights — re-confirm they're still acceptable. The Booth is a guest-facing, unauthenticated surface — Slice 1 established its trust boundary (the token gate + guest RLS); Slice 2 is the first slice that actually builds UI on top of that boundary, so it's worth re-reading ADR-0008 before starting, not just this summary.

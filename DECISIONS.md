@@ -4,6 +4,45 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-19 — Live test deployment (Vercel Hobby + Supabase Free), then Phase 5 Slice 1 (Booth guest QR gate)
+
+**Decided by:** Mohammed ("Let's get this on Vercel & SupaBase free for testing live" → "Now, let's proceed to the next Phase").
+
+### Live deployment — explicitly TESTING, not the pilot, so free tier is correct per ADR-0001
+
+Deployed pos/kds/captain/console (+ hub) to separate Vercel Hobby projects, GitHub-integration flow, and a real Supabase Free project (`sehgfgusiqxnmearhuzl`, region `ap-northeast-2`/Seoul). All 24 pre-existing migrations + `0025` (this session) applied to the live cloud DB; seeded with the believable-chain fixture + real GoTrue accounts (`owner@`/`cashier@`/`kitchen@restrobooth.test`, password `restrobooth`). This is intentionally **not** a violation of ADR-0001's "Vercel Hobby is non-commercial" rule — ADR-0001 itself frames free tier as correct for **dev/testing**; the trap is treating it as the **pilot/production** deployment, which this explicitly is not (no real payment, no real guest PII expected).
+
+**Two real bugs found only by deploying, not by review:**
+1. **Vercel Function region defaulted to `iad1` (US East)** while the Supabase project is in Seoul (`ap-northeast-2`) — every DB round trip paid a trans-Pacific hop, producing a genuine 3-5s per-click feel. Fixed by pinning each project's Function Region to `icn1` (Seoul) in Vercel's dashboard — Hobby allows a single non-default region, just not multi-region. Residual ~1-2s after the fix is attributed to (a) Hobby's cold starts and (b) `queryAsCurrentUser()`'s `supabase.auth.getUser()` making a real network call to Supabase Auth on every request, in addition to the DB query — the latter deliberately **not** swapped for a locally-verified JWT, since that would trade away real-time revocation-checking for speed on billing code, and this is explicitly a test deployment, not the pilot.
+2. **Vercel's Turborepo monorepo import defaulted the Root Directory to `apps/booth`** (the unbuilt stub) on first import for more than one project — not a code bug, just a dashboard default that has to be overridden explicitly per project.
+
+**Also fixed:** `turbo.json`'s `build` task didn't declare `DATABASE_URL` in its `env` array, which Vercel flagged as a strict-mode warning (the var could silently fail to reach the build / pollute cache hashing). `NEXT_PUBLIC_*` vars needed no fix — Turborepo auto-includes those via Next.js framework inference.
+
+**A UX gap this surfaced, fixed the same session:** most of the app already showed a pending state on network actions (`disabled` + a label swap, e.g. "Saving…") via `useActionState`/local `pending` state — but ~9 spots had none at all (every app's sign-out button, POS's rejected-outbox "Discard" buttons, Captain's floor "Refresh"). Fixed with the same static, instant disabled+label-swap convention everywhere — **no spinner, no continuous animation** was added anywhere, keeping POS/KDS/Captain's zero-motion rule intact; confirmed via `AskUserQuestion` before touching it, since a literal spinner would have needed a new logged motion-rule exception (like the floor-grid hover exception did) and the static approach didn't.
+
+**Also:** `CLAUDE.md`'s own git-workflow rule was edited (by the owner, outside this assistant's actions) from "push automatically" to "**DO NOT** push automatically" mid-session — honoured immediately; every commit from that point on stayed local until explicitly asked to push.
+
+**A destructive action taken deliberately, confirmed via `AskUserQuestion` first:** purged all table/order transactional data (`table_sessions` → `payments`, 13 tables) from the **live** cloud DB via a one-off script (`TRUNCATE ... CASCADE`), keeping menu/orgs/users and — per the owner's explicit choice — the open `business_day` rows, so the floor was immediately re-usable. Invoice numbering counters were deliberately **not** reset (CLAUDE.md: gaps are permanent, never reused, even for test data).
+
+### Phase 5 Slice 1 — the Booth's guest QR token gate (ADR-0008)
+
+Per CLAUDE.md's "plan before code," entered plan mode before building. Investigation found Phase 1 had already shipped more of Phase 5's foundation than ROADMAP.md implied: `qr_tokens`/`guest_sessions` tables and the full guest RLS policy set (anon reads published menu — A12; a guest reads only its own session/orders via a `request.jwt.claim.guest_session_id` GUC — A11) already existed, with the RLS migration's own comment explicitly deferring only "the real token-minting flow" to Phase 5 — i.e. **A14** (TENANCY.md §6: an expired/replayed QR token denied before RLS), which sat as a named `test.skip`.
+
+**Three decisions confirmed via `AskUserQuestion` before building:**
+1. **Payments (not built this slice, but the approach is decided):** a `PaymentGateway` interface + a mock gateway + the real (accountless) `upi://pay` deep-link + cash, with real Razorpay stubbed behind the interface for later — keeps the live test deployment free-tier-legal (no real payment processed) and follows "build the mock, don't invent the vendor contract."
+2. **Sequencing:** slice it, security core first (mirroring how Phase 3b's offline outbox was sliced) — this session built and fully verified Slice 1 only; Slices 2 (menu/cart/live status board) and 3 (payment/feedback) are outlined in PROGRESS.md, not built.
+3. **QR model:** printed static per-table QR (the real Indian dine-in default), not a device with a rotating on-screen code. Replay/"screenshot from home" defense is **not** geofencing or a fast rotation cadence — it's requiring the scanned table to currently have a non-terminal `table_session` under an open `business_day`. A table's `table_sessions.store_id` (set by staff at seat time) is inherited directly by the guest session, so the shared-cloud-kitchen "which brand" ambiguity is already resolved upstream — no separate store-picker was needed.
+
+**A real architectural boundary found while building, not designed upfront:** `packages/db` cannot depend on `packages/domain` — they deliberately target different TypeScript module-resolution modes (`domain` ships raw source for Next's bundler/`transpilePackages`, extensionless imports required; `db` compiles to a real dist for Node, which needs the opposite). This was already the reason PROGRESS.md's Phase 3a note describes domain's resolution mode as a "real architectural fix" — this session re-discovered the same boundary from the other direction (trying to import `evaluateGuestTokenAccess` into a `packages/db` test broke immediately) and resolved it by keeping the RLS test suite's A14 cases scoped to proving the **real DB round-trip** (`packages/db/src/guestToken.ts`'s functions against real Postgres), while the pure decision rule stays exhaustively tested in isolation inside `packages/domain`, and the two are only ever combined inside an actual Next app (`apps/booth`, bundler-mode, exactly like `apps/pos` already combines both) — never inside `packages/db` itself.
+
+**Also found:** this Next.js version (16.2.10) renamed `middleware.ts`/`export function middleware` to `proxy.ts`/`export function proxy` — confirmed by checking how `apps/pos`/`apps/console` actually do it (`proxy.ts`, not `middleware.ts`) before writing Booth's route guard, avoiding a silently-inert middleware file.
+
+**Verified:** `packages/domain`'s new `qrToken.ts` at 100% line/branch; full workspace `typecheck`/`lint`/`build` green (7 apps built, including Booth's new `/t/[token]` + `/invalid` routes and its `proxy.ts`); the RLS adversarial suite at 42/42 (including 5 new A14 cases) against real Supabase-local Postgres; and the actual flow driven end-to-end against a running `apps/booth` dev server + real Postgres — valid token → cookie + redirect, unknown/revoked token → `/invalid`, a table with a closed session → `/invalid` (correctly distinguished from one still `dining`), no cookie → gated by `proxy.ts`.
+
+Full detail: [docs/adr/0008-guest-token-and-session.md](docs/adr/0008-guest-token-and-session.md), [PROGRESS.md](PROGRESS.md).
+
+---
+
 ## 2026-07-19 — Console's teal header, copied to POS/KDS/Captain
 
 **Decided by:** Mohammed ("copy the teal header bg from Menu page to all apps headers"). Scoped narrowly and deliberately: **header background only**, not a reversion of the light re-skin — the working content below every header (floor, order pad, bill, board, menu) stays exactly as light as the Phase 4.5 redesign left it. Console's `/menu` page has no header of its own; the teal is `AppShell.module.css`'s shared `.header` (`--enamel-700` fill, 3px `--brass-500` border-bottom) that every Console page already used.
