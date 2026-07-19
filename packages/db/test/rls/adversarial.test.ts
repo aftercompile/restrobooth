@@ -245,6 +245,59 @@ describe("A11-A13: anonymous Booth guest at table T5 (AMD)", () => {
 
   // docs/TENANCY.md's A13 also names "stock_ledger" — inventory is
   // Phase 8 scope; that table doesn't exist yet. Nothing to test.
+
+  // Phase 5 Slice 2a additions — migration 0026's order_item_guest_own_read
+  // and kot_guest_own_read, the live status board's read policies. Not in
+  // TENANCY.md's original A-numbered table (order_items/kots had NO anon
+  // policy at all before this slice), same "new phase, new capability, own
+  // test pair" shape as every prior phase's additions below.
+  //
+  // Honesty note (T6 has no order_items/kots by design — see the seed
+  // script's own "no KOT/bill, just enough for A11" comment): the "0 rows"
+  // half below would pass even with a broken `using (true)` policy, since
+  // there is nothing at T6 TO leak. The positive-control half is what
+  // actually exercises the policy's join condition against real data
+  // (T5's full order/KOT narrative) — the pair together is the same shape
+  // as A11/A11b, just without an equally strong negative case available in
+  // this fixture. Worth a real cross-table order_items/kots negative case
+  // if the seed ever gives a second AMD table a populated order.
+  test("guest at T5 reading order_items for T6's session returns 0 rows", async () => {
+    const rows = await asGuest(client, id.GUEST_SESSION_AMD_T1, async (c) => {
+      const r = await c.query(
+        "select oi.* from order_items oi join orders o on o.id = oi.order_id where o.table_session_id = $1",
+        [id.TABLE_SESSION_AMD_2],
+      );
+      return r.rows;
+    });
+    expect(rows).toHaveLength(0);
+  });
+
+  test("guest at T5 CAN read their own table's order_items (positive control)", async () => {
+    const rows = await asGuest(client, id.GUEST_SESSION_AMD_T1, async (c) => {
+      const r = await c.query(
+        "select oi.* from order_items oi join orders o on o.id = oi.order_id where o.table_session_id = $1",
+        [id.TABLE_SESSION_AMD_1],
+      );
+      return r.rows;
+    });
+    expect(rows.length).toBeGreaterThan(0);
+  });
+
+  test("guest at T5 reading kots for T6's session returns 0 rows", async () => {
+    const rows = await asGuest(client, id.GUEST_SESSION_AMD_T1, async (c) => {
+      const r = await c.query("select * from kots where table_session_id = $1", [id.TABLE_SESSION_AMD_2]);
+      return r.rows;
+    });
+    expect(rows).toHaveLength(0);
+  });
+
+  test("guest at T5 CAN read their own table's kots (positive control)", async () => {
+    const rows = await asGuest(client, id.GUEST_SESSION_AMD_T1, async (c) => {
+      const r = await c.query("select * from kots where table_session_id = $1", [id.TABLE_SESSION_AMD_1]);
+      return r.rows;
+    });
+    expect(rows.length).toBeGreaterThan(0);
+  });
 });
 
 // Token replay/expiry is an APPLICATION-layer check (ADR-0008): Postgres

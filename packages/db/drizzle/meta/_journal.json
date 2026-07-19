@@ -183,6 +183,13 @@
       "when": 1784471111771,
       "tag": "0025_qr_token_one_live_per_table",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1784473643196,
+      "tag": "0026_guest_order_read_policies",
+      "breakpoints": true
     }
   ]
 }

@@ -43,16 +43,22 @@ export function StateRail({
   children,
   style,
   label,
+  glow,
 }: {
   state: RailState;
   children: ReactNode;
   style?: CSSProperties | undefined;
   /** Screen-reader text for the rail's meaning, since colour conveys it visually. */
   label?: string | undefined;
+  /** DESIGN.md's Booth-only "glowing card edge on your order" — opt-in, not
+   *  a density-wide effect, since most StateRail uses (a menu row, a KDS
+   *  ticket) are not the one hero "your order" card the glow is for. A
+   *  no-op everywhere except booth density (CSS-scoped, see .module.css). */
+  glow?: boolean | undefined;
 }) {
   return (
     <div
-      className={styles.rail}
+      className={[styles.rail, glow && styles.glow].filter(Boolean).join(" ")}
       data-rail={state}
       style={{ ["--rail-color" as string]: RAIL_COLOR[state], ...style }}
     >

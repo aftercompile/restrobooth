@@ -12,9 +12,13 @@ export default async function InvalidPage({
   const { message } = await searchParams;
 
   return (
-    <main>
-      <h1>Can&rsquo;t start your order</h1>
-      <p>{message ?? "This QR code is no longer valid — please rescan the code on your table."}</p>
+    <main style={{ padding: "var(--space-3)", maxWidth: 480, margin: "0 auto" }}>
+      <h1 className="rb-display" style={{ fontSize: "var(--text-xl)" }}>
+        Can&rsquo;t start your order
+      </h1>
+      <p style={{ color: "var(--text-muted)" }}>
+        {message ?? "This QR code is no longer valid — please rescan the code on your table."}
+      </p>
     </main>
   );
 }

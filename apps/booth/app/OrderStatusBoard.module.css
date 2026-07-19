@@ -1,0 +1,41 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.empty {
+  color: var(--text-muted);
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.qty {
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.statusLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.statusLabel[data-tone="fresh"] {
+  color: var(--ramp-fresh);
+}
+.statusLabel[data-tone="warming"] {
+  color: var(--ramp-warming);
+}
+.statusLabel[data-tone="idle"] {
+  color: var(--text-muted);
+}

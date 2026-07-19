@@ -19,6 +19,15 @@
   width: 6px;
 }
 
+/* DESIGN.md's Booth "your order" card: a genuine glow, not just a wider
+   edge — opt-in via the `glow` prop, and only meaningful at booth density
+   (POS/KDS/Console never pass it). Static box-shadow, no animation — the
+   glow itself doesn't need to pulse to read as "alive," and POS/KDS's
+   zero-motion rule would kill any transition on it anyway. */
+[data-density="booth"] .rail.glow::before {
+  box-shadow: 0 0 16px 3px var(--rail-color, var(--ramp-fresh));
+}
+
 /* Colour is never the only channel (docs/DESIGN.md). Critical gets a
    diagonal hatch; archived gets a dashed break. Both survive greyscale,
    colour-blindness, and a greasy glare-lit kitchen screen. */

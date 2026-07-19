@@ -4,6 +4,28 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-19 (later) — Phase 5 Slice 2a: Booth menu browse + live status board, sub-sliced from ordering
+
+**Decided by:** Mohammed ("proceed to Slice 2"). Entered plan mode per CLAUDE.md's "plan before code"; re-explored (three parallel Explore agents: menu resolution + the order-item write path, the event log + polling, and the UI/Direction-B system) rather than assuming Slice 1's plan-mode findings still applied.
+
+**The decision that shaped the whole slice:** exploration found an anonymous guest **cannot currently write any order data** — `order_item_isolation` (permissive) requires `accessible_outlet_ids()`/`accessible_store_ids()` (empty for anon), and the restrictive `order_item_take_capability` policy (migration `0014`) explicitly requires a staff `memberships` row in a fixed role list. Both stacked policies categorically exclude `anon`. Confirmed via `AskUserQuestion`: **sub-slice** into 2a (read-only: menu browse + live status board — deployable and demoable on its own, "scan → browse → watch your order live") and 2b (self-service order-writes, deferred — a genuinely new security surface deserving its own ADR + adversarial tests, same discipline as Slice 1's token gate got).
+
+**What shipped (2a only):**
+1. **`apps/booth/app/layout.tsx`** replaced the bare Phase-1 stub — real fonts, tokens, `DensityProvider density="booth"`, `AmbientBackground mode="animate"` (unconditional, unlike Console's login-only gating — Booth is DESIGN.md's one full-motion app by design).
+2. **Menu browse is a privileged read, not a `withGuest` one** — a real finding, not assumed: `resolve_menu()` inner-joins `stores`/`dayparts`/`promos`, all RLS-gated to `accessible_*_ids()`, empty for anon. Calling it guest-scoped would have silently returned an empty menu with no error — exactly the kind of bug that's invisible until a real guest hits it. The menu itself has no per-guest isolation concern (it's public data), so privileged-but-correct is right here, deliberately different from the status board.
+3. **The live status board goes through `withGuest`** (a genuine isolation concern) via two new RLS policies, migration `0026_guest_order_read_policies.sql`: `order_item_guest_own_read`, `kot_guest_own_read` — neither table had any `anon` policy before (a guest could read the `orders` header via Slice 1's `order_guest_own_read` but not line items or ticket status). Applied to all three DBs.
+4. **DESIGN.md's "split-flap board"** — no existing component or spec beyond a few descriptive sentences (checked; genuinely net-new). Built as per-item tiles that flip (`rotateX` spring, `BOOTH_TRANSITION`) on status change, `useMotionAllowed()`-gated per `motion.tsx`'s own escape-hatch instructions for anything beyond `<Animate>`. A simplified, faithful rendition — not a full character-level Solari board (flagged as a later enhancement, not attempted).
+5. **`StateRail` got a new opt-in `glow` prop** for DESIGN.md's "glowing card edge on your order" — deliberately opt-in (booth-density-scoped CSS), not a blanket booth-density effect, since most `StateRail` uses (a menu row, a KDS ticket) aren't the one hero card the glow is for.
+6. **The 5s poll (`BoothPoll.tsx`) gates on the Page Visibility API** — net-new to this codebase; every existing poll (KDS's heartbeat fallback, the floor map's backstop) only gates on `navigator.onLine`, none on foreground/background. ADR-0005 §3 explicitly asks for "stopping entirely when backgrounded," so this isn't a nice-to-have.
+7. **RLS suite: 46/46 passing**, 4 new cases. Documented an honest limitation inline in the test file: the new isolation half (guest at T5 reading T6's order_items/kots returns 0 rows) is weaker than A11's own isolation proof, because the seed's T6 fixture deliberately has no order_items/kots at all ("just enough for A11 to have a real orders row" — a prior session's own comment) — so that half would pass even under a broken `using (true)` policy. The positive-control half (real data at T5) is what actually exercises the policy's join condition. Flagged as worth a real cross-table negative case if the seed ever gives T6 populated items, rather than silently claiming stronger coverage than exists.
+8. **Verified end-to-end with real screenshots** (CLAUDE.md rule 11), not just typecheck/lint/build: minted fresh tokens, temporarily seeded two test order_items (fired/served) into an open session to actually see the board populated and its status colors/glow render, then deleted them again — a real screenshot of a genuinely empty local fixture would have proven nothing about the flip-tile rendering.
+
+**Not built, deliberately:** guest add-to-order, cart, call-waiter (Slice 2b — see PROGRESS.md's "Next up"), `apps/booth`'s Vercel deployment (a dashboard step, next session).
+
+Full detail: [PROGRESS.md](PROGRESS.md)'s Slice 2a section.
+
+---
+
 ## 2026-07-19 — Live test deployment (Vercel Hobby + Supabase Free), then Phase 5 Slice 1 (Booth guest QR gate)
 
 **Decided by:** Mohammed ("Let's get this on Vercel & SupaBase free for testing live" → "Now, let's proceed to the next Phase").
