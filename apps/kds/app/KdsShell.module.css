@@ -1,5 +1,7 @@
-/* KDS chrome: thin, light, zero animation — the header is a strip, not a
-   destination. Almost every pixel below it belongs to tickets. */
+/* KDS chrome: thin, zero animation — the header is a strip, not a
+   destination. Almost every pixel below it belongs to tickets. Header
+   background matches Console's AppShell (copied everywhere, per the
+   owner's explicit call) — the ticket board below is untouched. */
 
 .bar {
   position: sticky;
@@ -10,8 +12,8 @@
   gap: var(--space-2);
   min-height: 48px;
   padding: 0 var(--space-2);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--enamel-700);
+  border-bottom: 3px solid var(--brass-500);
 }
 
 .mark {
@@ -20,7 +22,7 @@
   gap: 8px;
   font-weight: 700;
   font-size: var(--text-base);
-  color: var(--text);
+  color: #fff;
   flex-shrink: 0;
 }
 
@@ -36,7 +38,7 @@
 }
 
 .userEmail {
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 72%);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
@@ -47,9 +49,9 @@
   font-size: var(--text-sm);
   cursor: pointer;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid rgb(255 255 255 / 30%);
   border-radius: var(--radius);
-  color: var(--text);
+  color: #fff;
   min-height: 44px;
   padding: 0 12px;
 }

@@ -4,6 +4,18 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-19 — Console's teal header, copied to POS/KDS/Captain
+
+**Decided by:** Mohammed ("copy the teal header bg from Menu page to all apps headers"). Scoped narrowly and deliberately: **header background only**, not a reversion of the light re-skin — the working content below every header (floor, order pad, bill, board, menu) stays exactly as light as the Phase 4.5 redesign left it. Console's `/menu` page has no header of its own; the teal is `AppShell.module.css`'s shared `.header` (`--enamel-700` fill, 3px `--brass-500` border-bottom) that every Console page already used.
+
+**What changed:** `PosShell`, `KdsShell`, and `CaptainShell`'s header bars now use the same `--enamel-700` + 3px brass-border treatment as Console's `AppShell`. Everything living inside those headers had to be re-derived for a dark background instead of copied wholesale, since POS's header in particular has more moving parts than Console's (segmented nav, a Live Header search field, an alerts badge, an avatar menu) that AppShell has no equivalent of:
+- Nav: track background and inactive-link color became translucent white (`rgb(255 255 255 / 12%)` / `72%`); the active tab's pill flipped to solid white with `--enamel-700` text (Console's own active-tab treatment is an underline, not a pill — POS's segmented-pill language was kept, just recoloured, since changing the *shape* of the nav wasn't what was asked).
+- `HeaderSearch` and `AlertsBadge`'s trigger button: recessed field/icon colours moved from the light-surface tokens to translucent-white equivalents. Their dropdown panels (`.error`, `.panel`) were **left alone** — those are overlays sitting on `--surface`, not part of the header bar itself, and stay light for readability.
+- **A real bug caught while doing this, not after:** `AvatarMenu`'s circle was filled with `--enamel-700` — invisible the instant the header itself became `--enamel-700`. Refilled with `--brass-500` (the system's other, and only other, fill colour) instead, which also reads as a deliberate "you are here" accent rather than an accident.
+- `AlertsBadge`'s notification-dot ring (a border meant to visually "cut into" whatever's behind the trigger) moved from `--surface` (white) to `--enamel-700`, so it still reads as a ring around the dot rather than a stray white halo on teal.
+
+---
+
 ## 2026-07-19 — Guest details (name/phone/notes) captured at seating, and two POS bill-flow bugs
 
 **Decided by:** Mohammed. Two forks confirmed via `AskUserQuestion` before touching schema: **(1)** field scope — name + phone + notes (the richest of three offered options; explicitly **not** the minimal "name only" one), **(2)** Booth scope — capture happens at Captain/POS seating only this pass; Booth (still its own "Phase 1 scaffold checkpoint... guest QR ordering lands in Phase 5" stub, no real ordering flow to attach a field to) is deliberately deferred, not built ahead of schedule.

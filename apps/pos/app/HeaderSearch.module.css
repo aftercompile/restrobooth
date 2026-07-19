@@ -6,17 +6,18 @@
   min-width: 200px;
   height: 40px;
   padding: 0 10px;
-  /* Recessed, matching every other input on the form screens (Part A's
-     surface-hierarchy pair) — a search field is a hole to type into. */
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
+  /* Recessed, same "hole to type into" idea as every input on the form
+     screens (Part A's surface-hierarchy pair) — just the teal-header
+     translucent version, since this now sits on --enamel-700, not --bg. */
+  background: rgb(255 255 255 / 14%);
+  border: 1px solid rgb(255 255 255 / 22%);
   border-radius: var(--radius);
 }
 
 .icon {
   width: 16px;
   height: 16px;
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 72%);
   flex-shrink: 0;
 }
 
@@ -27,7 +28,7 @@
   background: transparent;
   font: inherit;
   font-size: var(--text-sm);
-  color: var(--text);
+  color: #fff;
 }
 
 .input:focus {
@@ -35,11 +36,11 @@
 }
 
 .input::placeholder {
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 55%);
 }
 
 .pending {
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 72%);
   font-size: var(--text-sm);
   flex-shrink: 0;
 }

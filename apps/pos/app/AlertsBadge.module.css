@@ -13,7 +13,7 @@
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
-  color: var(--text);
+  color: #fff;
 }
 
 .icon {
@@ -28,7 +28,9 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  border: 1.5px solid var(--surface);
+  /* The ring "cuts into" whatever sits behind the trigger — that's now
+     the teal header, not --surface. */
+  border: 1.5px solid var(--enamel-700);
 }
 
 .dot[data-tone="critical"] {

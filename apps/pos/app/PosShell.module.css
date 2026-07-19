@@ -1,7 +1,8 @@
-/* POS chrome: thin, light, zero animation. Console's AppShell is
-   deliberately NOT reused here — it's built for a light, editorial,
-   big-display-type back office. POS is a dense staff terminal; its bar
-   exists to get out of the way. */
+/* POS chrome: thin, zero animation. Header background now matches
+   Console's AppShell (the one saturated surface — "spend the boldness in
+   one place") per the owner's explicit call to copy it everywhere; the
+   working content below stays exactly as light as it already was — this
+   is a header-only change, not a reversion of the light re-skin. */
 
 .bar {
   position: sticky;
@@ -12,9 +13,8 @@
   gap: var(--space-2);
   min-height: 68px;
   padding: 0 var(--space-3);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgb(18 32 29 / 4%);
+  background: var(--enamel-700);
+  border-bottom: 3px solid var(--brass-500); /* brass as a FILL, never text — same as AppShell's header */
 }
 
 .mark {
@@ -23,7 +23,7 @@
   gap: 8px;
   font-weight: 700;
   font-size: var(--text-base);
-  color: var(--text);
+  color: #fff;
   text-decoration: none;
   flex-shrink: 0;
 }
@@ -40,7 +40,7 @@
   align-items: center;
   gap: 2px;
   padding: 4px;
-  background: var(--surface-sunken);
+  background: rgb(255 255 255 / 12%);
   border-radius: calc(var(--radius) + 4px);
 }
 
@@ -51,7 +51,7 @@
   min-height: 40px;
   padding: 0 14px;
   border-radius: var(--radius);
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 72%);
   text-decoration: none;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -63,9 +63,9 @@
 }
 
 .navLink[aria-current="page"] {
-  color: var(--text);
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgb(18 32 29 / 8%);
+  color: var(--enamel-700);
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(18 32 29 / 16%);
 }
 
 /* Live Header context strip — business date + how many outlets are open,
@@ -84,22 +84,22 @@
 .contextDate {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 72%);
 }
 
 .contextDivider {
   width: 1px;
   height: 14px;
-  background: var(--border-strong);
+  background: rgb(255 255 255 / 30%);
 }
 
 .contextOk {
-  color: var(--enamel-700);
+  color: #fff;
   font-weight: 600;
 }
 
 .contextWarn {
-  color: color-mix(in srgb, var(--ramp-warming) 70%, var(--text));
+  color: var(--ramp-warming);
   font-weight: 600;
 }
 

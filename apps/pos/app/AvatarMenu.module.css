@@ -11,7 +11,7 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--text);
+  color: #fff;
 }
 
 .avatar {
@@ -21,8 +21,11 @@
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: var(--enamel-700);
-  color: #fff;
+  /* Was --enamel-700 — invisible once the header itself became
+     --enamel-700 (this pass). Brass is the system's one other fill
+     colour, and reads as the "you" accent against the teal header. */
+  background: var(--brass-500);
+  color: var(--text);
   font-weight: 700;
   font-size: var(--text-sm);
   flex-shrink: 0;
@@ -31,7 +34,7 @@
 .chevron {
   width: 14px;
   height: 14px;
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 72%);
 }
 
 .menu {
