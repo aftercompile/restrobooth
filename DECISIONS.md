@@ -4,6 +4,26 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-20 — Phase 5 Slice 2c: call-waiter, closing out Slice 2
+
+**Decided by:** Mohammed ("proceed" → chose "Build call-waiter next" over deploying `apps/booth` or hardening the staff-side fire lock, both also queued). Planned via `EnterPlanMode` since it's still a guest *write* (the same trust wall ADR-0009 already navigated), but the plan turned out short — every piece it needs already existed.
+
+**The design that made this small:** a single nullable `table_sessions.waiter_called_at` column (migration `0028`) rather than a `service_requests` table (deferred — right-sized for the pilot, noted as a future migration if it's ever wanted). No new ADR: the guest write reuses ADR-0009's `resolveOwnSession` pattern verbatim (same file, `order-mutations.ts`), and the staff acknowledge is an ordinary RLS-scoped write, same as any other floor field update — no new capability gate, since responding to a service call isn't a money/void action.
+
+**The genuinely useful discovery, made while planning rather than assumed**: both POS's `FloorMap.tsx` and Captain's `FloorList.tsx` already hold a realtime subscription on `table_sessions` (`.on("postgres_changes", { table: "table_sessions" }, () => router.refresh())`) — wired originally for occupancy/status, but it doesn't care *which* column changed. Setting or clearing `waiter_called_at` triggers the exact same live refresh, for free — zero new event emission, zero new socket code, unlike KDS's board (which explicitly does NOT re-surface arbitrary event types — confirmed in Slice 2a's own exploration that its subscription only ever re-queries `kots`). This is why call-waiter didn't need the event-log plumbing PROGRESS.md's earlier note assumed it might.
+
+**What shipped:** the header "Call waiter" bell (`apps/booth/app/BoothShell.tsx`, reachable from every Booth page, not just one — a guest at `bill_requested`/`settling` can still need help, so `callWaiter()` has no menu-freeze guard unlike `addToCart`); a static (no pulse — POS's usual rule, and Captain rides the same zero-motion kill-switch since it's also `density="pos"`) signal-tone card outline + "Waiter called" badge + inline Acknowledge button on both floor views, in the same footer/row slot the existing "Guest-opened" and bill-status badges already use.
+
+**Verified with real UI interaction on both ends**, not just direct DB writes: `tools/booth-call-waiter-test.mjs` drove the actual bell button and confirmed the toast + "notified" client state; `tools/pos-acknowledge-waiter-test.mjs` drove the actual Acknowledge button on a real POS floor page and confirmed both the badge disappearing client-side and `waiter_called_at` clearing to `null` in Postgres. (One test artifact along the way, worth naming honestly: an early, messier interleaved test run showed a table's badge missing when a cleaner isolated re-run of the identical code path worked correctly twice — concluded to be an artifact of overlapping test scripts, not an app bug, since the clean run exercised the exact same code and passed both directions.)
+
+**A real environment gotcha, unrelated to this feature's own logic:** partway through, the live Supabase project's *direct* connection hostname (`db.<ref>.supabase.co`) started failing DNS resolution (`ENOTFOUND`) — the same hostname that had worked for three earlier migrations this session. Not fully root-caused (plausibly this machine's IPv6 routing, since Supabase's direct-connection host is IPv6-only); the **pooled** connection string — already what the deployed apps use for `DATABASE_URL` — worked immediately as a drop-in fallback for running the migration. Noted in PROGRESS.md so a future session tries the pooler first rather than assuming a migration failure means the SQL itself is wrong.
+
+**Slice 2 (the Booth's full guest self-service arc — token gate, browse, order, call-waiter) is now complete.** Only Slice 3 (payment + feedback) stands between here and Phase 5's "pilot-ready" gate.
+
+Full detail: [PROGRESS.md](PROGRESS.md).
+
+---
+
 ## 2026-07-19 (latest) — Phase 5 Slice 2b: guest self-service ordering, server-side cart, privileged write path
 
 **Decided by:** Mohammed: *"the guest should be able to order from the QR itself"* + *"until someone has placed an order/fire to KOT through self serve QR, the QR stays open as it's possible the guest minimizing the window and opening QR again on another browser."* Planned via `EnterPlanMode` given the security sensitivity (a genuinely new write surface, flagged as needing its own ADR back in Slice 2a's own notes).

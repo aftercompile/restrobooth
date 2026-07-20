@@ -21,7 +21,7 @@ export default async function MenuPage() {
   }
 
   return (
-    <BoothShell tableLabel={guest.tableLabel} brandName={guest.brandName}>
+    <BoothShell tableLabel={guest.tableLabel} brandName={guest.brandName} waiterCalled={guest.waiterCalled}>
       {items.length === 0 ? (
         <p>Nothing on the menu right now — please ask a staff member.</p>
       ) : (

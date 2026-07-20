@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addToCart, placeOrder, removeFromCart } from "../lib/order-mutations";
+import { addToCart, callWaiter, placeOrder, removeFromCart } from "../lib/order-mutations";
 
 export interface SimpleActionState {
   error: string | null;
@@ -33,5 +33,16 @@ export async function placeOrderAction(_prev: SimpleActionState, _formData: Form
   const result = await placeOrder();
   if (!result.ok) return { error: result.error };
   revalidatePath("/");
+  return OK;
+}
+
+/** Called directly from BoothShell's header button — same shape as
+ *  addToCartAction. Revalidates both pages since the button lives in the
+ *  shell both share. */
+export async function callWaiterAction(): Promise<SimpleActionState> {
+  const result = await callWaiter();
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/");
+  revalidatePath("/menu");
   return OK;
 }

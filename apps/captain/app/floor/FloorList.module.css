@@ -48,6 +48,46 @@
   font: inherit;
 }
 
+/* Slice 2c — static attention outline, no pulse/animation. */
+.tableButton[data-waiter-called="true"] {
+  border-color: var(--signal-600);
+  box-shadow: 0 0 0 1px var(--signal-600);
+}
+
+.waiterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  padding: 6px var(--space-2) 0;
+}
+
+.waiterBellIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.acknowledgeButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--signal-600);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--signal-600) 45%, transparent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.acknowledgeButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .tableLabelGroup {
   display: flex;
   flex-direction: column;

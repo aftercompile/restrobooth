@@ -211,6 +211,15 @@
   min-height: 92px;
 }
 
+/* Slice 2c — a static attention outline, no pulse. The border-colour swap
+   rides the SAME already-granted floorMotionScope exception the status
+   chip's colour change uses (DESIGN.md's "status-chip colour change" —
+   this is the card-level equivalent), not a new one. */
+.tableCard[data-waiter-called="true"] {
+  border-color: var(--signal-600);
+  box-shadow: 0 0 0 1px var(--signal-600);
+}
+
 .tableCardInner {
   display: flex;
   flex-direction: column;
@@ -289,6 +298,32 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   flex-shrink: 0;
+}
+
+.waiterBellIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.acknowledgeButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--signal-600);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--signal-600) 45%, transparent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.acknowledgeButton:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .billLink:hover {

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { schema, sql } from "@restrobooth/db";
+import { eq, schema, sql } from "@restrobooth/db";
 import { queryAsCurrentUser } from "../../lib/db";
 
 export type ActionState = { error: string | null };
@@ -85,4 +85,22 @@ export async function seatTable(_prev: ActionState, formData: FormData): Promise
 
   revalidatePath("/floor");
   redirect(`/floor/${sessionId}`);
+}
+
+/** Same acknowledge logic as apps/pos/app/floor/actions.ts's
+ *  acknowledgeWaiterCall — plain RLS-scoped staff write, no capability
+ *  gate. */
+export async function acknowledgeWaiterCall(sessionId: string): Promise<ActionState> {
+  if (!sessionId) return { error: "Missing session." };
+
+  try {
+    await queryAsCurrentUser(async (tx) => {
+      await tx.update(schema.tableSessions).set({ waiterCalledAt: null }).where(eq(schema.tableSessions.id, sessionId));
+    });
+  } catch (err) {
+    return { error: fullErrorMessage(err) || "Could not clear the call." };
+  }
+
+  revalidatePath("/floor");
+  return { error: null };
 }

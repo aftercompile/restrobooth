@@ -20,7 +20,7 @@ export default async function HomePage() {
   const liveItems = status.items.filter((i) => i.status !== "pending");
 
   return (
-    <BoothShell tableLabel={guest.tableLabel} brandName={guest.brandName}>
+    <BoothShell tableLabel={guest.tableLabel} brandName={guest.brandName} waiterCalled={guest.waiterCalled}>
       <BoothPoll />
       <h1 className="rb-display" style={{ fontSize: "var(--text-xl)", marginBottom: "var(--space-2)" }}>
         Your order

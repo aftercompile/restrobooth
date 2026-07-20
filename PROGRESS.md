@@ -4,6 +4,27 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
+## Where things stand — 2026-07-20, Phase 5 Slice 2c: call-waiter
+
+**A guest can now flag staff without ordering anything.** A "Call waiter" bell in the Booth's header ([apps/booth/app/BoothShell.tsx](apps/booth/app/BoothShell.tsx)) is reachable from every page, not just one. This closes out the Slice 2 build sequence — token gate (1) → browse/status board (2a) → self-service ordering (2b) → call-waiter (2c) — the Booth now covers everything ROADMAP.md's Phase 5 line names except payment/feedback (Slice 3).
+
+**Design: a single nullable `table_sessions.waiter_called_at` column** (migration `0028`) — non-null = an outstanding call. No new ADR needed: the guest write reuses ADR-0009's exact `resolveOwnSession` pattern (same file, `apps/booth/lib/order-mutations.ts`'s new `callWaiter()`), and the staff acknowledge is a plain RLS-scoped write like any other floor action — no new security surface, no new capability gate (any staff who can see the table can clear a service call; it isn't a money/void action). The genuinely useful discovery: **both POS's and Captain's floor views already `router.refresh()` on any `table_sessions` realtime change** (wired for occupancy/status, not built for this) — so setting/clearing the column surfaces to staff live with zero new event or socket code.
+
+**What shipped:**
+- `apps/booth/lib/order-mutations.ts`'s `callWaiter()` — no menu-freeze guard (unlike `addToCart`): a guest at `bill_requested`/`settling` can still need help.
+- The header bell (`BoothShell.tsx`) — brass fill when active ("Waiter notified"), a toast on first call, harmless to re-tap.
+- **POS** (`FloorMap.tsx`) and **Captain** (`FloorList.tsx`) both get: a static (no pulse) signal-tone card outline, a "Waiter called" badge, and an inline **Acknowledge** button — same footer/row slot the existing "Guest-opened" and bill-status badges already use. `acknowledgeWaiterCall(sessionId)` in each app's own `floor/actions.ts`.
+- **Verified with real UI interaction, not just direct DB checks**: two Playwright scripts (`tools/booth-call-waiter-test.mjs`, `tools/pos-acknowledge-waiter-test.mjs`, both left untracked) — scanned a never-seated table, tapped the real bell button, confirmed the toast and the button's "notified" state; separately, loaded the real POS floor, confirmed the badge/outline/Acknowledge button render correctly, clicked the actual Acknowledge button, and confirmed both the badge disappearing client-side and `waiter_called_at` clearing back to `null` in Postgres.
+- **A real environment gotcha hit while migrating**: the live Supabase project's *direct* connection hostname (`db.<ref>.supabase.co`) started failing DNS resolution (`ENOTFOUND`) mid-session, after working fine for three earlier migrations this same session — no code/config change on our side. Root cause not fully diagnosed (plausibly this machine's IPv6 routing/DNS, since Supabase's direct-connection hostname is IPv6-only and the pooler hostname isn't); the **pooled** connection string (already in use for the deployed apps' `DATABASE_URL`) worked immediately as a fallback and applied migration `0028` cleanly. Worth trying the pooler first if the direct hostname ever fails again rather than assuming the migration itself is broken.
+
+### Still deferred
+- Payment (mock gateway + real UPI deep-link) and feedback — Slice 3, the actual "pilot-ready" gate.
+- `apps/booth` is still not deployed to Vercel — only tested locally/on-phone via dev server so far.
+- The staff-side `fireOrder`/`applyFireOrder` `business_days` row-lock hardening ADR-0009 flagged (guest+staff can now fire concurrently) — not done.
+- A `service_requests` history table (multiple request types, an audit trail) if the single-column call-waiter model ever needs to grow past the pilot.
+
+---
+
 ## Where things stand — 2026-07-19 (latest), Phase 5 Slice 2b: guest self-service ordering
 
 **The Booth can now take a real order end to end: scan → auto-seat → browse → add to cart → place order → real KOT.** See [docs/adr/0009-guest-order-writes.md](docs/adr/0009-guest-order-writes.md) for the full design writeup. Slice 2b's "Next up" scope from the previous entry is now built (ordering half; call-waiter is still deferred, see below).
@@ -220,13 +241,13 @@ Docker Desktop was found fully stopped partway through this session (not just th
 
 ---
 
-## Next up: Phase 5 Slice 2c — call-waiter, then Slice 3 (payment/feedback)
+## Next up: Phase 5 Slice 3 — payment + feedback (the pilot-ready gate)
 
-**Slices 1 (token gate), 2a (menu browse + live status board), and 2b (self-service ordering) are all done** — see the 2026-07-19 sections above, ADR-0008, ADR-0009, and migration `0026`. A guest can scan, browse, order, and watch their KOT cook, entirely unassisted. Phase 5 is not yet "pilot-ready"; that's Slice 3's payment work, still ahead.
+**Slices 1 (token gate), 2a (menu browse + live status board), 2b (self-service ordering), and 2c (call-waiter) are all done** — see the sections above, ADR-0008, ADR-0009, and migrations `0026`–`0028`. A guest can scan, browse, order, watch their KOT cook, and flag staff, entirely unassisted. **Slice 2 is complete.** Phase 5 is not yet "pilot-ready" — that's Slice 3, the last piece.
 
-Next up is **call-waiter** — net-new (confirmed no existing signal/notification concept anywhere in the codebase). `order_status_events`' `event_type` column is free text, so emitting one needs no schema change, but surfacing it on the POS/Captain floor does need new query/UI work: the KDS's realtime subscription reacts to any INSERT but only ever re-queries `kots`, it isn't a content router — the same would be true for POS/Captain, so a "guest called" signal needs its own read query and its own UI surface (plausibly the floor card, next to the "Guest-opened" badge from the ADR-0008 amendment), not just an event emit. Write an approved plan before starting.
+Next up is **Slice 3**: payment (the confirmed plan — a `PaymentGateway` interface + mock gateway + the real, accountless `upi://pay` deep-link + cash, real Razorpay stubbed behind the interface, per the decision already recorded in DECISIONS.md) and post-meal feedback (a new table — nothing exists in the schema yet). Write an approved, detailed plan before starting, same as every slice so far.
 
-Also outstanding: **deploy `apps/booth` to Vercel** (root `apps/booth`, Function Region `icn1`, single env var `DATABASE_URL` — no Supabase client needed) — the live deployment currently only has pos/kds/captain/console/hub; **hardening staff-side `fireOrder`/`applyFireOrder` with the same `business_days` row lock** ADR-0009 added to the guest path (flagged there as a fast-follow, not done).
+Also still outstanding, unrelated to Slice 3: **deploy `apps/booth` to Vercel** (root `apps/booth`, Function Region `icn1`, single env var `DATABASE_URL` — no Supabase client needed) — the live deployment currently only has pos/kds/captain/console/hub, so nothing built in Phase 5 is actually live yet, only tested locally; **hardening staff-side `fireOrder`/`applyFireOrder`** with the same `business_days` row lock ADR-0009 added to the guest path (flagged there as a fast-follow, not done); a `service_requests` table if call-waiter's single-column model ever needs to grow.
 
 **ADR-0001 still says Phase 5 (specifically Slice 3's payment feature) triggers the move to Vercel Pro + Supabase Pro (~$45/mo)** — accepting a REAL guest payment is commercial use by Vercel's own fair-use definition. This session's live deployment stays free-tier-legal precisely because Slice 3 (the only payment-processing slice) hasn't been built yet, and when it is, the plan is a mock gateway + the real (accountless) UPI deep-link first — see the confirmed decision in DECISIONS.md. Budget for the Pro move before wiring a real Razorpay account, not at "first paying customer."
 

@@ -28,6 +28,12 @@
   font-size: var(--text-sm);
 }
 
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .nav {
   display: flex;
   gap: var(--space-1);
@@ -49,6 +55,41 @@
 .navLink[aria-current="page"] {
   background: rgb(255 255 255 / 16%);
   color: #fff;
+}
+
+.callWaiterButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: none;
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  cursor: pointer;
+}
+
+.callWaiterButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* A static, instant colour swap — no pulse/animation, same zero-motion
+   discipline the rest of the system's calm surfaces follow, just applied
+   here instead of POS/KDS specifically. brass is a FILL only (lint-brass),
+   never used as an icon colour on a light ground, but this is a dark
+   header bar, same exception the avatar/alerts chrome elsewhere already
+   takes — see apps/pos/app/AvatarMenu.module.css's own comment. */
+.callWaiterButton[data-called="true"] {
+  background: var(--brass-500);
+  color: var(--text);
+}
+
+.bellIcon {
+  width: 20px;
+  height: 20px;
 }
 
 .main {

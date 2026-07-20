@@ -127,6 +127,14 @@ export const tableSessions = pgTable(
     // default (every pre-existing seating path) so no backfill is needed;
     // only apps/booth's scan-gate route ever writes 'guest'.
     openedVia: text("opened_via").notNull().default("staff"),
+    // Phase 5 Slice 2c (call-waiter): non-null = the guest has an
+    // outstanding "call waiter" request; staff clear it (back to null) from
+    // the floor once attended. A single nullable timestamp is right-sized
+    // for the pilot — a service_requests table (history, multiple request
+    // types) is a future migration if ever wanted. Both floors already
+    // router.refresh() on any table_sessions change, so setting/clearing
+    // this surfaces live with no event plumbing.
+    waiterCalledAt: timestamp("waiter_called_at", { withTimezone: true }),
   },
   (t) => [
     unique().on(t.idempotencyKey),

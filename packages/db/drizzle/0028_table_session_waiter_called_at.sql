@@ -1,0 +1,1 @@
+ALTER TABLE "table_sessions" ADD COLUMN "waiter_called_at" timestamp with time zone;

@@ -1,14 +1,40 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Badge, RefreshIcon, StateRail } from "@restrobooth/ui";
+import { Badge, BellIcon, RefreshIcon, StateRail } from "@restrobooth/ui";
 import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS } from "@restrobooth/domain";
 import { createClient } from "../../lib/supabase/client";
+import { acknowledgeWaiterCall } from "./actions";
 import type { FloorTable } from "./queries";
 import { SeatTableDialog } from "./SeatTableDialog";
 import styles from "./FloorList.module.css";
+
+/** Slice 2c — same static-badge-plus-acknowledge pattern as
+ *  apps/pos/app/floor/FloorMap.tsx's WaiterCalledBadge, sized for
+ *  Captain's list row instead of a grid card. */
+function WaiterCalledRow({ sessionId }: { sessionId: string }) {
+  const [pending, startTransition] = useTransition();
+
+  function handleAcknowledge() {
+    startTransition(async () => {
+      await acknowledgeWaiterCall(sessionId);
+    });
+  }
+
+  return (
+    <div className={styles.waiterRow}>
+      <Badge tone="critical">
+        <BellIcon className={styles.waiterBellIcon} aria-hidden="true" />
+        Waiter called
+      </Badge>
+      <button type="button" className={styles.acknowledgeButton} disabled={pending} onClick={handleAcknowledge}>
+        {pending ? "Clearing…" : "Acknowledge"}
+      </button>
+    </div>
+  );
+}
 
 function formatElapsed(ms: number): string {
   const totalMinutes = Math.floor(ms / 60_000);
@@ -120,7 +146,11 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                   const elapsedLabel = elapsedMs === null ? "…" : formatElapsed(elapsedMs);
                   return (
                     <StateRail key={t.tableId} state={rampState} label={`${t.sessionStatus}, ${elapsedLabel}`}>
-                      <Link href={`/floor/${t.sessionId}`} className={styles.tableButton}>
+                      <Link
+                        href={`/floor/${t.sessionId}`}
+                        className={styles.tableButton}
+                        data-waiter-called={t.waiterCalledAt !== null}
+                      >
                         <span className={styles.tableLabelGroup}>
                           <span className={styles.tableLabel}>{t.label}</span>
                           {/* Optional — most walk-ins won't have one; the row is
@@ -147,6 +177,10 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                           </span>
                         </span>
                       </Link>
+                      {/* Outside the Link (an <a>, can't nest a click-handling
+                          button) — same "acknowledge lives in a footer slot
+                          beside the card" shape as apps/pos's FloorMap. */}
+                      {t.waiterCalledAt && t.sessionId && <WaiterCalledRow sessionId={t.sessionId} />}
                     </StateRail>
                   );
                 })}

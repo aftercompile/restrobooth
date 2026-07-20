@@ -1,14 +1,40 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Badge, Card, CardHeader, CashIcon, FloorIcon, RampLegend, ReceiptIcon, RefreshIcon, SeatIcon } from "@restrobooth/ui";
+import { Badge, BellIcon, Card, CardHeader, CashIcon, FloorIcon, RampLegend, ReceiptIcon, RefreshIcon, SeatIcon } from "@restrobooth/ui";
 import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS, type RampState } from "@restrobooth/domain";
 import { createClient } from "../../lib/supabase/client";
+import { acknowledgeWaiterCall } from "./actions";
 import type { FloorTable } from "./queries";
 import { SeatTableDialog } from "./SeatTableDialog";
 import styles from "./FloorMap.module.css";
+
+/** Slice 2c — a static badge (no pulse/animation, POS's usual rule) plus
+ *  an inline acknowledge action. Its own small component so per-table
+ *  pending state doesn't need tracking in the parent's render loop. */
+function WaiterCalledBadge({ sessionId }: { sessionId: string }) {
+  const [pending, startTransition] = useTransition();
+
+  function handleAcknowledge() {
+    startTransition(async () => {
+      await acknowledgeWaiterCall(sessionId);
+    });
+  }
+
+  return (
+    <>
+      <Badge tone="critical">
+        <BellIcon className={styles.waiterBellIcon} aria-hidden="true" />
+        Waiter called
+      </Badge>
+      <button type="button" className={styles.acknowledgeButton} disabled={pending} onClick={handleAcknowledge}>
+        {pending ? "Clearing…" : "Acknowledge"}
+      </button>
+    </>
+  );
+}
 
 const DWELL_LEGEND = [
   { label: "Available", color: "var(--text-muted)" },
@@ -250,7 +276,12 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                       const rampState = elapsedMs === null ? "fresh" : rampStateForElapsed(elapsedMs, TABLE_DWELL_THRESHOLDS);
                       const elapsedLabel = elapsedMs === null ? "…" : formatElapsed(elapsedMs);
                       return (
-                        <div key={t.tableId} className={styles.tableCard} data-state={rampState}>
+                        <div
+                          key={t.tableId}
+                          className={styles.tableCard}
+                          data-state={rampState}
+                          data-waiter-called={t.waiterCalledAt !== null}
+                        >
                           <Link href={`/floor/${t.sessionId}`} className={styles.tableCardInner}>
                             <div className={styles.cardTop}>
                               <span className={styles.tableLabel}>{t.label}</span>
@@ -276,8 +307,9 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                               channel encodes state with colour") — the chip stays pure
                               elapsed-time, these badges are their own axes and can
                               disagree with it independently. */}
-                          {(t.billStatus || t.openedVia === "guest") && (
+                          {(t.billStatus || t.openedVia === "guest" || t.waiterCalledAt) && (
                             <div className={styles.tableFooter}>
+                              {t.waiterCalledAt && t.sessionId && <WaiterCalledBadge sessionId={t.sessionId} />}
                               {t.openedVia === "guest" && (
                                 <Badge tone="neutral">Guest-opened</Badge>
                               )}

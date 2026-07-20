@@ -273,3 +273,28 @@ export async function placeOrder(): Promise<Result<{ kotCount: number }>> {
     }),
   );
 }
+
+/**
+ * Slice 2c — the guest service gesture. No menu-freeze/status guard beyond
+ * resolveOwnSession's own terminal-session check: a guest at
+ * bill_requested/settling can still need help, unlike adding an item. A
+ * single nullable timestamp on table_sessions (non-null = outstanding
+ * call) — both apps/pos's and apps/captain's floor views already
+ * router.refresh() on any table_sessions change, so this surfaces to
+ * staff live with no event/realtime plumbing of its own. Re-calling while
+ * already called just re-stamps the same non-null state — harmless, no
+ * guard needed.
+ */
+export async function callWaiter(): Promise<Result<{ called: true }>> {
+  const db = getDb();
+  return asResult(() =>
+    db.transaction(async (tx) => {
+      const session = await resolveOwnSession(tx);
+      await tx
+        .update(schema.tableSessions)
+        .set({ waiterCalledAt: new Date() })
+        .where(eq(schema.tableSessions.id, session.tableSessionId));
+      return { called: true as const };
+    }),
+  );
+}

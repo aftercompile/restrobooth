@@ -11,6 +11,7 @@ export interface GuestContext {
   tableLabel: string;
   brandName: string;
   sessionStatus: string;
+  waiterCalled: boolean;
 }
 
 // A guest's table_session can turn terminal mid-visit (staff closes it, a
@@ -40,6 +41,7 @@ export async function getGuestContext(): Promise<GuestContext | null> {
       tableSessionId: schema.guestSessions.tableSessionId,
       expiresAt: schema.guestSessions.expiresAt,
       sessionStatus: schema.tableSessions.status,
+      waiterCalledAt: schema.tableSessions.waiterCalledAt,
       brandName: schema.brands.name,
     })
     .from(schema.guestSessions)
@@ -71,5 +73,6 @@ export async function getGuestContext(): Promise<GuestContext | null> {
     tableLabel: tableRows.map((t) => t.label).join(", "),
     brandName: row.brandName,
     sessionStatus: row.sessionStatus,
+    waiterCalled: row.waiterCalledAt !== null,
   };
 }

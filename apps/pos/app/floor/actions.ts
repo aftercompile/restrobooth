@@ -161,3 +161,25 @@ export async function mergeSessions(_prev: ActionState, formData: FormData): Pro
   revalidatePath("/floor");
   redirect(`/floor/${targetSessionId}`);
 }
+
+/**
+ * Slice 2c — clears a guest's "call waiter" flag once staff have attended
+ * to it. Plain RLS-scoped staff write (table_session_isolation's existing
+ * `for all` policy already covers this — no new capability gate, since
+ * responding to a service call isn't a money/void action any staff who can
+ * see the table shouldn't be able to do).
+ */
+export async function acknowledgeWaiterCall(sessionId: string): Promise<ActionState> {
+  if (!sessionId) return { error: "Missing session." };
+
+  try {
+    await queryAsCurrentUser(async (tx) => {
+      await tx.update(schema.tableSessions).set({ waiterCalledAt: null }).where(eq(schema.tableSessions.id, sessionId));
+    });
+  } catch (err) {
+    return { error: fullErrorMessage(err) || "Could not clear the call." };
+  }
+
+  revalidatePath("/floor");
+  return { error: null };
+}
