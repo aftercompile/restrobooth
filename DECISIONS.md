@@ -4,7 +4,21 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-20 (latest) — Floor card redesign: universal notification band
+## 2026-07-20 (latest) — POS: "Unseat table" (release without billing)
+
+**Decided by:** Mohammed — "There's no option to unseat, add it to POS." A genuine gap, not an oversight caught late: the domain state machine (`packages/domain/src/tableSession.ts`) has modeled the `abandoned` status since it was first written, but no code path anywhere — POS, Captain, or Booth — could ever reach it. A staff member who accidentally seated a table, or whose guest left before ordering, had no way to release it back to available short of a direct DB edit.
+
+**Scoped deliberately narrower than DOMAIN.md §3.1's full description.** That section describes an "abandoned" walkout as manager-authorized, with any unsettled amount posted to a walkout expense line — aspirational text with no code behind it (no expense/ledger concept exists in this schema at all). Building that properly is a real feature (PIN-style manager gate, a ledger line, probably its own ADR) that this request didn't ask for. What shipped instead: a plain RLS-scoped staff action (`unseatSession`, `apps/pos/app/floor/[sessionId]/actions.ts`) — no capability gate, same tier as `acknowledgeWaiterCall` — reasoned about explicitly: unlike a void, this never touches a paise field, a bill, or the ledger; it's a status transition plus a required free-text reason (the DB's own `abandoned_reason_required` check constraint enforces that regardless of what this action does). A stronger warning shows in the confirm dialog when the session already has fired/served items or KOTs ("this cannot be undone" language, naming what's being written off), but nothing is blocked — the underlying `assertSessionTransition` guard (already in the domain layer, unchanged) is the only hard gate.
+
+**What shipped:** `unseatSession` server action (transitions to `abandoned`, four reason options — seated by mistake, guest left before ordering, walked out unpaid, staff error); `UnseatDialog.tsx` (a `Dialog`-based confirm, same weight as `SeatTableDialog` for the opposite operation); a "Unseat table" danger-variant button in `OrderPad.tsx`'s header, hidden once a session is already terminal (a bookmarked/back-navigated URL can reach this page after the session closed — the page itself applies no status guard).
+
+**Scoped to POS only, per the literal request** — not mirrored to Captain this pass, unlike most floor-view changes earlier in this session. Flagged, not silently deferred.
+
+**Verified end-to-end**, not just typechecked: opened a real empty session (T3, Ahmedabad, `open` status, no orders/KOTs) via Playwright, confirmed the plain-language dialog, submitted with a reason, confirmed the redirect to `/floor`, and confirmed directly in Postgres that `status` flipped to `abandoned` with `abandoned_reason` set. Separately opened a session with a fired KOT (T5, `dining`) and confirmed the dialog's stronger warning copy renders correctly without submitting (left that session's real data untouched). Test fixture (T3) restored to its original `open`/`guest`-opened state afterward.
+
+---
+
+## 2026-07-20 — Floor card redesign: universal notification band
 
 **Decided by:** Mohammed, across three follow-up messages on Slice 2c's call-waiter UI, each narrowing the fix: (1) "the Acknowledge button goes out of the card border" — a CSS overflow bug, fixed twice (the first fix, wrapping only the outer footer, was itself insufficient — the user caught it, "The Acknowledge button still goes out of the card"); (2) "the table having waiter requested is taller than other cards" — the real, structural version of the same complaint, since the stacking fix that solved (1) made the card's footer variable-height, which stretched the whole grid row (CSS grid equalizes row height to the tallest card); (3) a full design spec for the fix — ghost-button copy/styling, a tone-tinted footer surface, a de-escalated card border, restrained icon/content motion, and a named architecture: "Universal Action Center."
 

@@ -4,7 +4,23 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-20 (latest), floor card redesign: universal notification band
+## Where things stand — 2026-07-20 (latest), POS: "Unseat table"
+
+**POS can now release a table without billing it.** A "Unseat table" button in the table detail page's header (`apps/pos/app/floor/[sessionId]/OrderPad.tsx`) opens a confirm dialog (`UnseatDialog.tsx`, four reason options), then transitions the session to the domain's existing `abandoned` status via a new `unseatSession` server action. Full rationale: [DECISIONS.md](DECISIONS.md)'s "POS: 'Unseat table'" entry.
+
+**Deliberately narrower than DOMAIN.md §3.1's full "walkout" description** — no manager-auth gate, no expense-ledger posting (neither exists in the schema today). Plain RLS-scoped staff write, same tier as `acknowledgeWaiterCall`, since abandoning never touches a paise field or the ledger. A stronger warning shows in the dialog when the session has fired/served items, but nothing is blocked beyond the domain layer's own `assertSessionTransition`.
+
+**Scoped to POS only** — not mirrored to Captain this pass (unlike most floor-view work this session), since that's what was asked. Worth mirroring later if wanted.
+
+**Verified end-to-end** with real Playwright interaction and a direct Postgres check (status → `abandoned`, `abandoned_reason` set); the warning-copy path (session with a fired KOT) was checked without submitting, to leave that fixture's real data untouched. Test fixture restored afterward.
+
+### Still deferred
+- A real manager-authorized "walkout" flow with an expense/ledger line (DOMAIN.md §3.1's fuller description) — no ledger concept exists in this schema yet.
+- Mirroring "Unseat table" to Captain, if wanted.
+
+---
+
+## Where things stand — 2026-07-20, floor card redesign: universal notification band
 
 **The floor cards' footer is now structurally fixed-height (48px), always rendered, on both POS and Captain** — closing out a bug the previous entry's call-waiter footer introduced (a variable-height footer stretched its whole grid row when present). Full rationale and the design spec behind it: [DECISIONS.md](DECISIONS.md)'s "Floor card redesign" entry, and [docs/DESIGN.md](docs/DESIGN.md)'s "Amendment 4."
 

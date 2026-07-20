@@ -1,8 +1,14 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq, emitOrderStatusEvent, schema, sql, withIdempotency, type RlsTx } from "@restrobooth/db";
-import { assertOrderItemTransition, assertSessionTransition, groupByKitchenSection } from "@restrobooth/domain";
+import {
+  assertOrderItemTransition,
+  assertSessionTransition,
+  groupByKitchenSection,
+  type TableSessionStatus,
+} from "@restrobooth/domain";
 import { queryAsCurrentUser } from "../../../lib/db";
 import { mockPrinterBridge } from "../../../lib/printerBridge";
 
@@ -439,4 +445,47 @@ export async function reprintKot(_prev: ActionState, formData: FormData): Promis
 
   revalidatePath(`/floor/${sessionId}`);
   return OK;
+}
+
+/**
+ * Releases a table without billing it — DOMAIN.md §3.1's `abandoned`
+ * status, previously modeled in the domain state machine
+ * (`assertSessionTransition`) but with no code path anywhere that could
+ * actually reach it: there was no "undo an accidental seat" or "the guest
+ * left, free the table" action on the floor at all.
+ *
+ * Deliberately NOT gated behind a manager capability the way a fired-item
+ * void is. Unlike a void, this never touches a paise field, a bill, or the
+ * ledger — it's a status change plus an audit-trail reason, and the reason
+ * is always required (the DB's own `abandoned_reason_required` check
+ * constraint backs this up regardless of what this action does). DOMAIN.md
+ * §3.1 additionally describes a manager-authorized "walkout" flow that
+ * posts an unsettled amount to a walkout expense line — no expense/ledger
+ * concept exists anywhere in this schema yet, so that half is intentionally
+ * not built here; this covers the common case (an empty or mis-seated
+ * table), not a full walkout write-off.
+ */
+export async function unseatSession(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!sessionId) return { error: "Missing session." };
+  if (!reason) return { error: "A reason is required." };
+
+  try {
+    await queryAsCurrentUser(async (tx) => {
+      const session = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
+      if (!session) throw new Error("session not found");
+      assertSessionTransition(session.status as TableSessionStatus, "abandoned");
+
+      await tx
+        .update(schema.tableSessions)
+        .set({ status: "abandoned", abandonedReason: reason })
+        .where(eq(schema.tableSessions.id, sessionId));
+    });
+  } catch (err) {
+    return { error: fullErrorMessage(err) || "Could not unseat the table." };
+  }
+
+  revalidatePath("/floor");
+  redirect("/floor");
 }

@@ -12,6 +12,7 @@ import { mergeSessions } from "../actions";
 import type { KotSummary, OrderableMenuItem, OrderItemRow, SessionDetail } from "./queries";
 import type { MergeCandidate } from "../queries";
 import { AddItemPicker } from "./AddItemPicker";
+import { UnseatDialog } from "./UnseatDialog";
 import styles from "./OrderPad.module.css";
 
 const REASONS = [
@@ -61,6 +62,7 @@ export function OrderPad({
   // Server and client must render the same thing on the first paint, or
   // React discards the server HTML as a hydration mismatch.
   const [now, setNow] = useState<number | null>(null);
+  const [showUnseat, setShowUnseat] = useState(false);
 
   // KOT ACK alarm needs second-scale precision (DOMAIN.md §3.3: "no ACK
   // after 10s raises an alarm"), unlike the floor map's minute-scale dwell
@@ -124,6 +126,12 @@ export function OrderPad({
     };
   });
 
+  // A directly-revisited/bookmarked URL can land here after the session
+  // already reached a terminal status (the page itself applies no status
+  // guard — see page.tsx) — hide Unseat rather than let it fail against
+  // assertSessionTransition's rejection.
+  const isTerminal = session.status === "closed" || session.status === "abandoned" || session.status === "merged_into";
+
   const items = [...baseItems, ...localItems];
   const pendingItems = items.filter((i) => i.status === "pending");
   const activeItems = items.filter((i) => i.status !== "pending" && i.status !== "voided");
@@ -169,11 +177,29 @@ export function OrderPad({
             view without scrolling past an empty-looking strip. */}
         <div className={styles.headerRight}>
           <div className={styles.total}>₹{formatRupees(total.toString())}</div>
+          {/* No manager gate, no menu-freeze check — releasing a table is
+              legal from any non-terminal status (assertSessionTransition
+              in the action itself is the real guard). See UnseatDialog's
+              comment for why this stays a one-step confirm, not a full
+              walkout/write-off flow. */}
+          {!isTerminal && (
+            <Button type="button" variant="danger" onClick={() => setShowUnseat(true)}>
+              Unseat table
+            </Button>
+          )}
           <Button type="button" variant="secondary" onClick={onGoToBill}>
             Go to bill →
           </Button>
         </div>
       </div>
+
+      {showUnseat && (
+        <UnseatDialog
+          sessionId={session.sessionId}
+          hasActiveItems={activeItems.length > 0 || kots.length > 0}
+          onClose={() => setShowUnseat(false)}
+        />
+      )}
 
       <div className={styles.columns}>
         <div>
