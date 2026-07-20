@@ -4,7 +4,23 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-20 (latest) — POS made responsive down to phone width
+## 2026-07-20 (latest) — Cleanup pass: booth deploy confirmed, staff KOT-lock fix, Unseat mirrored, KDS idle exempted
+
+**Decided by:** Mohammed, closing out four items flagged at the end of the previous session's "what's the plan" check-in, before starting Phase 5 Slice 3 planning.
+
+1. **`apps/booth` deploy confirmed live** (`https://restrobooth-booth.vercel.app/`) — the owner deployed it directly; PROGRESS.md's "still not deployed" note was stale and is corrected. Not independently re-verified over the network (this environment's outbound HTTPS is sandboxed — `curl` fails at the TLS layer, unrelated to the target), taken on the owner's word.
+
+2. **Staff-side KOT-number race fixed** — `apps/pos/app/floor/[sessionId]/actions.ts`'s `applyFireOrder` and `apps/captain/app/floor/[sessionId]/actions.ts`'s `fireOrder` both allocated `kot_number` via a bare `SELECT MAX(kot_number)+1`, no lock, ever since ADR-0009 flagged this as a fast-follow when the guest `placeOrder()` path got a real lock (a guest and staff can now fire the same outlet concurrently). Fixed by adding the exact same `SELECT ... FOR UPDATE` on the outlet's `business_days` row `placeOrder()` already uses — no new locking primitive, same idiom `seatOrJoinTableSession` established. **Verified for real**, not just reasoned about: fired a fresh item through both POS and Captain against two different tables back to back and confirmed sequential, non-colliding `kot_number`s (3, then 4) directly in Postgres.
+
+3. **"Unseat table" mirrored to Captain** — same `unseatSession` action, same `UnseatDialog`, same reasons, same scoping (no manager gate, no ledger posting — see the original POS entry for the full rationale, unchanged here). Captain's simpler single-column `OrderScreen.tsx` (no `headerRight` row like POS) got a full-width button below the total rather than an inline one, matching how `FireButton`/`CallForBillButton` already sit in their own full-width rows there. **Verified end-to-end**: released a real empty session via Captain, confirmed the redirect and the Postgres row (`status: abandoned`, reason recorded).
+
+4. **KDS exempted from the 60-minute idle logout** — `IdleLogoutGuard` removed from `KdsShell.tsx` and the now-unused `apps/kds/app/IdleLogoutGuard.tsx` deleted outright rather than left dead. Matches the caveat already flagged when idle logout first shipped: a kitchen screen watched-not-touched during a lull isn't the same as an unattended terminal. POS, Captain, and Console keep the 60-minute rule unchanged.
+
+**Housekeeping note:** two of Docker Desktop's now-familiar mid-session stops happened again while verifying this pass — same fix as every prior occurrence (`Start-Process` + poll `docker ps` until responsive, ~10-20s). Not re-documenting as a new finding, just noting it recurred.
+
+---
+
+## 2026-07-20 — POS made responsive down to phone width
 
 **Decided by:** Mohammed — "POS does not seem mobile/tablet friendly. Make it responsive." Audited first via real Playwright screenshots at tablet (820px) and phone (390px) widths across every main POS page, rather than guessing at what to fix.
 

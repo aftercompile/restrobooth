@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { signOut } from "./auth-actions";
-import { IdleLogoutGuard } from "./IdleLogoutGuard";
 import styles from "./KdsShell.module.css";
 
 /** useFormStatus must be read from inside the <form> it tracks, hence the
@@ -17,6 +16,14 @@ function SignOutSubmit() {
   );
 }
 
+/**
+ * Deliberately no IdleLogoutGuard — every other staff app auto-signs-out
+ * after 60 minutes of no mouse/key/touch/scroll, but KDS is a fixed
+ * kitchen screen a cook glances at rather than touches; a quiet ticket
+ * queue during a lull isn't the same thing as an unattended terminal.
+ * Exempted at the owner's explicit request, not silently dropped — see
+ * DECISIONS.md's 2026-07-20 entry.
+ */
 export function KdsShell({ email, children }: { email?: string | undefined; children: ReactNode }) {
   return (
     <>
@@ -31,7 +38,6 @@ export function KdsShell({ email, children }: { email?: string | undefined; chil
           <SignOutSubmit />
         </form>
       </header>
-      <IdleLogoutGuard />
       <main className={styles.main}>{children}</main>
     </>
   );

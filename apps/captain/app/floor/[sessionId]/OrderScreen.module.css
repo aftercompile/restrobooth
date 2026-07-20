@@ -33,6 +33,14 @@
   margin-top: 4px;
 }
 
+.unseatRow {
+  margin-top: var(--space-2);
+}
+
+.unseatButton {
+  width: 100%;
+}
+
 .sectionTitle {
   font-size: var(--text-sm);
   font-weight: 700;

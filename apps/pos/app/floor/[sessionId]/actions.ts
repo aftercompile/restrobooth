@@ -213,6 +213,15 @@ export async function applyFireOrder(idempotencyKey: string, input: FireOrderInp
           })),
         );
 
+        // Serializes kot_number allocation the same way scan-queries.ts's
+        // seatOrJoinTableSession serializes seating (SELECT ... FOR UPDATE
+        // on an existing row) rather than introducing a new locking
+        // primitive with no precedent in this codebase. Matters now that
+        // apps/booth's guest placeOrder() can fire the same outlet
+        // concurrently — this staff path had a bare MAX+1 with no lock
+        // until now (ADR-0009 flagged it as a fast-follow when the guest
+        // path got this same fix).
+        await tx.execute(sql`select id from business_days where id = ${session.businessDayId} for update`);
         const nextKotNumberResult = await tx.execute<{ [key: string]: unknown; next: number }>(sql`
           select coalesce(max(kot_number), 0) + 1 as next from kots where outlet_id = ${session.outletId} and business_date = ${businessDate}
         `);

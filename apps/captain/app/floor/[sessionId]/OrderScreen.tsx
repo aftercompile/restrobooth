@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Badge, Card, CardHeader, Button } from "@restrobooth/ui";
 import { callForBill, fireOrder, requestVoid, voidPendingItem, type ActionState } from "./actions";
 import type { KotSummary, OrderableMenuItem, OrderItemRow, SessionDetail } from "./queries";
 import { AddItemPicker } from "./AddItemPicker";
+import { UnseatDialog } from "./UnseatDialog";
 import styles from "./OrderScreen.module.css";
 
 const INITIAL: ActionState = { error: null };
@@ -25,12 +26,18 @@ export function OrderScreen({
   kots: KotSummary[];
   menu: OrderableMenuItem[];
 }) {
+  const [showUnseat, setShowUnseat] = useState(false);
+
   const items = order?.items ?? [];
   const pendingItems = items.filter((i) => i.status === "pending");
   const activeItems = items.filter((i) => i.status !== "pending" && i.status !== "voided");
   const total = items
     .filter((i) => i.status !== "voided")
     .reduce((sum, i) => sum + BigInt(i.unitPricePaise) * BigInt(i.quantity), 0n);
+
+  // A directly-revisited URL can land here after the session already
+  // reached a terminal status — same guard as apps/pos's OrderPad.
+  const isTerminal = session.status === "closed" || session.status === "abandoned" || session.status === "merged_into";
 
   // A guard, not a server rule: calling for the bill with un-fired items
   // still sitting in the order would freeze the menu (DOMAIN.md §3.1)
@@ -52,7 +59,22 @@ export function OrderScreen({
         </p>
         {session.guestNotes && <p className={styles.guestNotes}>Note: {session.guestNotes}</p>}
         <div className={styles.total}>₹{formatRupees(total.toString())}</div>
+        {!isTerminal && (
+          <div className={styles.unseatRow}>
+            <Button type="button" variant="danger" className={styles.unseatButton} onClick={() => setShowUnseat(true)}>
+              Unseat table
+            </Button>
+          </div>
+        )}
       </div>
+
+      {showUnseat && (
+        <UnseatDialog
+          sessionId={session.sessionId}
+          hasActiveItems={activeItems.length > 0 || kots.length > 0}
+          onClose={() => setShowUnseat(false)}
+        />
+      )}
 
       <Card padded={false}>
         <CardHeader title="Order" count={items.filter((i) => i.status !== "voided").length} />

@@ -4,7 +4,23 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-20 (latest), POS made responsive
+## Where things stand — 2026-07-20 (latest), cleanup pass before Slice 3
+
+Four small items closed out before starting Phase 5 Slice 3 planning. Full detail: [DECISIONS.md](DECISIONS.md)'s "Cleanup pass" entry.
+
+- **`apps/booth` is deployed** (`https://restrobooth-booth.vercel.app/`) — the earlier "still not deployed" note was stale, now corrected. All 6 apps are live on Vercel.
+- **Staff-side KOT-number race fixed** — POS's `applyFireOrder` and Captain's `fireOrder` now lock the outlet's `business_days` row before allocating `kot_number`, same as the guest `placeOrder()` path already did (ADR-0009's flagged fast-follow, now done). Verified with real fires through both apps — sequential, non-colliding KOT numbers.
+- **"Unseat table" mirrored to Captain** — same action, same dialog, same scoping as POS's original. Verified end-to-end.
+- **KDS exempted from the 60-minute idle logout** — removed, not just disabled; the file is deleted. POS, Captain, Console unchanged.
+
+### Still deferred
+- Real cross-app SSO (needs a production domain decision).
+- A `service_requests` history table, if call-waiter's single-column model ever needs to grow.
+- Phase 5 Slice 3 (payment + feedback) — the last piece before the pilot gate. Planning starts next.
+
+---
+
+## Where things stand — 2026-07-20, POS made responsive
 
 **POS now works down to phone width (375px) with zero horizontal overflow on every page.** Full rationale: [DECISIONS.md](DECISIONS.md)'s "POS made responsive" entry.
 

@@ -1,8 +1,14 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq, emitOrderStatusEvent, schema, sql, type RlsTx } from "@restrobooth/db";
-import { assertOrderItemTransition, assertSessionTransition, groupByKitchenSection } from "@restrobooth/domain";
+import {
+  assertOrderItemTransition,
+  assertSessionTransition,
+  groupByKitchenSection,
+  type TableSessionStatus,
+} from "@restrobooth/domain";
 import { queryAsCurrentUser } from "../../../lib/db";
 import { mockPrinterBridge } from "../../../lib/printerBridge";
 
@@ -145,6 +151,15 @@ export async function fireOrder(_prev: ActionState, formData: FormData): Promise
         })),
       );
 
+      // Serializes kot_number allocation the same way scan-queries.ts's
+      // seatOrJoinTableSession serializes seating (SELECT ... FOR UPDATE
+      // on an existing row) rather than introducing a new locking
+      // primitive with no precedent in this codebase. Matters now that
+      // apps/booth's guest placeOrder() can fire the same outlet
+      // concurrently — this staff path had a bare MAX+1 with no lock
+      // until now (ADR-0009 flagged it as a fast-follow when the guest
+      // path got this same fix).
+      await tx.execute(sql`select id from business_days where id = ${session.businessDayId} for update`);
       const nextKotNumberResult = await tx.execute<{ [key: string]: unknown; next: number }>(sql`
         select coalesce(max(kot_number), 0) + 1 as next from kots where outlet_id = ${session.outletId} and business_date = ${businessDate}
       `);
@@ -273,6 +288,39 @@ export async function requestVoid(_prev: ActionState, formData: FormData): Promi
 
   revalidatePath(`/floor/${sessionId}`);
   return OK;
+}
+
+/**
+ * Releases a table without billing it — same action as apps/pos's
+ * unseatSession (DOMAIN.md §3.1's `abandoned` status), mirrored here per
+ * the owner's explicit request. Same scoping as POS: no manager gate (this
+ * never touches a paise field or the ledger), no expense-ledger posting
+ * (no ledger concept exists in this schema yet) — DOMAIN.md's fuller
+ * "walkout" description is intentionally not built.
+ */
+export async function unseatSession(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!sessionId) return { error: "Missing session." };
+  if (!reason) return { error: "A reason is required." };
+
+  try {
+    await queryAsCurrentUser(async (tx) => {
+      const session = (await tx.select().from(schema.tableSessions).where(eq(schema.tableSessions.id, sessionId)))[0];
+      if (!session) throw new Error("session not found");
+      assertSessionTransition(session.status as TableSessionStatus, "abandoned");
+
+      await tx
+        .update(schema.tableSessions)
+        .set({ status: "abandoned", abandonedReason: reason })
+        .where(eq(schema.tableSessions.id, sessionId));
+    });
+  } catch (err) {
+    return { error: fullErrorMessage(err) || "Could not unseat the table." };
+  }
+
+  revalidatePath("/floor");
+  redirect("/floor");
 }
 
 /**
