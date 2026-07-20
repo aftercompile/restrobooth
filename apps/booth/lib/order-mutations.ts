@@ -4,6 +4,7 @@ import { emitOrderStatusEvent, eq, schema, sql, type Database } from "@restroboo
 import { assertSessionTransition, groupByKitchenSection, type KitchenSection } from "@restrobooth/domain";
 import { getDb } from "./db";
 import { GUEST_SESSION_COOKIE } from "./guest-session";
+import { mockPrinterBridge } from "./printerBridge";
 
 /**
  * ADR-0009: guest order writes run on a PRIVILEGED connection (no
@@ -193,10 +194,14 @@ export async function removeFromCart(orderItemId: string): Promise<Result<{ remo
   );
 }
 
-/** The guest fire — same grouping/KOT/event logic as apps/captain's
- *  fireOrder, minus the printer bridge (a physical-terminal concept; a
- *  guest-fired KOT simply stays 'queued' until the kitchen's own printer
- *  bridge or KDS picks it up the same as any other). */
+/** The guest fire — same grouping/KOT/event/printer-bridge logic as
+ *  apps/pos's applyFireOrder and apps/captain's fireOrder. Earlier this
+ *  called no bridge at all, on the theory that "the kitchen's own printer
+ *  bridge... picks it up the same as any other" — but there is no such
+ *  standalone picker-upper; the mock bridge only ever runs inline in a
+ *  fire action. That left every guest-fired KOT stuck in 'queued' forever,
+ *  tripping the POS's 10s no-ACK alarm on 100% of QR orders instead of the
+ *  ~1-in-6 rate staff-fired KOTs get. */
 export async function placeOrder(): Promise<Result<{ kotCount: number }>> {
   const db = getDb();
   return asResult(() =>
@@ -269,6 +274,15 @@ export async function placeOrder(): Promise<Result<{ kotCount: number }>> {
             outletId: session.outletId,
             quantity: item.quantity,
           });
+        }
+
+        // The mock printer bridge — see lib/printerBridge.ts. A "queued"
+        // result is left exactly as-is: the client's own 10s-no-ACK timer
+        // (DOMAIN.md §3.3) is what surfaces a stuck ticket, not a server
+        // retry loop. Same as apps/pos's applyFireOrder.
+        const printResult = await mockPrinterBridge.send();
+        if (printResult === "printed") {
+          await tx.execute(sql`update kots set status = 'printed' where id = ${kotId}`);
         }
 
         const itemIds = sql.join(
