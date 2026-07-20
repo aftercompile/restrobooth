@@ -4,7 +4,27 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-20 (latest), POS: "Unseat table"
+## Where things stand — 2026-07-20 (latest), 60-min idle logout + SSO deferred
+
+**All 4 staff apps (POS, KDS, Captain, Console) now auto-sign-out after 60 minutes of real inactivity** — no mouse/key/touch/scroll for the full window, with a 60s warning dialog ("Stay signed in") beforehand. Full rationale: [DECISIONS.md](DECISIONS.md)'s "60-minute idle logout + SSO deferred" entry.
+
+**What shipped:**
+- `packages/ui/src/components/IdleTimeout.tsx` — `useIdleTimer` (pure activity tracking, no Supabase/router coupling) + `IdleWarningDialog` (presentational, built on the existing `Dialog`).
+- `apps/{pos,kds,captain,console}/app/IdleLogoutGuard.tsx` — one tiny client component per app, wiring the shared hook to that app's own existing `signOut` server action (identical across all 4, already used by each app's own header sign-out button). Mounted once inside each app's Shell.
+- Verified end-to-end with Playwright at a temporarily shortened timeout (8s) — confirmed the warning fires, the redirect to `/login` happens, the Supabase session is genuinely revoked, and "Stay signed in" correctly resets the clock. Reverted to 60min/60s before committing.
+
+**"SSO for all apps" — researched, then deliberately NOT built full cross-app session sharing.** None of the 5 apps share a production domain today (each is its own separate Vercel deployment), and Hub was built 2026-07-19 specifically around "sign in once you land on it" — real cookie SSO needs a shared root domain, a production-infra decision, not a code change. Asked the owner directly rather than guessing; **chose to hold off.** Shipped instead: Hub (`apps/hub/app/page.tsx`) remembers your last-used tile via same-origin `localStorage` and shows a "Last used" badge — genuinely deliverable without any domain decision, unlike the alternative (passing an email through to prefill login), which turned out to need the same cross-origin mechanism a shared domain would provide.
+
+**Worth a second look:** KDS's idle policy is the same 60-minute blanket rule as everywhere else, but flagged as the one app where "idle" (no touch) doesn't necessarily mean "unattended" — a fixed kitchen screen can go quiet during a lull while still being watched. Noted directly in `apps/kds/app/IdleLogoutGuard.tsx` as the file to revisit if this proves too aggressive in a real shift.
+
+### Still deferred
+- Real cross-app SSO (needs a production domain decision first).
+- A different idle policy for KDS specifically, if 60 minutes proves too aggressive there.
+- Everything the prior entries already deferred.
+
+---
+
+## Where things stand — 2026-07-20, POS: "Unseat table"
 
 **POS can now release a table without billing it.** A "Unseat table" button in the table detail page's header (`apps/pos/app/floor/[sessionId]/OrderPad.tsx`) opens a confirm dialog (`UnseatDialog.tsx`, four reason options), then transitions the session to the domain's existing `abandoned` status via a new `unseatSession` server action. Full rationale: [DECISIONS.md](DECISIONS.md)'s "POS: 'Unseat table'" entry.
 

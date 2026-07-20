@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { signOut } from "./auth-actions";
+import { IdleLogoutGuard } from "./IdleLogoutGuard";
 import styles from "./KdsShell.module.css";
 
 /** useFormStatus must be read from inside the <form> it tracks, hence the
@@ -30,6 +31,7 @@ export function KdsShell({ email, children }: { email?: string | undefined; chil
           <SignOutSubmit />
         </form>
       </header>
+      <IdleLogoutGuard />
       <main className={styles.main}>{children}</main>
     </>
   );

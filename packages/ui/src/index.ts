@@ -42,6 +42,7 @@ export { Badge, type BadgeTone } from "./components/Badge";
 export { Card, CardHeader } from "./components/Card";
 export { DataRow } from "./components/DataRow";
 export { Dialog } from "./components/Dialog";
+export { useIdleTimer, IdleWarningDialog } from "./components/IdleTimeout";
 export { Tabs, type TabItem } from "./components/Tabs";
 export { TabularNumber } from "./components/TabularNumber";
 export { ToastProvider, useToast, type ToastTone } from "./components/Toast";

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { signOut } from "./auth-actions";
+import { IdleLogoutGuard } from "./IdleLogoutGuard";
 import styles from "./CaptainShell.module.css";
 
 /** useFormStatus must be read from inside the <form> it tracks, hence the
@@ -35,6 +36,7 @@ export function CaptainShell({ children }: { children: ReactNode }) {
           <SignOutSubmit />
         </form>
       </header>
+      <IdleLogoutGuard />
       <main className={styles.main}>{children}</main>
     </>
   );

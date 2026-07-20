@@ -8,6 +8,7 @@ import { OfflineStatusBar } from "./OfflineStatusBar";
 import { PosNav } from "./PosNav";
 import { getDayStatuses } from "./day/queries";
 import { queryAsCurrentUser } from "../lib/db";
+import { IdleLogoutGuard } from "./IdleLogoutGuard";
 import styles from "./PosShell.module.css";
 
 /**
@@ -64,6 +65,7 @@ export async function PosShell({ email, children }: { email?: string | undefined
         <AvatarMenu email={email} />
       </header>
       <OfflineStatusBar />
+      <IdleLogoutGuard />
       <main className={styles.main}>{children}</main>
     </>
   );

@@ -86,6 +86,14 @@
   transform: scale(0.99);
 }
 
+.tileTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--space-1);
+}
+
 .tileLabel {
   font-family: var(--font-display);
   font-size: var(--text-xl);

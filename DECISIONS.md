@@ -4,7 +4,21 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-20 (latest) — POS: "Unseat table" (release without billing)
+## 2026-07-20 (latest) — 60-minute idle logout (all 4 staff apps) + SSO deferred
+
+**Decided by:** Mohammed — "create a security logout timer of 60 minutes, also build an SSO for all apps." The logout timer was unambiguous and shipped directly. SSO was not: researched first (no idle-timeout/auto-logout code existed anywhere in the codebase; more importantly, none of the 5 apps share a production domain today — `DECISIONS.md`'s 2026-07-19 entry says each is "presumably separate domains in prod... each app is its own Vercel project" — and Hub was built that same day specifically around "sign in once you land on it," a deliberate no-shared-session design). Real cookie-based SSO needs a shared root domain, which is a production-infra decision, not a code change — asked via `AskUserQuestion` rather than guessing or unilaterally reversing the Hub decision. **Chose "hold off on full SSO for now."**
+
+**Idle logout — a genuine gap, not an extension of anything.** `useIdleTimer` (`packages/ui/src/components/IdleTimeout.tsx`) is pure activity-tracking (mouse/key/touch/scroll/wheel resets a ref-held last-activity timestamp, a 1s interval compares elapsed time) — no Supabase, no router, matching the standing rule that `packages/ui` never carries a hosting- or auth-specific API. `IdleWarningDialog` is the presentational half (reuses the existing `Dialog` primitive), showing a countdown once inside the last 60s and offering "Stay signed in." Each app gets its own tiny `IdleLogoutGuard.tsx` client component that wires the two together and supplies the one thing `packages/ui` can't own: the app's own local `signOut` server action (already existed, identical across all 4 apps — the same one the avatar/header menu's own "Sign out" button calls). Mounted once inside each app's Shell (`PosShell`, `KdsShell`, `CaptainShell`, `ConsoleShell`) — all four already only render on already-authenticated pages (`/login` has no shell), so there's nothing extra to gate.
+
+**Verified for real, not just typechecked:** ran POS with the timeout/warning temporarily shortened to 8s/6s, drove it with Playwright doing nothing (no synthetic activity), and confirmed both the warning dialog appearing and the actual redirect to `/login` with the Supabase session genuinely revoked (a second Playwright run against the same saved auth state failed, as expected — signOut() invalidates the refresh token server-side). Separately confirmed "Stay signed in" dismisses the dialog and prevents the logout. Reverted to 60min/60s before committing.
+
+**Flagged, not silently decided: KDS may need a different policy.** KDS is a fixed kitchen screen, often watched rather than touched for stretches during a lull — the same blanket 60-minute idle rule applies there today, but it's the one app where "idle" doesn't necessarily mean "unattended" the way it does at a POS terminal or a captain's handheld. Noted in the file itself (`apps/kds/app/IdleLogoutGuard.tsx`'s own comment) as the one place to revisit if a real kitchen shift finds it too aggressive.
+
+**SSO's actual substitute, scoped to what's real without a domain decision:** Hub (`apps/hub/app/page.tsx`) now remembers which tile you last clicked (`localStorage`, same-origin only — Hub's own storage, not shared with the apps it links to, since that cross-origin sharing is exactly the piece SSO itself is waiting on) and shows a "Last used" badge next visit. No reordering (a fixed picker screen staff use daily shouldn't move tiles under someone's muscle memory) — just a hint. Genuinely deliverable without any infra decision; the alternative floated in the `AskUserQuestion` (passing an email through to prefill the next app's login) was **not built** — it would need the same cross-origin storage a shared cookie domain would provide, so it's not actually a cheaper path, just SSO with extra steps.
+
+---
+
+## 2026-07-20 — POS: "Unseat table" (release without billing)
 
 **Decided by:** Mohammed — "There's no option to unseat, add it to POS." A genuine gap, not an oversight caught late: the domain state machine (`packages/domain/src/tableSession.ts`) has modeled the `abandoned` status since it was first written, but no code path anywhere — POS, Captain, or Booth — could ever reach it. A staff member who accidentally seated a table, or whose guest left before ordering, had no way to release it back to available short of a direct DB edit.
 

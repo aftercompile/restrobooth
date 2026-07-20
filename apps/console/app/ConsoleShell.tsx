@@ -6,6 +6,7 @@ import { AppShell, shellClasses } from "@restrobooth/ui";
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { signOut } from "./auth-actions";
+import { IdleLogoutGuard } from "./IdleLogoutGuard";
 
 const NAV = [
   { href: "/menu", label: "Menu" },
@@ -24,29 +25,32 @@ export function ConsoleShell({ email, children }: { email?: string | undefined; 
   const pathname = usePathname();
 
   return (
-    <AppShell
-      nav={NAV.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={shellClasses.navLink}
-            aria-current={active ? "page" : undefined}
-          >
-            {item.label}
-          </Link>
-        );
-      })}
-      actions={
-        <>
-          {email && <span className={shellClasses.userEmail}>{email}</span>}
-          <SignOutButton />
-        </>
-      }
-    >
-      {children}
-    </AppShell>
+    <>
+      <AppShell
+        nav={NAV.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={shellClasses.navLink}
+              aria-current={active ? "page" : undefined}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+        actions={
+          <>
+            {email && <span className={shellClasses.userEmail}>{email}</span>}
+            <SignOutButton />
+          </>
+        }
+      >
+        {children}
+      </AppShell>
+      <IdleLogoutGuard />
+    </>
   );
 }
 
