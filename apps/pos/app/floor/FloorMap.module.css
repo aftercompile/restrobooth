@@ -289,13 +289,17 @@
 /* The waiter-called badge + Acknowledge button get their OWN full-width
    line (flex-basis forces a wrap before/after) rather than sharing
    tableFooter's space-between row with the openedVia/bill badges — a
-   6-up grid card is too narrow to fit both reliably, and this keeps
-   everything inside the card's border instead of bleeding past it. */
+   6-up grid card is too narrow to fit both reliably. Stacked, not
+   side-by-side: a space-between row doesn't wrap on its own, so if the
+   badge + button together are wider than the card (easily true on a
+   6-up grid), the button just overflows past the edge instead of
+   dropping to its own line. Stacking removes that failure mode
+   entirely, regardless of card width. */
 .waiterFooterRow {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   flex: 1 0 100%;
 }
 

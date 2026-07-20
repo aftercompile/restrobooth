@@ -54,12 +54,16 @@
   box-shadow: 0 0 0 1px var(--signal-600);
 }
 
+/* Stacked, not side-by-side — same reasoning as apps/pos's
+   FloorMap.module.css .waiterFooterRow: a space-between row doesn't wrap
+   on its own, so the button can overflow past the card on a narrow
+   viewport instead of dropping to its own line. Stacking removes that
+   failure mode entirely. */
 .waiterRow {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 6px var(--space-1);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   padding: 6px var(--space-2) 0;
 }
 
