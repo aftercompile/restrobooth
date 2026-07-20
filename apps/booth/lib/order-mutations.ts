@@ -22,11 +22,16 @@ import { GUEST_SESSION_COOKIE } from "./guest-session";
  * belongs to.
  */
 
-const TERMINAL_STATUSES = ["closed", "abandoned", "merged_into"];
+// Always-terminal for a guest, no exceptions: a merge re-parents this
+// session's own items elsewhere, an abandon means staff force-closed it.
+// "closed" is handled separately below — the one terminal status a guest
+// still has a legitimate reason to act against (submitting feedback right
+// after the mock gateway auto-settles and closes their own session).
+const ALWAYS_TERMINAL_STATUSES = ["abandoned", "merged_into"];
 
 export class GuestOrderError extends Error {}
 
-interface OwnSession {
+export interface OwnSession {
   tableSessionId: string;
   outletId: string;
   storeId: string;
@@ -34,7 +39,21 @@ interface OwnSession {
   status: string;
 }
 
-async function resolveOwnSession(tx: Parameters<Parameters<Database["transaction"]>[0]>[0]): Promise<OwnSession> {
+/**
+ * The one function every guest mutation in this file (and
+ * payment-mutations.ts) resolves through FIRST, inside the same
+ * transaction as the write that follows — see this file's header comment
+ * for why that ordering is what makes the whole privileged-connection
+ * approach safe. `allowClosed` exists for exactly one caller
+ * (submitFeedback): the mock payment path closes the session as part of
+ * settling it, and the guest's own feedback prompt is shown immediately
+ * after — resolving their session would otherwise reject it as terminal a
+ * moment after they legitimately finished using it.
+ */
+export async function resolveOwnSession(
+  tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
+  options: { allowClosed?: boolean } = {},
+): Promise<OwnSession> {
   const cookieStore = await cookies();
   const guestSessionId = cookieStore.get(GUEST_SESSION_COOKIE)?.value;
   if (!guestSessionId) throw new GuestOrderError("Your session has ended — please rescan the code on your table.");
@@ -55,20 +74,24 @@ async function resolveOwnSession(tx: Parameters<Parameters<Database["transaction
   const row = rows[0];
   if (!row) throw new GuestOrderError("Your session has ended — please rescan the code on your table.");
   if (row.expiresAt.getTime() < Date.now()) throw new GuestOrderError("Your session has expired — please rescan the code on your table.");
-  if (TERMINAL_STATUSES.includes(row.status)) throw new GuestOrderError("This table is no longer active — please ask a staff member.");
+  if (ALWAYS_TERMINAL_STATUSES.includes(row.status)) throw new GuestOrderError("This table is no longer active — please ask a staff member.");
+  if (row.status === "closed" && !options.allowClosed) throw new GuestOrderError("This table is no longer active — please ask a staff member.");
 
   return row;
 }
 
-async function getBusinessDate(tx: Parameters<Parameters<Database["transaction"]>[0]>[0], businessDayId: string): Promise<string> {
+export async function getBusinessDate(
+  tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
+  businessDayId: string,
+): Promise<string> {
   const row = (await tx.select().from(schema.businessDays).where(eq(schema.businessDays.id, businessDayId)))[0];
   if (!row) throw new GuestOrderError("This outlet's business day could not be found.");
   return row.businessDate;
 }
 
-type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
+export type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 
-function asResult<T>(fn: () => Promise<T>): Promise<Result<T>> {
+export function asResult<T>(fn: () => Promise<T>): Promise<Result<T>> {
   return fn()
     .then((value) => ({ ok: true as const, ...value }))
     .catch((err) => ({ ok: false as const, error: err instanceof Error ? err.message : "Something went wrong." }));

@@ -73,6 +73,12 @@ export const outlets = pgTable(
     timezone: text("timezone").notNull().default("Asia/Kolkata"),
     address: jsonb("address").notNull(),
     kind: text("kind").notNull().default("restaurant"),
+    // Phase 5 Slice 3 — the merchant UPI address a guest's upi://pay deep
+    // link pays into. Nullable: an outlet with no VPA configured simply
+    // doesn't offer the UPI method in the Booth (checked at the call site,
+    // not enforced here — an outlet can legitimately run cash-only).
+    upiVpa: text("upi_vpa"),
+    upiPayeeName: text("upi_payee_name"),
   },
   (t) => [
     unique().on(t.orgId, t.code),

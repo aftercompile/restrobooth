@@ -41,6 +41,7 @@ function WaiterAction({ sessionId }: { sessionId: string }) {
  *  each branch that reads it. */
 function notifyTone(t: FloorTable): "critical" | "warning" | "positive" | "neutral" | "none" {
   if (t.waiterCalledAt) return "critical";
+  if (t.hasPendingGuestPayment) return "critical";
   if (t.billStatus === "printed") return "warning";
   if (t.billStatus === "paid") return "positive";
   if (t.openedVia === "guest") return "neutral";
@@ -331,13 +332,22 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                               card in a row to the tallest — that's what made a
                               waiter-called table taller than its neighbours before).
                               Content is priority-ordered and mutually exclusive,
-                              never stacked: waiter call > bill status > self-seated
-                              tag > empty. Same slot future events (payment requested,
-                              food ready, kitchen delay, ...) would extend, not a new
+                              never stacked: waiter call > payment to confirm > bill
+                              status > self-seated tag > empty. Same slot future events
+                              (food ready, kitchen delay, ...) would extend, not a new
                               layout each time. */}
                           <div className={styles.notifyBand} data-tone={notifyTone(t)}>
                             {t.waiterCalledAt && t.sessionId ? (
                               <WaiterAction sessionId={t.sessionId} />
+                            ) : t.hasPendingGuestPayment && t.sessionId ? (
+                              // ADR-0010: only a link — confirming needs the bill's
+                              // actual payment id/method, not just a table id, so
+                              // unlike WaiterAction this can't act inline here.
+                              <Link href={`/floor/${t.sessionId}/bill`} className={styles.notifyAction} data-tone="critical">
+                                <CashIcon className={styles.notifyIcon} aria-hidden="true" />
+                                <span className={styles.notifyLabel}>Payment to confirm</span>
+                                <span className={styles.notifyHint}>View bill</span>
+                              </Link>
                             ) : t.billStatus ? (
                               <Link
                                 href={`/floor/${t.sessionId}/bill`}

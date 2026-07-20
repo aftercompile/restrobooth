@@ -307,3 +307,35 @@ export const orderStatusEvents = pgTable("order_status_events", {
   payload: jsonb("payload").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Phase 5 Slice 3 — post-meal guest feedback, one row per visit. Rating is
+// the only required signal; comment is raw text for Phase 6's later
+// aspect/sentiment extraction (RESTROBOOTH_BRIEF.md), not analyzed here.
+// Partitioned by business_date — same convention as every other
+// business-event table in this file (see create_partitions_ahead's table
+// list, drizzle/0003). Written via the guest privileged connection
+// (ADR-0009's pattern, not RLS/anon), so the unique constraint below is
+// the real duplicate-submit guard, not a UI nicety.
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: uuid("id").notNull(),
+    businessDate: date("business_date").notNull(),
+    tableSessionId: uuid("table_session_id")
+      .notNull()
+      .references(() => tableSessions.id),
+    outletId: uuid("outlet_id")
+      .notNull()
+      .references(() => outlets.id),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id),
+    rating: integer("rating").notNull(),
+    comment: text("comment"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.tableSessionId, t.businessDate),
+    check("feedback_rating_valid", sql`${t.rating} between 1 and 5`),
+  ],
+);

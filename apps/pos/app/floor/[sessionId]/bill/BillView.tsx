@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Badge, Button, Card, CardHeader, Input, Select, useToast, type ToastTone } from "@restrobooth/ui";
@@ -9,7 +9,7 @@ import { getOfflineDb, type OutboxEntry } from "../../../../lib/offline/db";
 import { enqueue, discardRejected } from "../../../../lib/offline/outbox";
 import { uuid7 } from "../../../../lib/offline/uuid7";
 import { useOnlineStatus } from "../../../../lib/offline/useOnlineStatus";
-import { refundBill, splitBillByAmount, splitBillByItems, voidBill, type ActionState } from "./actions";
+import { confirmGuestPayment, refundBill, splitBillByAmount, splitBillByItems, voidBill, type ActionState } from "./actions";
 import type { BillPreview, ExistingBill } from "./queries";
 import styles from "./page.module.css";
 
@@ -485,6 +485,41 @@ function PendingFinalizeCard({ sessionId, entry, localSettles }: { sessionId: st
   );
 }
 
+const METHOD_LABEL: Record<string, string> = { cash: "Cash", upi_intent: "UPI" };
+
+/** ADR-0010 — a guest claims to have paid (cash or the UPI deep link);
+ *  this confirms the cashier actually has the money/credit before it
+ *  counts toward the bill. No offline outbox involved — a cashier
+ *  confirming receipt is real-time by nature (they're looking at the cash
+ *  or their banking app right now), same reasoning apps/pos's
+ *  acknowledgeWaiterCall already established for other non-money, staff
+ *  RLS-scoped floor actions. */
+function PendingGuestPaymentRow({ sessionId, paymentId, method, amountPaise }: { sessionId: string; paymentId: string; method: string; amountPaise: string }) {
+  const toast = useToast();
+  const [pending, startTransition] = useTransition();
+
+  function handleConfirm() {
+    startTransition(async () => {
+      const result = await confirmGuestPayment(paymentId, sessionId);
+      if (result.error) toast(result.error, "critical");
+    });
+  }
+
+  return (
+    <div className={styles.totalsRow}>
+      <span>
+        Guest claims paid <Badge tone="warning">{METHOD_LABEL[method] ?? method}</Badge>
+      </span>
+      <span className={styles.lineAmount}>
+        {formatRupees(amountPaise)}{" "}
+        <Button type="button" variant="primary" className={styles.smallButton} disabled={pending} onClick={handleConfirm}>
+          {pending ? "Confirming…" : "Confirm"}
+        </Button>
+      </span>
+    </div>
+  );
+}
+
 function SettleView({ sessionId, bill, localSettles }: { sessionId: string; bill: ExistingBill; localSettles: OutboxEntry[] }) {
   const toast = useToast();
   const [voidState, voidAction, voidPending] = useActionState(voidBill, INITIAL);
@@ -505,6 +540,9 @@ function SettleView({ sessionId, bill, localSettles }: { sessionId: string; bill
         <span>Payable</span>
         <span className={styles.lineAmount}>{formatRupees(payablePaise)}</span>
       </div>
+      {bill.pendingPayments.map((p) => (
+        <PendingGuestPaymentRow key={p.paymentId} sessionId={sessionId} paymentId={p.paymentId} method={p.method} amountPaise={p.amountPaise} />
+      ))}
       <div className={styles.totalsRow}>
         <span>
           Paid so far {syncingCount > 0 && <Badge tone="warning">{syncingCount} syncing</Badge>}

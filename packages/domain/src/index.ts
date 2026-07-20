@@ -13,3 +13,4 @@ export * from "./bill";
 export * from "./splitBill";
 export * from "./invoiceNumber";
 export * from "./qrToken";
+export * from "./upi";

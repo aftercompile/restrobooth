@@ -5,6 +5,7 @@ import { BoothShell } from "./BoothShell";
 import { BoothPoll } from "./BoothPoll";
 import { OrderStatusBoard } from "./OrderStatusBoard";
 import { CartSection, EmptyOrderState } from "./CartSection";
+import { RequestBillButton } from "./RequestBillButton";
 
 /** Where a valid scan lands (apps/booth/app/t/[token]/route.ts redirects
  *  here) and where a returning guest's browser reopens to — split into
@@ -32,6 +33,9 @@ export default async function HomePage() {
         </div>
       )}
       <OrderStatusBoard items={liveItems} />
+      {(guest.sessionStatus === "dining" || guest.sessionStatus === "bill_requested" || guest.sessionStatus === "settling") && (
+        <RequestBillButton sessionStatus={guest.sessionStatus} />
+      )}
     </BoothShell>
   );
 }

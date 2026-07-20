@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { addToCart, callWaiter, placeOrder, removeFromCart } from "../lib/order-mutations";
+import { finalizeGuestBill, payGuestBill, submitFeedback, type GuestBill, type GuestPaymentMethod, type GuestPaymentResult } from "../lib/payment-mutations";
 
 export interface SimpleActionState {
   error: string | null;
@@ -44,5 +45,31 @@ export async function callWaiterAction(): Promise<SimpleActionState> {
   if (!result.ok) return { error: result.error };
   revalidatePath("/");
   revalidatePath("/menu");
+  return OK;
+}
+
+/** Called directly from PayPanel on mount — idempotent (returns the
+ *  existing bill if one's already finalised), so a re-visit or a refresh
+ *  never double-bills. */
+export async function finalizeGuestBillAction(): Promise<{ error: string | null; bill: GuestBill | null }> {
+  const result = await finalizeGuestBill();
+  if (!result.ok) return { error: result.error, bill: null };
+  const { ok: _ok, ...bill } = result;
+  return { error: null, bill };
+}
+
+export async function payGuestBillAction(
+  method: GuestPaymentMethod,
+): Promise<{ error: string | null; result: GuestPaymentResult | null }> {
+  const result = await payGuestBill(method);
+  if (!result.ok) return { error: result.error, result: null };
+  const { ok: _ok, ...paymentResult } = result;
+  revalidatePath("/");
+  return { error: null, result: paymentResult };
+}
+
+export async function submitFeedbackAction(rating: number, comment: string): Promise<SimpleActionState> {
+  const result = await submitFeedback(rating, comment);
+  if (!result.ok) return { error: result.error };
   return OK;
 }

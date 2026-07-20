@@ -41,7 +41,12 @@ export default function HubPage() {
   const [lastApp, setLastApp] = useState<string | null>(null);
 
   useEffect(() => {
-    setLastApp(localStorage.getItem(LAST_APP_KEY));
+    // Same setTimeout(0) pattern as apps/pos's FloorMap.tsx clock effect —
+    // react-hooks/set-state-in-effect flags a synchronous setState here
+    // (cascading-render risk); nesting it one level down is "set it right
+    // after mount" without tripping the rule.
+    const id = setTimeout(() => setLastApp(localStorage.getItem(LAST_APP_KEY)), 0);
+    return () => clearTimeout(id);
   }, []);
 
   return (

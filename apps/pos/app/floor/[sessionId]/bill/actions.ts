@@ -217,6 +217,26 @@ export interface SettleBillInput {
  * network by definition and are simply not offered offline — the UI
  * layer enforces that (`SettleView`'s method picker), not this function.
  */
+/** Shared tail of "a captured payment just landed" — settles the bill and
+ *  reconciles the session once captured payments cover the payable amount.
+ *  Used by applySettleBill (a cashier records a tender directly) and
+ *  confirmGuestPayment (a cashier confirms a guest's own pending claim) —
+ *  one settle rule, not two copies that could quietly disagree. */
+async function trySettleBill(tx: RlsTx, billId: string, sessionId: string): Promise<boolean> {
+  const bill = (await tx.select().from(schema.bills).where(eq(schema.bills.id, billId)))[0];
+  if (!bill) throw new Error("bill not found");
+
+  const paidResult = await tx.execute<{ [key: string]: unknown; total: string }>(sql`
+    select coalesce(sum(amount_paise), 0) as total from payments where bill_id = ${billId} and status = 'captured'
+  `);
+  const totalPaid = BigInt(paidResult.rows[0]!.total);
+  if (totalPaid < bill.payablePaise) return false;
+
+  await tx.update(schema.bills).set({ status: "settled" }).where(eq(schema.bills.id, billId));
+  await reconcileSessionAfterBillChange(tx, sessionId);
+  return true;
+}
+
 export async function applySettleBill(idempotencyKey: string, input: SettleBillInput): Promise<{ settled: boolean }> {
   const { billId, sessionId, method, amountRupees } = input;
   if (!billId || !sessionId) throw new Error("missing bill");
@@ -248,17 +268,7 @@ export async function applySettleBill(idempotencyKey: string, input: SettleBillI
           idempotencyKey,
         });
 
-        const paidResult = await tx.execute<{ [key: string]: unknown; total: string }>(sql`
-          select coalesce(sum(amount_paise), 0) as total from payments where bill_id = ${billId} and status = 'captured'
-        `);
-        const totalPaid = BigInt(paidResult.rows[0]!.total);
-
-        let settled = false;
-        if (totalPaid >= bill.payablePaise) {
-          await tx.update(schema.bills).set({ status: "settled" }).where(eq(schema.bills.id, billId));
-          await reconcileSessionAfterBillChange(tx, sessionId);
-          settled = true;
-        }
+        const settled = await trySettleBill(tx, billId, sessionId);
         return { settled };
       },
     );
@@ -266,6 +276,38 @@ export async function applySettleBill(idempotencyKey: string, input: SettleBillI
     revalidatePath(`/floor/${sessionId}/bill`);
     return result;
   });
+}
+
+/**
+ * ADR-0010: confirms a guest's own pending payment claim (cash or the UPI
+ * deep link, written by apps/booth's payGuestBill) — the staff half of the
+ * hybrid settle model. No capability gate: confirming receipt of money
+ * that's already claimed isn't a void/refund, it's acknowledging cash in
+ * hand or a UPI credit the cashier can see in their own banking app, same
+ * trust level as any other cashier-entered payment.
+ */
+export async function confirmGuestPayment(paymentId: string, sessionId: string): Promise<ActionState> {
+  if (!paymentId || !sessionId) return { error: "Missing payment." };
+
+  try {
+    await queryAsCurrentUser(async (tx) => {
+      const payment = (await tx.select().from(schema.payments).where(eq(schema.payments.id, paymentId)))[0];
+      if (!payment) throw new Error("payment not found");
+      if (payment.status !== "pending") throw new Error(`cannot confirm — payment is '${payment.status}'`);
+
+      const bill = (await tx.select().from(schema.bills).where(eq(schema.bills.id, payment.billId)))[0];
+      if (!bill || bill.tableSessionId !== sessionId) throw new Error("payment does not belong to this session");
+
+      await tx.update(schema.payments).set({ status: "captured" }).where(eq(schema.payments.id, paymentId));
+      await trySettleBill(tx, payment.billId, sessionId);
+    });
+  } catch (err) {
+    return { error: fullErrorMessage(err) || "Could not confirm the payment." };
+  }
+
+  revalidatePath(`/floor/${sessionId}/bill`);
+  revalidatePath("/floor");
+  return OK;
 }
 
 /** A finalised-but-unsettled bill voids directly — no payment was ever

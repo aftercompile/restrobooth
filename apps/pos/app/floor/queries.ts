@@ -33,6 +33,9 @@ export interface FloorTable {
    *  acknowledged it yet (Slice 2c). A second, independent signal from
    *  billStatus/openedVia — same footer slot, own badge. */
   waiterCalledAt: string | null;
+  /** ADR-0010 — a guest paid via the Booth (cash or UPI) and staff
+   *  haven't confirmed receipt yet. Own signal, same footer slot. */
+  hasPendingGuestPayment: boolean;
 }
 
 interface FloorRow {
@@ -53,6 +56,7 @@ interface FloorRow {
   guest_name: string | null;
   opened_via: "staff" | "guest" | null;
   waiter_called_at: string | null;
+  has_pending_guest_payment: boolean;
 }
 
 /**
@@ -70,7 +74,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       t.area_id, a.name as area_name,
       ts.id as session_id, ts.status as session_status, ts.covers, ts.opened_at, ts.store_id,
       ts.guest_name, ts.opened_via, ts.waiter_called_at,
-      bs.bill_status
+      bs.bill_status, bs.has_pending_guest_payment
     from tables t
     join areas a on a.id = t.area_id
     join outlets o on o.id = t.outlet_id
@@ -96,14 +100,18 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     -- "printed" if any bill is finalised and still owes money, else null
     -- (no bill raised yet — the table is just mid-order).
     left join lateral (
-      select case
-        when count(*) filter (where b.status not in ('voided', 'discarded')) > 0
-         and count(*) filter (where b.status not in ('voided', 'discarded', 'settled')) = 0
-          then 'paid'
-        when count(*) filter (where b.status = 'finalised') > 0
-          then 'printed'
-        else null
-      end as bill_status
+      select
+        case
+          when count(*) filter (where b.status not in ('voided', 'discarded')) > 0
+           and count(*) filter (where b.status not in ('voided', 'discarded', 'settled')) = 0
+            then 'paid'
+          when count(*) filter (where b.status = 'finalised') > 0
+            then 'printed'
+          else null
+        end as bill_status,
+        -- ADR-0010: a guest's own claim (payments.status = 'pending'),
+        -- written by apps/booth, on any of this session's bills.
+        coalesce(bool_or(exists(select 1 from payments p where p.bill_id = b.id and p.status = 'pending')), false) as has_pending_guest_payment
       from bills b
       where b.table_session_id = ts.id
     ) bs on true
@@ -128,6 +136,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     guestName: r.guest_name,
     openedVia: r.opened_via,
     waiterCalledAt: r.waiter_called_at,
+    hasPendingGuestPayment: r.has_pending_guest_payment,
   }));
 }
 

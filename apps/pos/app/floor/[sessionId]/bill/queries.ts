@@ -177,6 +177,12 @@ export async function computeBillPreview(tx: RlsTx, sessionId: string, input: Bi
   return { lines, computed };
 }
 
+export interface PendingGuestPayment {
+  paymentId: string;
+  method: string;
+  amountPaise: string;
+}
+
 export interface ExistingBill {
   billId: string;
   invoiceNo: string | null;
@@ -188,7 +194,21 @@ export interface ExistingBill {
   roundOffPaise: string;
   payablePaise: string;
   paidPaise: string;
+  /** ADR-0010: a guest's own claim (cash or UPI paid at the table) — a
+   *  payments row with status='pending', written by apps/booth, never
+   *  counted in paidPaise until a staff member confirms it. */
+  pendingPayments: PendingGuestPayment[];
 }
+
+/** Same subquery every ExistingBill read needs — a guest's pending claim
+ *  (apps/booth's payGuestBill), never counted in paid_paise. */
+const PENDING_PAYMENTS_SUBQUERY = sql`
+  coalesce(
+    (select json_agg(json_build_object('paymentId', p2.id, 'method', p2.method, 'amountPaise', p2.amount_paise))
+     from payments p2 where p2.bill_id = b.id and p2.status = 'pending'),
+    '[]'
+  )
+`;
 
 /** The session's most recent bill, whatever its status — a session
  *  realistically has at most one non-voided bill in flight at a time. */
@@ -205,11 +225,13 @@ export async function getLatestBill(tx: RlsTx, sessionId: string): Promise<Exist
     round_off_paise: string;
     payable_paise: string;
     paid_paise: string;
+    pending_payments: PendingGuestPayment[];
   }>(sql`
     select
       b.id as bill_id, b.invoice_no, b.status, b.subtotal_paise, b.discount_paise,
       b.charges_paise, b.tax_paise, b.round_off_paise, b.payable_paise,
-      coalesce((select sum(amount_paise) from payments p where p.bill_id = b.id and p.status = 'captured'), 0) as paid_paise
+      coalesce((select sum(amount_paise) from payments p where p.bill_id = b.id and p.status = 'captured'), 0) as paid_paise,
+      ${PENDING_PAYMENTS_SUBQUERY} as pending_payments
     from bills b
     where b.table_session_id = ${sessionId}
     order by b.finalised_at desc nulls last
@@ -228,6 +250,7 @@ export async function getLatestBill(tx: RlsTx, sessionId: string): Promise<Exist
     roundOffPaise: row.round_off_paise,
     payablePaise: row.payable_paise,
     paidPaise: row.paid_paise,
+    pendingPayments: row.pending_payments,
   };
 }
 
@@ -248,11 +271,13 @@ export async function getSessionBills(tx: RlsTx, sessionId: string): Promise<Exi
     round_off_paise: string;
     payable_paise: string;
     paid_paise: string;
+    pending_payments: PendingGuestPayment[];
   }>(sql`
     select
       b.id as bill_id, b.invoice_no, b.status, b.subtotal_paise, b.discount_paise,
       b.charges_paise, b.tax_paise, b.round_off_paise, b.payable_paise,
-      coalesce((select sum(amount_paise) from payments p where p.bill_id = b.id and p.status = 'captured'), 0) as paid_paise
+      coalesce((select sum(amount_paise) from payments p where p.bill_id = b.id and p.status = 'captured'), 0) as paid_paise,
+      ${PENDING_PAYMENTS_SUBQUERY} as pending_payments
     from bills b
     where b.table_session_id = ${sessionId}
     order by b.finalised_at asc nulls last
@@ -268,6 +293,7 @@ export async function getSessionBills(tx: RlsTx, sessionId: string): Promise<Exi
     roundOffPaise: row.round_off_paise,
     payablePaise: row.payable_paise,
     paidPaise: row.paid_paise,
+    pendingPayments: row.pending_payments,
   }));
 }
 

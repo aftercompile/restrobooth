@@ -4,7 +4,31 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-20 (latest), cleanup pass before Slice 3
+## Where things stand — 2026-07-20 (latest), Phase 5 Slice 3: payment + feedback — Phase 5 is now COMPLETE
+
+**The Booth can now take a guest all the way through "QR → order → pay → feedback"** — the full arc ROADMAP.md names for Phase 5. Planned via `EnterPlanMode`, three real design forks resolved with the owner via `AskUserQuestion` before building (settle model, UPI scope, feedback shape). Full rationale: [docs/adr/0010-guest-payment-and-feedback.md](docs/adr/0010-guest-payment-and-feedback.md).
+
+**What shipped:**
+- **Hybrid settle model.** A guest paying via the mock gateway ("Pay online") auto-settles and closes the table — the stand-in for a future verified Razorpay. Cash and the real `upi://pay` deep link write a `pending` payment claim instead; staff confirm receipt on POS (`confirmGuestPayment`) before it counts. Real money stays staff-authoritative either way.
+- **`PaymentGateway` interface + `MockPaymentGateway`** (`apps/booth/lib/payment-gateway.ts`) — real Razorpay/Cashfree is a later, separate decision that implements the same interface, not a rewrite of the settle path.
+- **A real `upi://pay` deep link** (`packages/domain/src/upi.ts`, 100% test coverage) — the NPCI spec is public documentation, not a vendor's private API, so this is genuinely real, not mocked. Needed one new piece of config nowhere in the schema before: `outlets.upi_vpa`/`upi_payee_name` (migration `0029`), seeded for the Ahmedabad/Vastrapur outlet.
+- **`finalizeGuestBill`/`payGuestBill`/`submitFeedback`** (`apps/booth/lib/payment-mutations.ts`) — same ADR-0009 privileged-connection pattern every other guest write uses. `resolveOwnSession` (and the page-level `getGuestContext`) gained an `allowClosed` option: the mock path closes the guest's own session as part of paying, and feedback legitimately runs right after.
+- **`apps/booth/app/pay`** — a single route, all state transitions client-side after the initial load (no navigation between "choose a method" and "thanks for the feedback," which sidesteps needing the server to re-accept a now-closed session mid-flow).
+- **A new `feedback` table** (migration `0029`, partitioned by `business_date` like every other business-event table) — 1–5 rating required, free-text comment optional, one row per visit (`unique(table_session_id, business_date)`). Deliberately minimal: Phase 6's AI layer is what mines aspects/sentiment out of the comment text later, per the brief — this slice only captures the raw signal.
+- **POS: confirm a guest's pending payment** — a new row on the bill view (`PendingGuestPaymentRow`) and a "Payment to confirm" state in the floor card's notification band (this session's earlier redesign), prioritized alongside "Waiter called." Not mirrored to Captain — it has no bill screen of its own, a prior decision, unchanged here.
+
+### Still deferred
+- Real Razorpay/Cashfree integration + webhook verification (ADR-0001's Hobby→Pro trigger; `PaymentGateway` exists so this is additive, not a rewrite).
+- Guest-side split payment, guest-applied discount/service charge — both stay POS-only; a guest always pays one plain, whole bill.
+- Offline guest payment (the Booth is a phone that's online if it loaded at all).
+- Phase 6's aspect/sentiment extraction from feedback comments.
+- Everything the prior entries already deferred (real cross-app SSO, a `service_requests` table, KDS idle policy).
+
+**Phase 5 is complete.** Per ROADMAP.md's plan of record (Phase 1 → 2 → 3a → 3b → 4 → 5 → **PILOT**), the next real milestone isn't a phase — it's a real restaurant running a real service.
+
+---
+
+## Where things stand — 2026-07-20, cleanup pass before Slice 3
 
 Four small items closed out before starting Phase 5 Slice 3 planning. Full detail: [DECISIONS.md](DECISIONS.md)'s "Cleanup pass" entry.
 
