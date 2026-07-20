@@ -27,9 +27,19 @@ function WaiterAction({ sessionId }: { sessionId: string }) {
     <button type="button" className={styles.notifyAction} data-tone="critical" disabled={pending} onClick={handleAcknowledge}>
       <BellIcon className={styles.notifyIcon} aria-hidden="true" />
       <span className={styles.notifyLabel}>{pending ? "Clearing…" : "Waiter called"}</span>
-      <span className={styles.notifyHint}>{pending ? "" : "Acknowledge"}</span>
+      {!pending && <span className={styles.notifyHint}>Handled</span>}
     </button>
   );
+}
+
+/** Same priority order as apps/pos/app/floor/FloorMap.tsx's notifyTone —
+ *  drives the band's own tone-tinted surface. */
+function notifyTone(t: FloorTable): "critical" | "warning" | "positive" | "neutral" | "none" {
+  if (t.waiterCalledAt) return "critical";
+  if (t.billStatus === "printed") return "warning";
+  if (t.billStatus === "paid") return "positive";
+  if (t.openedVia === "guest") return "neutral";
+  return "none";
 }
 
 function formatElapsed(ms: number): string {
@@ -138,7 +148,7 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                           {/* Reserved even when empty — see .notifyBand's comment
                               below for why every row ends in the same
                               fixed-height strip. */}
-                          <div className={styles.notifyBand} />
+                          <div className={styles.notifyBand} data-tone="none" />
                         </div>
                       </StateRail>
                     );
@@ -174,7 +184,7 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                             Captain has no bill screen of its own (billing is a
                             POS/cashier capability), so bill status here is a
                             status only, no quick-link. */}
-                        <div className={styles.notifyBand}>
+                        <div className={styles.notifyBand} data-tone={notifyTone(t)}>
                           {t.waiterCalledAt && t.sessionId ? (
                             <WaiterAction sessionId={t.sessionId} />
                           ) : t.billStatus ? (

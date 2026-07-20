@@ -211,13 +211,14 @@
   min-height: 92px;
 }
 
-/* Slice 2c — a static attention outline, no pulse. The border-colour swap
-   rides the SAME already-granted floorMotionScope exception the status
-   chip's colour change uses (DESIGN.md's "status-chip colour change" —
-   this is the card-level equivalent), not a new one. */
+/* Deliberately quiet — the card border used to go full signal-red, which
+   competed with the chip's OWN critical-red for attention and made every
+   waiter-called table look like three separate alarms stacked on top of
+   each other. The notification band below now carries the alert (colour,
+   copy, action); this is just a soft lift, not a second alarm. */
 .tableCard[data-waiter-called="true"] {
-  border-color: var(--signal-600);
-  box-shadow: 0 0 0 1px var(--signal-600);
+  border-color: color-mix(in srgb, var(--signal-600) 30%, var(--border));
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--signal-600) 14%, transparent);
 }
 
 .tableCardInner {
@@ -294,16 +295,37 @@
 .notifyBand {
   display: flex;
   align-items: stretch;
-  height: 44px;
+  height: 48px;
   border-top: 1px solid var(--border);
+  background: var(--surface);
   flex-shrink: 0;
   overflow: hidden;
+}
+
+/* Tone-tinted surface — a distinct strip so an operational alert reads as
+   its own zone, not just another line inside the table's own card body.
+   Same color-mix-from-token idiom as .kpiTile[data-attention] above, kept
+   deliberately pale (8-10%) so it separates without shouting: the ramp
+   chip up top stays the one loud red on the card. */
+.notifyBand[data-tone="critical"] {
+  background: color-mix(in srgb, var(--signal-600) 8%, var(--surface));
+  border-top-color: color-mix(in srgb, var(--signal-600) 40%, var(--border));
+}
+
+.notifyBand[data-tone="warning"] {
+  background: color-mix(in srgb, var(--ramp-warming) 10%, var(--surface));
+  border-top-color: color-mix(in srgb, var(--ramp-warming) 40%, var(--border));
+}
+
+.notifyBand[data-tone="positive"] {
+  background: color-mix(in srgb, var(--ramp-fresh) 8%, var(--surface));
+  border-top-color: color-mix(in srgb, var(--ramp-fresh) 35%, var(--border));
 }
 
 .notifyAction {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
   padding: 0 var(--space-2);
@@ -316,17 +338,14 @@
 }
 
 .notifyAction[data-tone="critical"] {
-  background: color-mix(in srgb, var(--signal-600) 12%, transparent);
   color: var(--signal-600);
 }
 
 .notifyAction[data-tone="warning"] {
-  background: color-mix(in srgb, var(--ramp-warming) 16%, transparent);
   color: color-mix(in srgb, var(--ramp-warming) 70%, var(--text));
 }
 
 .notifyAction[data-tone="positive"] {
-  background: color-mix(in srgb, var(--ramp-fresh) 12%, transparent);
   color: var(--ramp-fresh);
 }
 
@@ -335,9 +354,12 @@
   cursor: default;
 }
 
+/* Larger and higher-contrast than a plain meta icon (.metaIcon is 15px) —
+   this is the one glanceable "something needs you" mark on the card, so
+   it earns the extra size. */
 .notifyIcon {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
@@ -351,11 +373,21 @@
   font-weight: 600;
 }
 
+/* A ghost button, not a hyperlink — border and text share the parent
+   action's tone colour via currentColor, transparent fill, so "Handled" /
+   "View bill" reads as a deliberate, tappable control rather than a piece
+   of underlined inline text. */
 .notifyHint {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
   font-size: 12px;
   font-weight: 700;
-  text-decoration: underline;
+  color: currentColor;
+  border: 1px solid currentColor;
+  border-radius: 999px;
 }
 
 .notifySubtle {
@@ -435,16 +467,39 @@
 
 /* ==========================================================================
    The one motion exception on POS (docs/DESIGN.md 2026-07-19 addendum,
-   confirmed with the owner before building). tokens/motion.css's blanket
+   confirmed with the owner before building; extended 2026-07-20, also
+   confirmed with the owner, to the notification band's icon pulse and
+   entrance slide below). tokens/motion.css's blanket
    `[data-density="pos"] * { transition: none !important }` still applies
    everywhere else in this app — order pad, bill, menu all stay instant.
 
    The state VALUES below (hover elevation, active-press scale) are NOT
    gated on prefers-reduced-motion — same precedent as Button's existing
    `:active { filter: brightness(0.94) }`, an instant discrete swap is not
-   what reduced-motion asks to remove. Only the `transition` declarations
-   that make those swaps ANIMATE are gated, in their own block below.
+   what reduced-motion asks to remove. Only the `transition`/`animation`
+   declarations that make those swaps ANIMATE are gated, in their own
+   block below.
    ========================================================================== */
+@keyframes notifySlideIn {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes notifyIconPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
 .floorMotionScope .tableCard:hover {
   box-shadow: 0 4px 14px rgb(18 32 29 / 10%);
   border-color: var(--brass-500);
@@ -498,6 +553,25 @@
   .floorMotionScope .refreshButton:active,
   .floorMotionScope .autoRefreshToggle:active {
     transition: transform 100ms ease-out !important;
+  }
+
+  /* The notification band's content swaps by React unmounting one element
+     and mounting another (WaiterAction ↔ bill Link ↔ self-seated tag) —
+     the animation plays automatically on that mount, no JS trigger
+     needed. The BAND's own height never moves (that's the whole point of
+     it being reserved space), so this animates the content sliding into
+     an already-fixed slot, not the slot itself. */
+  .floorMotionScope .notifyAction,
+  .floorMotionScope .notifySubtle {
+    animation: notifySlideIn 200ms ease-out !important;
+  }
+
+  /* Only the icon pulses, not the card or the band — a card-wide pulse
+     was ruled out as too much motion for a screen a cashier stares at all
+     shift; a single 18px icon breathing every 3s is enough to catch a
+     glance without being distracting sustained over minutes. */
+  .floorMotionScope .notifyBand[data-tone="critical"] .notifyIcon {
+    animation: notifyIconPulse 3s ease-in-out infinite !important;
   }
 }
 

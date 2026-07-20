@@ -4,6 +4,23 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
+## Where things stand — 2026-07-20 (latest), floor card redesign: universal notification band
+
+**The floor cards' footer is now structurally fixed-height (48px), always rendered, on both POS and Captain** — closing out a bug the previous entry's call-waiter footer introduced (a variable-height footer stretched its whole grid row when present). Full rationale and the design spec behind it: [DECISIONS.md](DECISIONS.md)'s "Floor card redesign" entry, and [docs/DESIGN.md](docs/DESIGN.md)'s "Amendment 4."
+
+**What shipped:**
+- `.notifyBand` (POS `FloorMap.module.css`, Captain `FloorList.module.css`) — every card ends in the same strip regardless of state; content is priority-ordered and mutually exclusive (waiter call > bill status > self-seated tag > empty), never stacked.
+- Card border on a waiter-called table de-escalated from full `--signal-600` to a soft `color-mix` tint + shadow — the notification band now carries the alert's colour, not the whole card.
+- "Acknowledge" → "Handled", restyled as a ghost button (border+text via `currentColor`, no underline).
+- A second, narrowly-scoped motion exception on **POS only** (`.floorMotionScope`, gated by `prefers-reduced-motion`): the band's icon pulses (3s) when critical, and swapped-in content slides up (200ms) on mount. **Not extended to Captain** — flagged to the user, not silently applied, since Captain has no equivalent motion scope today.
+- Verified with Playwright screenshots (uniform card height across idle/self-seated/waiter-called states, both apps) and a computed-style check confirming the animation is actually live under `prefers-reduced-motion: no-preference` and correctly off under `reduce`.
+
+### Still deferred
+- Extending the icon-pulse/slide motion to Captain, if the user wants it (currently POS-only by design, see above).
+- Everything the prior entry already deferred (payment/feedback Slice 3, `apps/booth` Vercel deploy, staff-side `business_days` lock hardening, a `service_requests` history table).
+
+---
+
 ## Where things stand — 2026-07-20, Phase 5 Slice 2c: call-waiter
 
 **A guest can now flag staff without ordering anything.** A "Call waiter" bell in the Booth's header ([apps/booth/app/BoothShell.tsx](apps/booth/app/BoothShell.tsx)) is reachable from every page, not just one. This closes out the Slice 2 build sequence — token gate (1) → browse/status board (2a) → self-service ordering (2b) → call-waiter (2c) — the Booth now covers everything ROADMAP.md's Phase 5 line names except payment/feedback (Slice 3).

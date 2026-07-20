@@ -29,9 +29,22 @@ function WaiterAction({ sessionId }: { sessionId: string }) {
     <button type="button" className={styles.notifyAction} data-tone="critical" disabled={pending} onClick={handleAcknowledge}>
       <BellIcon className={styles.notifyIcon} aria-hidden="true" />
       <span className={styles.notifyLabel}>{pending ? "Clearing…" : "Waiter called"}</span>
-      <span className={styles.notifyHint}>{pending ? "" : "Acknowledge"}</span>
+      {!pending && <span className={styles.notifyHint}>Handled</span>}
     </button>
   );
+}
+
+/** The band's own tone drives its surface (background + top border) — a
+ *  distinct, tone-tinted strip so an operational alert reads as visually
+ *  separate from the table details above it, not just another line of
+ *  text. Priority order lives here, once, rather than being re-derived by
+ *  each branch that reads it. */
+function notifyTone(t: FloorTable): "critical" | "warning" | "positive" | "neutral" | "none" {
+  if (t.waiterCalledAt) return "critical";
+  if (t.billStatus === "printed") return "warning";
+  if (t.billStatus === "paid") return "positive";
+  if (t.openedVia === "guest") return "neutral";
+  return "none";
 }
 
 const DWELL_LEGEND = [
@@ -265,7 +278,7 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                             {/* Reserved even when empty — see the notifyBand
                                 comment below for why every card ends in the
                                 same fixed-height strip. */}
-                            <div className={styles.notifyBand} />
+                            <div className={styles.notifyBand} data-tone="none" />
                           </div>
                         );
                       }
@@ -315,7 +328,7 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                               tag > empty. Same slot future events (payment requested,
                               food ready, kitchen delay, ...) would extend, not a new
                               layout each time. */}
-                          <div className={styles.notifyBand}>
+                          <div className={styles.notifyBand} data-tone={notifyTone(t)}>
                             {t.waiterCalledAt && t.sessionId ? (
                               <WaiterAction sessionId={t.sessionId} />
                             ) : t.billStatus ? (

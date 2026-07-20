@@ -40,10 +40,13 @@
   overflow: hidden;
 }
 
-/* Slice 2c — static attention outline, no pulse/animation. */
+/* Deliberately quiet — see apps/pos/app/floor/FloorMap.module.css's
+   identical comment: the row border used to go full signal-red, competing
+   with the ramp rail's OWN critical-red. The notification band below now
+   carries the alert; this is a soft lift, not a second alarm. */
 .rowCard[data-waiter-called="true"] {
-  border-color: var(--signal-600);
-  box-shadow: 0 0 0 1px var(--signal-600);
+  border-color: color-mix(in srgb, var(--signal-600) 30%, var(--border));
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--signal-600) 14%, transparent);
 }
 
 .tableButton {
@@ -75,15 +78,34 @@
 .notifyBand {
   display: flex;
   align-items: stretch;
-  height: 44px;
+  height: 48px;
   border-top: 1px solid var(--border);
+  background: var(--surface);
   overflow: hidden;
+}
+
+/* Tone-tinted surface — same color-mix-from-token idiom as
+   apps/pos/app/floor/FloorMap.module.css's identical rule, kept pale so
+   it separates the alert zone without competing with the rail's colour. */
+.notifyBand[data-tone="critical"] {
+  background: color-mix(in srgb, var(--signal-600) 8%, var(--surface));
+  border-top-color: color-mix(in srgb, var(--signal-600) 40%, var(--border));
+}
+
+.notifyBand[data-tone="warning"] {
+  background: color-mix(in srgb, var(--ramp-warming) 10%, var(--surface));
+  border-top-color: color-mix(in srgb, var(--ramp-warming) 40%, var(--border));
+}
+
+.notifyBand[data-tone="positive"] {
+  background: color-mix(in srgb, var(--ramp-fresh) 8%, var(--surface));
+  border-top-color: color-mix(in srgb, var(--ramp-fresh) 35%, var(--border));
 }
 
 .notifyAction {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
   padding: 0 var(--space-2);
@@ -96,7 +118,6 @@
 }
 
 .notifyAction[data-tone="critical"] {
-  background: color-mix(in srgb, var(--signal-600) 12%, transparent);
   color: var(--signal-600);
 }
 
@@ -105,9 +126,11 @@
   cursor: default;
 }
 
+/* Larger, higher-contrast than a plain meta glyph — the one glanceable
+   "something needs you" mark on the row. */
 .notifyIcon {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
@@ -121,11 +144,19 @@
   font-weight: 600;
 }
 
+/* A ghost button, not a hyperlink — border and text share the parent
+   action's tone colour via currentColor, transparent fill. */
 .notifyHint {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
   font-size: 12px;
   font-weight: 700;
-  text-decoration: underline;
+  color: currentColor;
+  border: 1px solid currentColor;
+  border-radius: 999px;
 }
 
 .notifySubtle {

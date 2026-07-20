@@ -4,6 +4,24 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-20 (latest) — Floor card redesign: universal notification band
+
+**Decided by:** Mohammed, across three follow-up messages on Slice 2c's call-waiter UI, each narrowing the fix: (1) "the Acknowledge button goes out of the card border" — a CSS overflow bug, fixed twice (the first fix, wrapping only the outer footer, was itself insufficient — the user caught it, "The Acknowledge button still goes out of the card"); (2) "the table having waiter requested is taller than other cards" — the real, structural version of the same complaint, since the stacking fix that solved (1) made the card's footer variable-height, which stretched the whole grid row (CSS grid equalizes row height to the tallest card); (3) a full design spec for the fix — ghost-button copy/styling, a tone-tinted footer surface, a de-escalated card border, restrained icon/content motion, and a named architecture: "Universal Action Center."
+
+**The structural fix, not a third CSS patch:** every table card (POS `FloorMap.module.css`'s `.notifyBand`, mirrored in Captain's `FloorList.module.css`) now ends in the SAME fixed-height strip (48px), always rendered, whether idle, self-seated, billed, or waiter-called. Content is priority-ordered and mutually exclusive — waiter call > bill status > self-seated tag > empty — never stacked, so the card's total height is structurally incapable of varying by content. Labels truncate with an ellipsis rather than push an action off the edge, so the original overflow bug can't recur regardless of card width. This is also the reusable extension point for future service signals (payment requested, food ready, kitchen delay) named in the spec — **no UI was built for those**, since they aren't real columns yet (CLAUDE.md: don't build against invented data); the pattern is ready, the data isn't.
+
+**De-escalated the card border, deliberately.** The waiter-called card previously got a full `var(--signal-600)` border ring — competing for attention with the ramp chip's own critical-red, so a waiter-called table showed three simultaneous red signals (chip, ring, badge) for one event. Softened to a `color-mix` tint (30%) plus a subtle tinted shadow; the notification band itself now carries the alert's colour, copy, and action, so the border is a quiet lift, not a second alarm — the chip stays the one loud signal on the card, per the spec's "prioritize status flags over secondary alert details."
+
+**A second, narrowly-scoped motion exception — extending Amendment 2's precedent, not repealing the zero-motion rule.** Within `.floorMotionScope` only (POS's floor grid), gated by `prefers-reduced-motion` and using `!important` to out-specify `tokens/motion.css`'s blanket kill-switch (caught by a computed-style Playwright check mid-build: the animation was silently being killed because the blanket rule's `!important` beats an unqualified `animation:` declaration — the same reason Amendment 2's transitions needed `!important` too, now applied consistently): the notification band's icon pulses (3s loop) when critical, and swapped-in band content slides up 200ms on mount, playing automatically since React unmounts/remounts the child on every priority-state change — no JS trigger needed. **Captain was not extended** — it has no equivalent `floorMotionScope` and stays fully static, consistent with its existing zero-motion rule; flagged to the user rather than silently applied, in case they want it added later. See DESIGN.md's "Amendment 4" and CLAUDE.md's traps section for the full writeup.
+
+**Copy:** "Acknowledge" (underlined hyperlink text) → "Handled" (a ghost-button pill, border+text via `currentColor` off the row's own tone colour) — one of three options the spec offered; chose it over "✓ Got it" / "Dismiss" for being terse and professional across every future action-band state, not just this one.
+
+**Verified with real Playwright screenshots** on both apps' floor views (idle/self-seated/waiter-called cards all render the same height in the same grid row) and a direct computed-style check confirming the icon's `animation-name` is actually applied under `prefers-reduced-motion: no-preference` and correctly reverts to `none` under `reduce`. Test fixture (`table_sessions.waiter_called_at`, set directly via `psql` for screenshotting) restored to `null` afterward.
+
+Full detail: [PROGRESS.md](PROGRESS.md).
+
+---
+
 ## 2026-07-20 — Phase 5 Slice 2c: call-waiter, closing out Slice 2
 
 **Decided by:** Mohammed ("proceed" → chose "Build call-waiter next" over deploying `apps/booth` or hardening the staff-side fire lock, both also queued). Planned via `EnterPlanMode` since it's still a guest *write* (the same trust wall ADR-0009 already navigated), but the plan turned out short — every piece it needs already existed.
