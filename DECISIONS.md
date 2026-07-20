@@ -4,7 +4,21 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-20 (latest) — 60-minute idle logout (all 4 staff apps) + SSO deferred
+## 2026-07-20 (latest) — POS made responsive down to phone width
+
+**Decided by:** Mohammed — "POS does not seem mobile/tablet friendly. Make it responsive." Audited first via real Playwright screenshots at tablet (820px) and phone (390px) widths across every main POS page, rather than guessing at what to fix.
+
+**The actual bug: `PosShell.module.css`'s header (`.bar`) had no responsive handling at all below ~1100px** (only the context strip — business date/outlets-open — was already hidden there). Below that, nothing wrapped: the nav tabs, search field, alerts bell, and avatar menu just overflowed the header horizontally with no scroll affordance, so at phone width "Day" and everything to its right (search, bell, avatar — including the sign-out menu) fell off-screen and was **unreachable**, not just visually cramped. The floor grid, order pad, bill, menu, and day pages, by contrast, already reflowed correctly — their grids use `auto-fill`/`minmax` or already had a `@media (width <= 900px)` single-column fallback from earlier work, confirmed via a real Playwright `scrollWidth` check (zero horizontal overflow at 375px on every page except the header, both before and after).
+
+**The fix is pure CSS, no new component state, no hamburger menu:** below 760px, `.bar` gets `flex-wrap: wrap` and the two elements that don't fit (`.bar`'s only `<nav>` and `<form>` — targetable by tag with zero markup changes) get `order` + `flex-basis: 100%`, each claiming its own full-width row below the compact top row (logo, bell, avatar). Reused the exact same "identify by tag, not a new wrapper class" trick rather than restructuring `PosShell.tsx`'s JSX.
+
+**Found and fixed a second, pre-existing bug while auditing the header: several POS-local buttons hardcoded `36px`/`40px`/`32px` heights**, violating CLAUDE.md's own "44px touch targets on POS are floor, not polish" — a rule the design token layer (`packages/ui/src/tokens/spacing.css`'s `--touch-target`, already `44px` at `pos` density) already enforces for every *shared* component (`Button`, `Input`, etc.), but these were bespoke, app-local elements (the alerts bell trigger, avatar menu items, search field, nav tabs, floor's refresh/auto-refresh toggles, order pad's small buttons, the menu's 86-toggle, the offline status bar) that never read the token at all. Fixed all of them to `var(--touch-target)` rather than a hardcoded `44px`, so they stay correct if the density token ever changes.
+
+**Verified with real screenshots at 390px, 768px, and 820px** across floor, order pad, bill, menu, and a dialog (`UnseatDialog`, confirming the existing shared `Dialog` primitive already handles mobile widths correctly with no changes needed) — plus the scripted horizontal-overflow check above. No feature or layout removed, no new density added — this stays `data-density="pos"` throughout; the fix is entirely "let the header wrap" plus token consistency.
+
+---
+
+## 2026-07-20 — 60-minute idle logout (all 4 staff apps) + SSO deferred
 
 **Decided by:** Mohammed — "create a security logout timer of 60 minutes, also build an SSO for all apps." The logout timer was unambiguous and shipped directly. SSO was not: researched first (no idle-timeout/auto-logout code existed anywhere in the codebase; more importantly, none of the 5 apps share a production domain today — `DECISIONS.md`'s 2026-07-19 entry says each is "presumably separate domains in prod... each app is its own Vercel project" — and Hub was built that same day specifically around "sign in once you land on it," a deliberate no-shared-session design). Real cookie-based SSO needs a shared root domain, which is a production-infra decision, not a code change — asked via `AskUserQuestion` rather than guessing or unilaterally reversing the Hub decision. **Chose "hold off on full SSO for now."**
 

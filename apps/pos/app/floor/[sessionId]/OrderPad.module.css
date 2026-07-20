@@ -115,12 +115,12 @@
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  min-height: 36px;
+  min-height: var(--touch-target);
   padding: 0 6px;
 }
 
 .smallButton {
-  min-height: 36px;
+  min-height: var(--touch-target);
   padding: 0 10px;
   font-size: var(--text-sm);
 }
@@ -190,6 +190,6 @@
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  min-height: 44px;
+  min-height: var(--touch-target);
   padding: 0 8px;
 }

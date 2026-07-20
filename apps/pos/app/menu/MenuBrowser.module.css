@@ -62,7 +62,7 @@
 }
 
 .toggleButton {
-  min-height: 36px;
+  min-height: var(--touch-target);
   padding: 0 10px;
   font-size: var(--text-sm);
 }

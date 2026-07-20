@@ -4,7 +4,22 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-20 (latest), 60-min idle logout + SSO deferred
+## Where things stand — 2026-07-20 (latest), POS made responsive
+
+**POS now works down to phone width (375px) with zero horizontal overflow on every page.** Full rationale: [DECISIONS.md](DECISIONS.md)'s "POS made responsive" entry.
+
+**The real bug:** `PosShell.module.css`'s header had no responsive handling below ~1100px — nav tabs, search, alerts, and the avatar/sign-out menu fell off-screen at phone width and were genuinely unreachable, not just cramped. Every other page (floor grid, order pad, bill, menu, day) already reflowed correctly. Fixed with pure CSS (`flex-wrap` + `order` on the header's own `<nav>`/`<form>`, no markup changes, no hamburger).
+
+**Also fixed while auditing:** several POS-local buttons hardcoded sub-44px heights (36/40/32px), violating CLAUDE.md's own touch-target floor — switched to the existing `--touch-target` design token (already `44px` at `pos` density) instead of a magic number.
+
+**Verified with real screenshots** at 390/768/820px across every main page plus a dialog, and a scripted `scrollWidth` check confirming zero horizontal overflow at 375px.
+
+### Still deferred
+- Nothing new — this was a pure bugfix/audit pass, no scope deferred.
+
+---
+
+## Where things stand — 2026-07-20, 60-min idle logout + SSO deferred
 
 **All 4 staff apps (POS, KDS, Captain, Console) now auto-sign-out after 60 minutes of real inactivity** — no mouse/key/touch/scroll for the full window, with a 60s warning dialog ("Stay signed in") beforehand. Full rationale: [DECISIONS.md](DECISIONS.md)'s "60-minute idle logout + SSO deferred" entry.
 

@@ -4,7 +4,7 @@
   align-items: center;
   gap: 6px;
   min-width: 200px;
-  height: 40px;
+  height: var(--touch-target);
   padding: 0 10px;
   /* Recessed, same "hole to type into" idea as every input on the form
      screens (Part A's surface-hierarchy pair) — just the teal-header

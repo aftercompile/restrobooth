@@ -48,7 +48,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
+  min-height: var(--touch-target);
   padding: 0 14px;
   border-radius: var(--radius);
   color: rgb(255 255 255 / 72%);
@@ -111,6 +111,45 @@
 
 .spacer {
   flex: 1;
+}
+
+/* Below this, the single row (mark, nav, search, alerts, avatar) no
+   longer fits — .bar wraps to a second row for nav + search rather than
+   clipping them off-screen (the old failure mode: "Day" and everything
+   right of it fell past the viewport edge with no way to reach it). Mark,
+   alerts and avatar stay on row one since they're small and need to stay
+   reachable without scrolling; nav and search get their own full-width
+   row each, in that order, since nav is the more frequent action. No new
+   component state, no hamburger — plain flex-wrap plus `order` on the
+   two elements identifiable by tag (`.bar`'s only <nav> and <form>), so
+   this needed zero markup changes. */
+@media (width <= 760px) {
+  .bar {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+    min-height: unset;
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .bar > nav {
+    order: 5;
+    flex: 1 0 100%;
+  }
+
+  .bar > form {
+    order: 6;
+    flex: 1 0 100%;
+  }
+
+  .nav {
+    justify-content: space-between;
+  }
+
+  .navLink {
+    flex: 1;
+    justify-content: center;
+    padding: 0 8px;
+  }
 }
 
 .main {
