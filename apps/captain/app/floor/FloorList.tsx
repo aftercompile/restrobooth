@@ -11,10 +11,10 @@ import type { FloorTable } from "./queries";
 import { SeatTableDialog } from "./SeatTableDialog";
 import styles from "./FloorList.module.css";
 
-/** Slice 2c — same static-badge-plus-acknowledge pattern as
- *  apps/pos/app/floor/FloorMap.tsx's WaiterCalledBadge, sized for
+/** Same notification-band pattern as apps/pos/app/floor/FloorMap.tsx's
+ *  WaiterAction — the whole strip is the acknowledge control, sized for
  *  Captain's list row instead of a grid card. */
-function WaiterCalledRow({ sessionId }: { sessionId: string }) {
+function WaiterAction({ sessionId }: { sessionId: string }) {
   const [pending, startTransition] = useTransition();
 
   function handleAcknowledge() {
@@ -24,15 +24,11 @@ function WaiterCalledRow({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <div className={styles.waiterRow}>
-      <Badge tone="critical">
-        <BellIcon className={styles.waiterBellIcon} aria-hidden="true" />
-        Waiter called
-      </Badge>
-      <button type="button" className={styles.acknowledgeButton} disabled={pending} onClick={handleAcknowledge}>
-        {pending ? "Clearing…" : "Acknowledge"}
-      </button>
-    </div>
+    <button type="button" className={styles.notifyAction} data-tone="critical" disabled={pending} onClick={handleAcknowledge}>
+      <BellIcon className={styles.notifyIcon} aria-hidden="true" />
+      <span className={styles.notifyLabel}>{pending ? "Clearing…" : "Waiter called"}</span>
+      <span className={styles.notifyHint}>{pending ? "" : "Acknowledge"}</span>
+    </button>
   );
 }
 
@@ -134,10 +130,16 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                   if (!t.sessionId || !t.openedAt) {
                     return (
                       <StateRail key={t.tableId} state="idle" label="Available">
-                        <button type="button" className={styles.tableButton} onClick={() => setSeating(t)}>
-                          <span className={styles.tableLabel}>{t.label}</span>
-                          <span className={styles.tableMeta}>Seats {t.capacity} · available</span>
-                        </button>
+                        <div className={styles.rowCard}>
+                          <button type="button" className={styles.tableButton} onClick={() => setSeating(t)}>
+                            <span className={styles.tableLabel}>{t.label}</span>
+                            <span className={styles.tableMeta}>Seats {t.capacity} · available</span>
+                          </button>
+                          {/* Reserved even when empty — see .notifyBand's comment
+                              below for why every row ends in the same
+                              fixed-height strip. */}
+                          <div className={styles.notifyBand} />
+                        </div>
                       </StateRail>
                     );
                   }
@@ -146,41 +148,48 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                   const elapsedLabel = elapsedMs === null ? "…" : formatElapsed(elapsedMs);
                   return (
                     <StateRail key={t.tableId} state={rampState} label={`${t.sessionStatus}, ${elapsedLabel}`}>
-                      <Link
-                        href={`/floor/${t.sessionId}`}
-                        className={styles.tableButton}
-                        data-waiter-called={t.waiterCalledAt !== null}
-                      >
-                        <span className={styles.tableLabelGroup}>
-                          <span className={styles.tableLabel}>{t.label}</span>
-                          {/* Optional — most walk-ins won't have one; the row is
-                              the same height either way, just one line taller
-                              when it's set. */}
-                          {t.guestName && <span className={styles.guestName}>{t.guestName}</span>}
-                        </span>
-                        <span className={styles.tableMetaGroup}>
-                          {/* Same "second signal, not folded into the rail" reasoning as
-                              apps/pos/app/floor/FloorMap.tsx — the rail stays pure elapsed
-                              time, these badges are their own axes. Captain has no
-                              bill screen of its own (billing is a POS/cashier capability),
-                              so bill status is a badge only, no quick-link. */}
-                          {t.openedVia === "guest" && <Badge tone="neutral">Self-seated</Badge>}
-                          {t.billStatus && (
-                            <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
-                              {t.billStatus === "paid" ? "Paid" : "Printed"}
-                            </Badge>
-                          )}
-                          <span className={styles.tableMeta}>
-                            {t.covers} cover{t.covers === 1 ? "" : "s"} · {t.sessionStatus}
-                            <br />
-                            <span className={styles.tableTimer}>{elapsedLabel}</span>
+                      <div className={styles.rowCard} data-waiter-called={t.waiterCalledAt !== null}>
+                        <Link href={`/floor/${t.sessionId}`} className={styles.tableButton}>
+                          <span className={styles.tableLabelGroup}>
+                            <span className={styles.tableLabel}>{t.label}</span>
+                            {/* Optional — most walk-ins won't have one; the row is
+                                the same height either way, just one line taller
+                                when it's set. */}
+                            {t.guestName && <span className={styles.guestName}>{t.guestName}</span>}
                           </span>
-                        </span>
-                      </Link>
-                      {/* Outside the Link (an <a>, can't nest a click-handling
-                          button) — same "acknowledge lives in a footer slot
-                          beside the card" shape as apps/pos's FloorMap. */}
-                      {t.waiterCalledAt && t.sessionId && <WaiterCalledRow sessionId={t.sessionId} />}
+                          <span className={styles.tableMetaGroup}>
+                            <span className={styles.tableMeta}>
+                              {t.covers} cover{t.covers === 1 ? "" : "s"} · {t.sessionStatus}
+                              <br />
+                              <span className={styles.tableTimer}>{elapsedLabel}</span>
+                            </span>
+                          </span>
+                        </Link>
+                        {/* The notification band — every row ends in this SAME
+                            fixed-height strip regardless of state, mirroring
+                            apps/pos/app/floor/FloorMap.tsx's .notifyBand (see its
+                            comment for the full rationale). Outside the Link (an
+                            <a>, can't nest a click-handling button). Priority:
+                            waiter call > bill status > self-seated tag > empty.
+                            Captain has no bill screen of its own (billing is a
+                            POS/cashier capability), so bill status here is a
+                            status only, no quick-link. */}
+                        <div className={styles.notifyBand}>
+                          {t.waiterCalledAt && t.sessionId ? (
+                            <WaiterAction sessionId={t.sessionId} />
+                          ) : t.billStatus ? (
+                            <div className={styles.notifySubtle}>
+                              <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
+                                {t.billStatus === "paid" ? "Paid" : "Bill printed"}
+                              </Badge>
+                            </div>
+                          ) : t.openedVia === "guest" ? (
+                            <div className={styles.notifySubtle}>
+                              <Badge tone="neutral">Self-seated</Badge>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
                     </StateRail>
                   );
                 })}

@@ -30,6 +30,22 @@
   gap: var(--space-1);
 }
 
+/* The card box — border/radius/background live here, not on .tableButton,
+   so the button (or Link) and the notification band below it read as ONE
+   unified card with a single boundary, not two stacked boxes. */
+.rowCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Slice 2c — static attention outline, no pulse/animation. */
+.rowCard[data-waiter-called="true"] {
+  border-color: var(--signal-600);
+  box-shadow: 0 0 0 1px var(--signal-600);
+}
+
 .tableButton {
   display: flex;
   align-items: center;
@@ -38,9 +54,8 @@
   width: 100%;
   text-align: left;
   text-decoration: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: transparent;
+  border: none;
   cursor: pointer;
   min-height: 56px;
   padding: var(--space-2);
@@ -48,49 +63,75 @@
   font: inherit;
 }
 
-/* Slice 2c — static attention outline, no pulse/animation. */
-.tableButton[data-waiter-called="true"] {
-  border-color: var(--signal-600);
-  box-shadow: 0 0 0 1px var(--signal-600);
-}
-
-/* Stacked, not side-by-side — same reasoning as apps/pos's
-   FloorMap.module.css .waiterFooterRow: a space-between row doesn't wrap
-   on its own, so the button can overflow past the card on a narrow
-   viewport instead of dropping to its own line. Stacking removes that
-   failure mode entirely. */
-.waiterRow {
+/* ==========================================================================
+   The notification band — every row ends in this SAME fixed-height strip
+   (44px) whether or not it has anything to say, mirroring apps/pos's
+   FloorMap.module.css .notifyBand (see its comment for the full
+   rationale: a variable-height footer used to make one row taller than
+   its neighbours). Content is priority-ordered and mutually exclusive,
+   never stacked: waiter call > bill status > self-seated tag > empty.
+   Labels truncate with an ellipsis (.notifyLabel) rather than overflow.
+   ========================================================================== */
+.notifyBand {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 6px var(--space-2) 0;
+  align-items: stretch;
+  height: 44px;
+  border-top: 1px solid var(--border);
+  overflow: hidden;
 }
 
-.waiterBellIcon {
+.notifyAction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.notifyAction[data-tone="critical"] {
+  background: color-mix(in srgb, var(--signal-600) 12%, transparent);
+  color: var(--signal-600);
+}
+
+.notifyAction:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.notifyIcon {
   width: 14px;
   height: 14px;
-}
-
-.acknowledgeButton {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 10px;
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--signal-600);
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--signal-600) 45%, transparent);
-  border-radius: var(--radius);
-  cursor: pointer;
   flex-shrink: 0;
 }
 
-.acknowledgeButton:disabled {
-  opacity: 0.6;
-  cursor: default;
+.notifyLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.notifyHint {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.notifySubtle {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
 }
 
 .tableLabelGroup {

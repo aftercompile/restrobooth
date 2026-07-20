@@ -11,10 +11,12 @@ import type { FloorTable } from "./queries";
 import { SeatTableDialog } from "./SeatTableDialog";
 import styles from "./FloorMap.module.css";
 
-/** Slice 2c — a static badge (no pulse/animation, POS's usual rule) plus
- *  an inline acknowledge action. Its own small component so per-table
- *  pending state doesn't need tracking in the parent's render loop. */
-function WaiterCalledBadge({ sessionId }: { sessionId: string }) {
+/** The notification band's one interactive state (of the priority-ordered
+ *  set below): the whole strip IS the acknowledge control, no separate
+ *  badge+button pair to fit side by side — that's what let the button
+ *  overflow narrow cards before. Its own component so per-table pending
+ *  state doesn't need tracking in the parent's render loop. */
+function WaiterAction({ sessionId }: { sessionId: string }) {
   const [pending, startTransition] = useTransition();
 
   function handleAcknowledge() {
@@ -24,15 +26,11 @@ function WaiterCalledBadge({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <div className={styles.waiterFooterRow}>
-      <Badge tone="critical">
-        <BellIcon className={styles.waiterBellIcon} aria-hidden="true" />
-        Waiter called
-      </Badge>
-      <button type="button" className={styles.acknowledgeButton} disabled={pending} onClick={handleAcknowledge}>
-        {pending ? "Clearing…" : "Acknowledge"}
-      </button>
-    </div>
+    <button type="button" className={styles.notifyAction} data-tone="critical" disabled={pending} onClick={handleAcknowledge}>
+      <BellIcon className={styles.notifyIcon} aria-hidden="true" />
+      <span className={styles.notifyLabel}>{pending ? "Clearing…" : "Waiter called"}</span>
+      <span className={styles.notifyHint}>{pending ? "" : "Acknowledge"}</span>
+    </button>
   );
 }
 
@@ -264,6 +262,10 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                                 Seats {t.capacity}
                               </div>
                             </button>
+                            {/* Reserved even when empty — see the notifyBand
+                                comment below for why every card ends in the
+                                same fixed-height strip. */}
+                            <div className={styles.notifyBand} />
                           </div>
                         );
                       }
@@ -302,30 +304,36 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                               <span className={styles.tableTimer}>{elapsedLabel}</span>
                             </div>
                           </Link>
-                          {/* Bill lifecycle and "who opened this" are SEPARATE signals,
-                              deliberately not folded into the chip (DESIGN.md: "only one
-                              channel encodes state with colour") — the chip stays pure
-                              elapsed-time, these badges are their own axes and can
-                              disagree with it independently. */}
-                          {(t.billStatus || t.openedVia === "guest" || t.waiterCalledAt) && (
-                            <div className={styles.tableFooter}>
-                              {t.waiterCalledAt && t.sessionId && <WaiterCalledBadge sessionId={t.sessionId} />}
-                              {t.openedVia === "guest" && (
+                          {/* The notification band — every card ends in this SAME
+                              fixed-height strip regardless of state, so one table's
+                              event never grows its card and, by extension, never
+                              stretches its whole grid row (CSS grid stretches every
+                              card in a row to the tallest — that's what made a
+                              waiter-called table taller than its neighbours before).
+                              Content is priority-ordered and mutually exclusive,
+                              never stacked: waiter call > bill status > self-seated
+                              tag > empty. Same slot future events (payment requested,
+                              food ready, kitchen delay, ...) would extend, not a new
+                              layout each time. */}
+                          <div className={styles.notifyBand}>
+                            {t.waiterCalledAt && t.sessionId ? (
+                              <WaiterAction sessionId={t.sessionId} />
+                            ) : t.billStatus ? (
+                              <Link
+                                href={`/floor/${t.sessionId}/bill`}
+                                className={styles.notifyAction}
+                                data-tone={t.billStatus === "paid" ? "positive" : "warning"}
+                              >
+                                <ReceiptIcon className={styles.notifyIcon} aria-hidden="true" />
+                                <span className={styles.notifyLabel}>{t.billStatus === "paid" ? "Paid" : "Bill printed"}</span>
+                                <span className={styles.notifyHint}>View bill</span>
+                              </Link>
+                            ) : t.openedVia === "guest" ? (
+                              <div className={styles.notifySubtle}>
                                 <Badge tone="neutral">Self-seated</Badge>
-                              )}
-                              {t.billStatus && (
-                                <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
-                                  {t.billStatus === "paid" ? "Paid" : "Printed"}
-                                </Badge>
-                              )}
-                              {t.billStatus && (
-                                <Link href={`/floor/${t.sessionId}/bill`} className={styles.billLink}>
-                                  <ReceiptIcon />
-                                  View bill
-                                </Link>
-                              )}
-                            </div>
-                          )}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       );
                     })}

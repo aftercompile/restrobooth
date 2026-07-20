@@ -277,80 +277,91 @@
   font-variant-numeric: tabular-nums;
 }
 
-.tableFooter {
+/* ==========================================================================
+   The notification band — every card ends in this SAME fixed-height strip
+   (44px) whether or not it has anything to say. A table's event used to
+   grow a variable footer, which stretched its whole grid row (CSS grid
+   stretches every card in a row to the tallest) — a waiter-called table
+   ended up taller than its neighbours and the grid visibly jumped.
+   Content is priority-ordered and mutually exclusive, never stacked:
+   waiter call > bill status > self-seated tag > empty. Labels truncate
+   with an ellipsis (.notifyLabel) rather than push the action off the
+   edge or grow the row, so overflow is structurally impossible regardless
+   of card width. This is also the extension point for future service
+   events (payment requested, food ready, kitchen delay, ...) — one more
+   priority branch, not a new layout.
+   ========================================================================== */
+.notifyBand {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 6px var(--space-1);
-  padding: 0 var(--space-2) var(--space-2);
+  align-items: stretch;
+  height: 44px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-/* The waiter-called badge + Acknowledge button get their OWN full-width
-   line (flex-basis forces a wrap before/after) rather than sharing
-   tableFooter's space-between row with the openedVia/bill badges — a
-   6-up grid card is too narrow to fit both reliably. Stacked, not
-   side-by-side: a space-between row doesn't wrap on its own, so if the
-   badge + button together are wider than the card (easily true on a
-   6-up grid), the button just overflows past the edge instead of
-   dropping to its own line. Stacking removes that failure mode
-   entirely, regardless of card width. */
-.waiterFooterRow {
+.notifyAction {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
-  flex: 1 0 100%;
-}
-
-.billLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 36px;
-  padding: 0 10px;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--enamel-700);
-  text-decoration: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  flex-shrink: 0;
-}
-
-.waiterBellIcon {
-  width: 14px;
-  height: 14px;
-}
-
-.acknowledgeButton {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 10px;
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--signal-600);
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  border: none;
   background: transparent;
-  border: 1px solid color-mix(in srgb, var(--signal-600) 45%, transparent);
-  border-radius: var(--radius);
+  font: inherit;
+  text-decoration: none;
   cursor: pointer;
-  flex-shrink: 0;
+  text-align: left;
 }
 
-.acknowledgeButton:disabled {
+.notifyAction[data-tone="critical"] {
+  background: color-mix(in srgb, var(--signal-600) 12%, transparent);
+  color: var(--signal-600);
+}
+
+.notifyAction[data-tone="warning"] {
+  background: color-mix(in srgb, var(--ramp-warming) 16%, transparent);
+  color: color-mix(in srgb, var(--ramp-warming) 70%, var(--text));
+}
+
+.notifyAction[data-tone="positive"] {
+  background: color-mix(in srgb, var(--ramp-fresh) 12%, transparent);
+  color: var(--ramp-fresh);
+}
+
+.notifyAction:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-.billLink:hover {
-  background: var(--surface-sunken);
+.notifyIcon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
-.billLink svg {
-  width: 16px;
-  height: 16px;
+.notifyLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.notifyHint {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.notifySubtle {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
 }
 
 /* The status chip. Colour comes from the SAME --ramp-* tokens StateRail
