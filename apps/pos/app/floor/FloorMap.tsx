@@ -24,7 +24,7 @@ function WaiterCalledBadge({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <>
+    <div className={styles.waiterFooterRow}>
       <Badge tone="critical">
         <BellIcon className={styles.waiterBellIcon} aria-hidden="true" />
         Waiter called
@@ -32,7 +32,7 @@ function WaiterCalledBadge({ sessionId }: { sessionId: string }) {
       <button type="button" className={styles.acknowledgeButton} disabled={pending} onClick={handleAcknowledge}>
         {pending ? "Clearing…" : "Acknowledge"}
       </button>
-    </>
+    </div>
   );
 }
 
@@ -311,7 +311,7 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                             <div className={styles.tableFooter}>
                               {t.waiterCalledAt && t.sessionId && <WaiterCalledBadge sessionId={t.sessionId} />}
                               {t.openedVia === "guest" && (
-                                <Badge tone="neutral">Guest-opened</Badge>
+                                <Badge tone="neutral">Self-seated</Badge>
                               )}
                               {t.billStatus && (
                                 <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>

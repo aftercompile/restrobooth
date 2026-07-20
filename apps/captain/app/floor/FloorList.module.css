@@ -57,8 +57,9 @@
 .waiterRow {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--space-1);
+  gap: 6px var(--space-1);
   padding: 6px var(--space-2) 0;
 }
 

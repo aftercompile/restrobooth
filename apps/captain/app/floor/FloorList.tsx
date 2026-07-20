@@ -164,7 +164,7 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                               time, these badges are their own axes. Captain has no
                               bill screen of its own (billing is a POS/cashier capability),
                               so bill status is a badge only, no quick-link. */}
-                          {t.openedVia === "guest" && <Badge tone="neutral">Guest-opened</Badge>}
+                          {t.openedVia === "guest" && <Badge tone="neutral">Self-seated</Badge>}
                           {t.billStatus && (
                             <Badge tone={t.billStatus === "paid" ? "live" : "warning"}>
                               {t.billStatus === "paid" ? "Paid" : "Printed"}

@@ -280,9 +280,23 @@
 .tableFooter {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px var(--space-1);
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+/* The waiter-called badge + Acknowledge button get their OWN full-width
+   line (flex-basis forces a wrap before/after) rather than sharing
+   tableFooter's space-between row with the openedVia/bill badges — a
+   6-up grid card is too narrow to fit both reliably, and this keeps
+   everything inside the card's border instead of bleeding past it. */
+.waiterFooterRow {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-1);
-  padding: 0 var(--space-2) var(--space-2);
+  flex: 1 0 100%;
 }
 
 .billLink {
