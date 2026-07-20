@@ -4,12 +4,10 @@ export const size = { width: 512, height: 512 };
 export const contentType = "image/png";
 
 /**
- * Generated, not a static asset — the state rail as the app icon (same
- * idea as AppShell's console mark: the product's own signature element
- * used as its logo, not a generic glyph). Enamel ground, brass rail.
- * "CT" (was "RB") once every other app got its own icon.tsx in the same
- * treatment — Hub kept "RB" as the RestroBooth front door, so each
- * terminal app needed its own two-letter mark to stay tab-distinguishable.
+ * Generated, not a static asset — same treatment as apps/captain's icon.tsx
+ * (the state rail as the app icon, enamel ground, brass rail), with this
+ * app's own two-letter mark rather than a shared "RB" so browser tabs stay
+ * distinguishable when a manager has Console open alongside a terminal app.
  */
 export default function Icon() {
   return new ImageResponse(
@@ -26,7 +24,7 @@ export default function Icon() {
       >
         <div style={{ width: 64, height: 280, background: "#c89b3c", borderRadius: 16, marginRight: 48 }} />
         <div style={{ display: "flex", flexDirection: "column", fontFamily: "sans-serif" }}>
-          <span style={{ color: "#edf1ef", fontSize: 96, fontWeight: 700, lineHeight: 1 }}>CT</span>
+          <span style={{ color: "#edf1ef", fontSize: 96, fontWeight: 700, lineHeight: 1 }}>CN</span>
         </div>
       </div>
     ),
