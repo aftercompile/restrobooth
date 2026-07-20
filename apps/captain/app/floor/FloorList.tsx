@@ -147,8 +147,15 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                           </button>
                           {/* Reserved even when empty — see .notifyBand's comment
                               below for why every row ends in the same
-                              fixed-height strip. */}
-                          <div className={styles.notifyBand} data-tone="none" />
+                              fixed-height strip. An idle table's is never
+                              truly blank: "Ready for Guests" is the one case
+                              where an empty footer would read as broken
+                              rather than quiet. */}
+                          <div className={styles.notifyBand} data-tone="none">
+                            <div className={styles.notifySubtle}>
+                              <span className={styles.notifyReady}>Ready for Guests</span>
+                            </div>
+                          </div>
                         </div>
                       </StateRail>
                     );
@@ -195,7 +202,7 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                             </div>
                           ) : t.openedVia === "guest" ? (
                             <div className={styles.notifySubtle}>
-                              <Badge tone="neutral">Self-seated</Badge>
+                              <Badge tone="neutral">Self Seated</Badge>
                             </div>
                           ) : null}
                         </div>

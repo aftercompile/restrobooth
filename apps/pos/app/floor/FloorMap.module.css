@@ -396,6 +396,12 @@
   padding: 0 var(--space-2);
 }
 
+.notifyReady {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* The status chip. Colour comes from the SAME --ramp-* tokens StateRail
    itself reads (single source of truth for what each state means) — this
    isn't a second palette, just a second presentation of the one that
