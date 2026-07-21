@@ -4,7 +4,25 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-21 (latest) — Ready-to-serve → Captain alert → Mark served, full loop closed
+## 2026-07-21 (latest) — Phase 5 acceptance: QR replay proven, Booth LCP audited (with an honest null result)
+
+**Decided by:** Mohammed — asked to pick up Phase 5's remaining `ROADMAP.md` acceptance items, chose "QR replay/rotation verification" and "Booth LCP audit" via `AskUserQuestion` (Razorpay webhook verification explicitly excluded — needs a real account/credentials, the owner's call).
+
+**QR replay/rotation: verified, no bug found.** `evaluateGuestTokenAccess` (`packages/domain/src/qrToken.ts`) already had 13 unit tests; what was missing was proof that the real `/t/[token]` route enforces it end-to-end. New permanent script, `tools/qr-token-replay-test.mjs`: mints a token, mints a second (which revokes the first per `mintTableToken`'s rotation semantics), and confirms — against a real running Booth + real DB — that the revoked token, an expired token (`rotates_at` forced into the past), and a garbage token all redirect to `/invalid` with no guest session cookie set, while a fresh token succeeds. All passed on the first real run. `ROADMAP.md`'s checkbox is now checked.
+
+**Booth LCP: audited, genuinely not passing locally, and the local number itself isn't trustworthy.** Full isolation chain, each step a real measurement, not a guess:
+1. First Lighthouse run (devtools throttling, mobile, 4x CPU, production build): **LCP 2.5s**, `lcp-breakdown-insight` attributing ~1.6s to "element render delay" on a plain `<p>` of server-rendered text.
+2. Hypothesis: `OrderStatusBoard` (the only framer-motion-importing component on the page) was statically imported and bundled even when it renders `null` (empty cart, the common first-scan case). Converted to `next/dynamic()` (`apps/booth/app/page.tsx`) — SSR stays on, so the split-flap board's real content is unaffected once a guest has live items; only the client bundle is meant to code-split out.
+3. **Re-measured: LCP got slightly WORSE (3.0s), and total transferred bytes were statistically unchanged (382,524 → 379,439 — noise-level).** The fix didn't do what it was supposed to; `next/dynamic()` without `ssr:false` didn't meaningfully defer this component's weight out of the critical path for this render.
+4. Rather than iterate blindly on a metric that had just moved the wrong direction, ran controls: (a) same page with `cpuSlowdownMultiplier=1` (network throttle only) — "element render delay" barely moved (2.0s), ruling out CPU-throttled JS execution as the dominant cost; (b) `/` hit directly with a pre-established session cookie (bypassing the `/t/[token]` redirect) — **TTFB dropped from 660–860ms to 117ms** (a real, isolated finding: the redirect hop costs ~500–700ms), but "element render delay" was still ~1.96s, unchanged; (c) **the trivial `/invalid` page (31ms TTFB, near-zero real content) under the identical throttle showed the same ~2.1s "element render delay,"** and even **fully unthrottled** that same trivial page took 1.2s — both numbers a plain static error page has no business producing.
+5. **Conclusion: this local environment's Lighthouse/headless-Chrome measurements carry a systematic, unexplained ~2s tax unrelated to Booth's actual code** — isolated and proven via a negative control (a page with almost no content shows the same delay), not asserted from a single unlucky run. Chasing it further with more code changes would be optimizing against noise. `ROADMAP.md`'s LCP checkbox stays unchecked, with this chain documented inline and a recommendation to re-verify against the deployed Vercel instance (PageSpeed Insights or a real phone on real 4G) rather than this dev box.
+6. The `next/dynamic()` change was kept anyway — better code-splitting is reasonable practice independent of whether it moved this specific (noisy) number, and it's a no-risk, typecheck/lint-clean change.
+
+**Why report a null result instead of quietly moving on**: a false "fixed!" here would have been worse than an honest "audited, found the tooling itself unreliable, here's what IS real" — the redirect-latency finding and the ruled-out CPU-vs-network hypothesis are both genuinely useful for whoever picks this up next, and a fabricated pass would have hidden them.
+
+---
+
+## 2026-07-21 — Ready-to-serve → Captain alert → Mark served, full loop closed
 
 **Decided by:** Mohammed — "Once bumped, show Ready and a Captain app gets alert, then the captain brings it to table and mark as Served. the table notification banner should show these status in POS as well (example: Ready To Serve, Dining)."
 

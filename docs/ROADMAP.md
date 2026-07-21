@@ -132,12 +132,12 @@ Phase 10 Hardening             }
 ⚠️ **[ADR-0001](adr/0001-hosting.md): this phase triggers the move to Vercel Pro + Supabase Pro (~$45/mo).** Taking a payment from a guest is commercial use by Vercel's own definition. Budget for it now.
 
 **Acceptance:**
-- [ ] **Booth LCP < 2.0 s on 4G, cold cache.**
-- [ ] QR token replay is rejected. A screenshotted QR used from off-premises is rejected.
-- [ ] A guest completes scan → order → pay without asking a human.
-- [ ] Payments: **Razorpay webhooks verified via HMAC-SHA256 over the raw body, `X-Razorpay-Signature`** (verified 2026-07-13). Idempotent on `(gateway, gateway_txn_id)`.
-- [ ] **UPI intent deep-link** (`upi://pay?pa=…&pn=…&am=…&cu=INR&tn=…&tr=…`, NPCI linking spec) works as the zero-cost fallback.
-- [ ] Cash and "pay at counter" are first-class, not afterthoughts.
+- [ ] **Booth LCP < 2.0 s on 4G, cold cache.** Audited 2026-07-21 with Lighthouse (devtools throttling, mobile) against a production build — not passing, but the local number isn't trustworthy either way: a *trivial* static page (`/invalid`, 31 ms TTFB) showed the same ~2.1 s "element render delay" as the real page, and even fully unthrottled the same trivial page took 1.2 s, well above what static HTML should cost. That's a measurement-environment artifact (headless Chrome + DevTools-protocol throttling on this Windows/WSL2 box), not a proven app defect — see DECISIONS.md's entry for the isolation steps. One *real*, isolated finding from the same session: the `/t/[token]` → `/` redirect hop adds ~500–700 ms of genuine latency (TTFB 660–860 ms through the redirect vs. 117 ms hitting `/` directly with the session cookie already set) — a legitimate lead for whoever verifies this next, on a real deployed instance from a real phone.
+- [x] QR token replay is rejected. A screenshotted QR used from off-premises is rejected. Verified 2026-07-21 end-to-end against a real running Booth + real DB (`tools/qr-token-replay-test.mjs`): a revoked (rotated-away) token, an expired token, and a garbage token are all rejected with no guest session created; a freshly rotated token succeeds. The pure logic (`evaluateGuestTokenAccess`) already had unit coverage — this closes the missing route-level layer.
+- [x] A guest completes scan → order → pay without asking a human. Verified via Playwright, Phase 5 Slice 3 (see DECISIONS.md's 2026-07-20 entry) — full loop, both the mock-pay and cash/UPI-pending paths.
+- [ ] Payments: **Razorpay webhooks verified via HMAC-SHA256 over the raw body, `X-Razorpay-Signature`** (verified 2026-07-13). Idempotent on `(gateway, gateway_txn_id)`. Not built — only `MockPaymentGateway` exists behind the `PaymentGateway` interface. Needs a real Razorpay account/credentials, the owner's call, not something to build speculatively.
+- [x] **UPI intent deep-link** (`upi://pay?pa=…&pn=…&am=…&cu=INR&tn=…&tr=…`, NPCI linking spec) works as the zero-cost fallback. Verified, Phase 5 Slice 3 — `packages/domain/src/upi.ts` at 100% coverage, exercised end-to-end.
+- [x] Cash and "pay at counter" are first-class, not afterthoughts. Verified, Phase 5 Slice 3 — the hybrid settle model's pending-payment + staff-confirm path.
 
 **Demo:** Scan → order → KOT prints in the kitchen → pay → feedback lands in the DB. **End to end on a real phone.**
 

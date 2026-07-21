@@ -4,7 +4,20 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-21 (latest), the "served" loop closed: Ready to serve → Captain alert → Mark served
+## Where things stand — 2026-07-21 (latest), Phase 5 acceptance: QR replay closed, Booth LCP audited
+
+Picked up two of the three remaining boxes on `docs/ROADMAP.md`'s Phase 5 acceptance checklist (the third, real Razorpay webhook verification, needs a real account/credentials — the owner's call, not something to build speculatively). Full chain of reasoning: [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- **QR token replay/rotation: verified end-to-end, no bug found.** New permanent script `tools/qr-token-replay-test.mjs` — mints a token, rotates it, confirms the old one (and an expired one, and a garbage one) all get rejected at `/t/[token]` with no guest session created, and a fresh token succeeds. `ROADMAP.md` checkbox now checked.
+- **Booth LCP: audited, not passing, but the LOCAL measurement itself is proven unreliable.** Isolated a real, actionable finding along the way — the `/t/[token]` → `/` redirect costs ~500–700ms of genuine latency (confirmed via TTFB, a metric the noise didn't affect) — but the dominant "element render delay" (~2s) reproduces identically on a *trivial* static page under the same throttle, and even unthrottled. That's a systematic artifact of this dev machine's headless-Chrome/DevTools-throttling setup, not something fixable by changing Booth's code. Tried one real fix (code-splitting the one framer-motion-importing component out of the initial bundle via `next/dynamic()`) — kept it as a reasonable improvement, but it didn't move the (noisy) number and byte transfer was statistically unchanged. **Left the checkbox unchecked** rather than claim a false pass; real verification needs the deployed Vercel instance, not this box.
+- Also corrected three other Phase 5 acceptance boxes that were already true (verified in the prior Slice 3 session) but never checked off in `ROADMAP.md`: guest scan→order→pay without a human, the UPI deep-link, and cash/pay-at-counter.
+
+### Local dev note
+If a future perf audit on this same machine shows suspiciously large "element render delay" numbers under Lighthouse DevTools-protocol throttling, check against a trivial page first (`/invalid` or similar) before assuming it's a real app issue — this session found a ~2s flat tax that reproduces on pages with almost no content.
+
+---
+
+## Where things stand — 2026-07-21, the "served" loop closed: Ready to serve → Captain alert → Mark served
 
 Requested directly by the owner. Full rationale, including a real bug caught by the first live test (a composite-PK `GROUP BY` gotcha): [DECISIONS.md](DECISIONS.md)'s latest entry.
 

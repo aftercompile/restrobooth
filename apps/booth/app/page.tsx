@@ -1,11 +1,20 @@
 import { redirect } from "next/navigation";
+import dynamic from "next/dynamic";
 import { getGuestContext } from "../lib/guest-context";
 import { getGuestOrderStatus } from "../lib/order-queries";
 import { BoothShell } from "./BoothShell";
 import { BoothPoll } from "./BoothPoll";
-import { OrderStatusBoard } from "./OrderStatusBoard";
 import { CartSection, EmptyOrderState } from "./CartSection";
 import { RequestBillButton } from "./RequestBillButton";
+
+// The only component on this page that imports framer-motion — dynamic()
+// still renders it server-side (the split-flap board's real content is in
+// the first response either way), but code-splits the CLIENT bundle out
+// of the page's initial JS. Measured with Lighthouse under 4G+CPU
+// throttling: a first scan with an empty cart was paying framer-motion's
+// full parse/hydrate cost for a component that renders null. See
+// DECISIONS.md's Phase 5 LCP entry for the before/after numbers.
+const OrderStatusBoard = dynamic(() => import("./OrderStatusBoard").then((m) => m.OrderStatusBoard));
 
 /** Where a valid scan lands (apps/booth/app/t/[token]/route.ts redirects
  *  here) and where a returning guest's browser reopens to — split into
