@@ -4,7 +4,21 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-21 (latest), Bill/Pay UI redesign (POS + Booth)
+## Where things stand — 2026-07-21 (latest), KDS/OrderPad realtime actually fixed
+
+The previous session's fix (migration 0030, `publish_via_partition_root`) turned out to be necessary but not sufficient — the self-hosted Realtime stack's `postgres_changes` decoder (wal2json) doesn't support publications at all on this Postgres image, so it was structurally unable to honor that setting regardless. Full root-cause story and verification: [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- **Migration 0031**: `order_status_events`/`kots` (both `PARTITION BY RANGE (business_date)`) now push a Realtime **Broadcast** message via a parent-level trigger + `realtime.broadcast_changes()`, instead of relying on WAL decoding. A new RLS policy on `realtime.messages` authorizes it, scoped by outlet via the existing `accessible_outlet_ids()` helper.
+- **`apps/kds/app/board/RealtimeSync.tsx`** and **`apps/pos/app/floor/[sessionId]/OrderPad.tsx`** switched from `postgres_changes` to this broadcast channel. Both also fixed a real, separate auth-propagation gap along the way: `supabase-js` never wires `realtime.setAuth()` on `INITIAL_SESSION` (only `SIGNED_IN`/`TOKEN_REFRESHED`), so every page load here — always an already-authenticated SSR session — left the Realtime socket's JWT unset. Both effects now block on `getSession()` + `await setAuth()` before ever subscribing.
+- **POS's FloorMap and Captain's FloorList were NOT touched** — both watch `table_sessions`, which isn't partitioned and was confirmed working the whole time.
+- Verified live: two-terminal Playwright run (POS fires, KDS updates in ~1.5s with zero manual refresh), raw websocket capture, direct Postgres trigger/message inspection. Full workspace typecheck + lint green.
+
+### Local dev note
+This stack's bundled wal2json genuinely does not support Postgres publications (confirmed: `pg_logical_slot_get_changes(..., 'publication-names', ...)` errors "unknown option" on this image) — so `postgres_changes` on any partitioned table is a dead end here regardless of publication settings. If a future table needs realtime and gets partitioned, reach for the same broadcast-trigger pattern (0031) rather than another `publish_via_partition_root` migration.
+
+---
+
+## Where things stand — 2026-07-21, Bill/Pay UI redesign (POS + Booth)
 
 Pure visual/UX pass, no behavior changes: "the Bill Pay UI on POS and QR looks old." Full rationale: [DECISIONS.md](DECISIONS.md)'s latest entry.
 

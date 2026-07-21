@@ -218,6 +218,13 @@
       "when": 1784556515177,
       "tag": "0030_realtime_partition_root",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1784626013096,
+      "tag": "0031_realtime_broadcast_partitioned",
+      "breakpoints": true
     }
   ]
 }

@@ -60,6 +60,22 @@ function rowToTicket(r: KotRow, items: TicketItem[]): Ticket {
   };
 }
 
+/**
+ * The outlet(s) this KDS session can see — almost always exactly one (a
+ * kitchen-role membership is outlet-scoped; a KDS terminal is physically
+ * at one kitchen), but not assumed to be, since a shared cloud kitchen can
+ * legitimately show more than one store's tickets on one screen and a
+ * broader (org/brand-scoped) membership is possible. Needed separately
+ * from the ticket rows themselves because the board's realtime signal has
+ * to keep listening even when the board is empty (RealtimeSync.tsx).
+ */
+export async function getMyOutletIds(tx: RlsTx): Promise<string[]> {
+  const result = await tx.execute<{ [key: string]: unknown; accessible_outlet_ids: string }>(sql`
+    select accessible_outlet_ids()
+  `);
+  return result.rows.map((r) => r.accessible_outlet_ids);
+}
+
 async function loadItemsByKot(tx: RlsTx, kotIds: string[]): Promise<Map<string, TicketItem[]>> {
   const itemsByKot = new Map<string, TicketItem[]>();
   if (kotIds.length === 0) return itemsByKot;

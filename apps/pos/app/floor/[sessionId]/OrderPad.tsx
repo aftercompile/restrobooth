@@ -78,18 +78,41 @@ export function OrderPad({
     };
   }, []);
 
+  // Not postgres_changes: `kots` is PARTITION BY RANGE (business_date), and
+  // this stack's self-hosted Realtime decodes postgres_changes via
+  // wal2json, which doesn't understand publications at all —
+  // publish_via_partition_root (0030) is silently inert for it, so a
+  // WAL-based subscription here never fires no matter what the publication
+  // says (same root cause as KDS's RealtimeSync.tsx, see its comment for
+  // the full story). Migration 0031 broadcasts every kots insert/update to
+  // its outlet's topic instead, sidestepping WAL decoding entirely; this
+  // filters client-side on table_session_id to keep the original
+  // per-session precision (the payload's `record` is still not trusted for
+  // anything beyond that filter — a match just triggers a router.refresh(),
+  // same as before).
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel(`order-pad-${session.sessionId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "kots", filter: `table_session_id=eq.${session.sessionId}` }, () =>
-        router.refresh(),
-      )
-      .subscribe();
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | undefined;
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      await supabase.realtime.setAuth(data.session?.access_token ?? null);
+      if (cancelled) return;
+      channel = supabase
+        .channel(`outlet:${session.outletId}:kots`, { config: { private: true } })
+        .on("broadcast", { event: "*" }, (msg) => {
+          const record = (msg.payload as { record?: { table_session_id?: string }; old_record?: { table_session_id?: string } } | undefined) ?? {};
+          const sessionId = record.record?.table_session_id ?? record.old_record?.table_session_id;
+          if (sessionId === session.sessionId) router.refresh();
+        })
+        .subscribe();
+    });
+
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) void supabase.removeChannel(channel);
     };
-  }, [router, session.sessionId]);
+  }, [router, session.sessionId, session.outletId]);
 
   // ADR-0004's local-first overlay: every addOrderItem/fireOrder mutation
   // for THIS session, whatever its state. Once one applies, the realtime

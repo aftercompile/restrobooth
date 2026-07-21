@@ -4,7 +4,26 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-21 (latest) — Bill/Pay UI redesign: POS bill screens + Booth pay/feedback
+## 2026-07-21 (latest) — KDS/OrderPad realtime actually fixed: broadcast, not postgres_changes
+
+**Reported by:** Mohammed — "The KDS does not show an order realtime I have to refresh everytime," immediately after the previous session's fix (c2a6831, migration 0030: `publish_via_partition_root = true`) had already landed and was believed to have closed this out.
+
+**Root cause was NOT what 0030 diagnosed, or not only that.** Verified end-to-end with real Playwright + raw websocket capture before touching any code:
+1. `pubviaroot` was confirmed `true` on the local publication, and RLS/JWT propagation was ALSO genuinely broken (a real, separate bug: `supabase-js` only auto-wires `realtime.setAuth()` on `SIGNED_IN`/`TOKEN_REFRESHED`, never on `INITIAL_SESSION` — the event a page load with an already-authenticated SSR-cookie session fires. Fixed as a prerequisite in `RealtimeSync.tsx`/`OrderPad.tsx`: block on `getSession()` + `await setAuth()` *before* ever calling `.channel().subscribe()`, since even a reactive fire-and-forget `setAuth()` after the fact can lose the race against the join push).
+2. Fixing that auth gap **still didn't fix delivery.** Isolated with the service-role key (bypasses RLS entirely) plus a raw manual `INSERT`: still nothing arrived on `order_status_events`/`kots`, while the exact same test against unpartitioned `table_sessions` worked immediately. That isolated it to the partitioned tables specifically, regardless of auth.
+3. Root cause, confirmed directly against this Postgres image: `pg_logical_slot_get_changes(..., 'publication-names', 'supabase_realtime')` errors `"option ... is unknown"` — the **wal2json** decoder this self-hosted Realtime stack uses for `postgres_changes` does not understand publications at all. `publish_via_partition_root` is a publication-level setting; wal2json here only take an explicit `add-tables` list and reports whatever child-partition name is actually in the WAL record. 0030 was the right instinct and fixed the publication correctly — it just can't do anything for a decoder that never consults the publication in the first place. This is a real limitation of the self-hosted stack's bundled wal2json version, not a config mistake.
+
+**Fix: stop depending on WAL decoding for these two tables' realtime signal.** Migration 0031 adds a `FOR EACH ROW` trigger on the partitioned PARENT (`order_status_events`, `kots`) — which Postgres fires once per row no matter which child partition it lands in, standard behaviour, unaffected by any of the above — calling `realtime.broadcast_changes()` (Supabase's own helper, already present in this image) to push a Realtime **Broadcast** message instead. Broadcast is a completely different, non-WAL delivery path (insert into `realtime.messages`, itself fanned out via a dedicated `pgoutput`-based slot that Supabase manages internally) — confirmed working for both tables via raw script before any app code changed. Two things had to be got right, each independently verified:
+- The trigger passes a **stable table name as its own argument** rather than reading `TG_TABLE_NAME`, which reports the child partition's own name (e.g. `order_status_events_2026_07`) — the first attempt used `TG_TABLE_NAME` directly and silently broke topic matching (client subscribed to the parent name, trigger broadcast under the partition's name).
+- `realtime.broadcast_changes()` marks every message `private = true` (confirmed by inspecting the row it writes), so it requires an authorizing RLS policy on `realtime.messages` — added, reusing the same `accessible_outlet_ids()` helper every other outlet-scoped policy in this schema already uses, keyed off a `outlet:<outlet_id>:<table>` topic convention chosen specifically so that policy could parse it with a plain `split_part`.
+
+**Client changes:** `apps/kds/app/board/RealtimeSync.tsx` now subscribes per-accessible-outlet (a new `getMyOutletIds()` query, almost always exactly one outlet but not assumed to be — a shared cloud kitchen can legitimately show more than one store). `apps/pos/app/floor/[sessionId]/OrderPad.tsx` subscribes on its outlet's `kots` topic and filters client-side on `table_session_id` to keep the original per-session precision the old `postgres_changes` filter had. **`apps/pos/FloorMap.tsx` and `apps/captain/FloorList.tsx` were left untouched** — both subscribe to `table_sessions`, which is NOT partitioned and was confirmed working correctly the whole time; this bug never touched them.
+
+**Verified for real, repeatedly, not just reasoned about**: raw websocket frame capture showing the broadcast delivered to an authenticated subscriber; a live two-terminal Playwright run (fire from POS terminal A, watch KDS/terminal B update with zero manual refresh, ~1.5s latency); direct Postgres confirmation that the trigger fires for every partition and populates `realtime.messages` correctly. Full-workspace `pnpm -w typecheck && pnpm -w lint` green across all 12 packages.
+
+---
+
+## 2026-07-21 — Bill/Pay UI redesign: POS bill screens + Booth pay/feedback
 
 **Decided by:** Mohammed — "Work on the Bill Pay UI on POS and QR too, It looks old. I need new gen buttons and UI." Pure visual/UX polish following Slice 3's functional build; no behavior changed.
 
