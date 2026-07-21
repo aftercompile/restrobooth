@@ -4,7 +4,19 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-20 (latest), Phase 5 Slice 3: payment + feedback — Phase 5 is now COMPLETE
+## Where things stand — 2026-07-21 (latest), Bill/Pay UI redesign (POS + Booth)
+
+Pure visual/UX pass, no behavior changes: "the Bill Pay UI on POS and QR looks old." Full rationale: [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- **POS bill screens** (`apps/pos/app/floor/[sessionId]/bill/`): raw HTML `<select>`/`<input>` controls replaced with the shared `Select`/`Input`/`MoneyInput` components; a new reusable segmented-control pattern (mirroring `PosShell`'s existing nav-pill shape) for finalize mode, discount kind, and refund kind; `PayForm`'s method choice is now tappable icon buttons with a "Needs network" hint (offline-gating logic itself unchanged). Zero new motion — POS's zero-motion rule intact.
+- **Booth pay/feedback** (`apps/booth/app/pay/`): hero-total card, "Pay online" split out as its own primary CTA above secondary UPI/cash options (reflecting that only the mock gateway auto-settles; UPI/cash need staff confirmation). Star rating now uses Booth's existing motion allowance. Fixed a real header word-wrap bug on narrow phones (`BoothShell.module.css`).
+- **Self-caught bug fix**: a brass-as-text-color violation in `FeedbackForm.module.css` (written during Slice 3, not caught by `lint-brass.mjs` since it only scans `packages/ui`) — fixed to brass-as-fill, matching the established pattern elsewhere.
+- **New shared icons**: `CardIcon`, `SmartphoneIcon`, `BankIcon`, `WalletIcon`, `CheckCircleIcon` in `packages/ui`.
+- Full-workspace typecheck + lint (incl. brass/motion lints) green; every redesigned screen state verified via real Playwright screenshots.
+
+---
+
+## Where things stand — 2026-07-20, Phase 5 Slice 3: payment + feedback — Phase 5 is now COMPLETE
 
 **The Booth can now take a guest all the way through "QR → order → pay → feedback"** — the full arc ROADMAP.md names for Phase 5. Planned via `EnterPlanMode`, three real design forks resolved with the owner via `AskUserQuestion` before building (settle model, UPI scope, feedback shape). Full rationale: [docs/adr/0010-guest-payment-and-feedback.md](docs/adr/0010-guest-payment-and-feedback.md).
 

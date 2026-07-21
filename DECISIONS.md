@@ -4,7 +4,25 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-20 (latest) — Phase 5 Slice 3: guest payment + feedback — Phase 5 complete
+## 2026-07-21 (latest) — Bill/Pay UI redesign: POS bill screens + Booth pay/feedback
+
+**Decided by:** Mohammed — "Work on the Bill Pay UI on POS and QR too, It looks old. I need new gen buttons and UI." Pure visual/UX polish following Slice 3's functional build; no behavior changed.
+
+**Diagnosis:** not a design-system failure — several bill-screen forms bypassed the already-well-styled shared `Select`/`Input`/`MoneyInput` components in favor of raw unstyled HTML `<select>`/`<input>`, creating a visible seam against the rest of the (already-approved) app. Scoped the redesign to that inconsistency rather than re-skinning screens that already matched the system — `CardHeader`'s flat tan bar (used everywhere, e.g. floor grid, KDS) was deliberately left untouched.
+
+**POS** (`apps/pos/app/floor/[sessionId]/bill/`): `PayForm`'s method picker became tappable icon buttons (`METHODS` array: cash/UPI/card/netbanking/wallet, each with a hand-authored icon, `data-selected`, and a "Needs network" hint respecting the existing offline-gating rule unchanged); `FinalizeForm`'s mode picker and `OneBillControls`'/`SettledView`'s discount/refund-kind pickers became a reusable **segmented control** (`.segmented`/`.segmentedButton`), deliberately modeled on `PosShell.module.css`'s existing dark-header nav pill shape rather than inventing a new pattern, just adapted for a light surface. Amounts moved to the shared `MoneyInput`. Zero new motion added anywhere — explicit comment in the CSS reaffirms the POS zero-motion rule.
+
+**Booth** (`apps/booth/app/pay/`, `BoothShell`): `PayPanel` redesigned around a hero total card; **"Pay online" (the one method that fully auto-settles) got its own full-width primary CTA, separated from UPI/cash under an "or pay another way" divider** — both of the latter still need staff confirmation before anything's final (ADR-0010's hybrid settle model, unchanged), so the hierarchy reflects that difference honestly rather than presenting all three as equivalent. `FeedbackForm`'s star rating uses `<Animate>`/`motion.button` (`whileTap`), gated through the existing `useMotionAllowed()` — Booth is the one app allowed this. Fixed a real header word-wrap bug in `BoothShell.module.css` (`.context` needed a shrink floor + ellipsis, `.right` needed `flex-shrink: 0` — a two-row `flex-wrap`/`order` attempt was tried first and abandoned once it was clear `.nav`/`.callWaiterButton` are grandchildren of `.bar`, not direct children, so `order` on them did nothing).
+
+**Bug self-caught during the pass:** `FeedbackForm.module.css`'s filled-star style (written earlier, during Slice 3 itself) used `color: var(--brass-500)` — brass as literal icon/text color, a direct violation of the brass-fill-only non-negotiable (brass fails AA as text). Not flagged by `lint-brass.mjs`, which only scans `packages/ui/src/**/*.module.css`, not app-level CSS — self-policed by re-reading the code during this pass. Fixed to match the already-established compliant pattern (`AvatarMenu.module.css`'s `.avatar`, `BoothShell.module.css`'s `.callWaiterButton[data-called]`): brass as a circular background fill, glyph colored `--text` on top of it.
+
+**New shared icons** (`packages/ui/src/components/icons.tsx`): `CardIcon`, `SmartphoneIcon`, `BankIcon`, `WalletIcon`, `CheckCircleIcon` — same hand-authored recipe as the existing set (24×24, `stroke="currentColor"`, no fill, no icon library dependency).
+
+**Verified:** full-workspace `pnpm -w typecheck` and `pnpm -w lint` (including `lint-brass`/`lint-motion`) green across all 12 packages; every redesigned screen state driven and screenshotted via real Playwright — POS's FinalizeForm, SettleView (with and without a guest pending-payment claim), SettledView+refund form; Booth's header fix, full pay flow through mock/UPI/cash paths, and feedback star-rating + thanks screen.
+
+---
+
+## 2026-07-20 — Phase 5 Slice 3: guest payment + feedback — Phase 5 complete
 
 **Decided by:** Mohammed — "proceed to plan Slice 3" after the cleanup pass below. Planned via `EnterPlanMode`, grounded in real code (read POS's full `applyFinalizeBill`/`applySettleBill`/`reconcileSessionAfterBillChange`, the `payments` schema, ADR-0009's guest-write pattern) before writing anything. Three genuine forks surfaced during planning, each with real trade-offs, resolved via `AskUserQuestion` rather than picked unilaterally.
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, CardHeader } from "@restrobooth/ui";
+import { Animate, Button, Card, CheckCircleIcon, motion, useMotionAllowed, useToast } from "@restrobooth/ui";
 import { submitFeedbackAction } from "../actions";
 import styles from "./FeedbackForm.module.css";
 
@@ -15,23 +15,23 @@ const STARS = [1, 2, 3, 4, 5] as const;
  * only captures the raw signal, it doesn't analyze it.
  */
 export function FeedbackForm() {
+  const toast = useToast();
+  const motionAllowed = useMotionAllowed();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
     if (rating < 1) {
-      setError("Please choose a rating.");
+      toast("Please choose a rating.", "critical");
       return;
     }
     setSubmitting(true);
-    setError(null);
     const result = await submitFeedbackAction(rating, comment);
     setSubmitting(false);
     if (result.error) {
-      setError(result.error);
+      toast(result.error, "critical");
       return;
     }
     setSubmitted(true);
@@ -39,31 +39,41 @@ export function FeedbackForm() {
 
   if (submitted) {
     return (
-      <Card>
-        <div className={styles.thanks}>Thanks for letting us know!</div>
-      </Card>
+      <Animate>
+        <Card>
+          <div className={styles.thanks}>
+            <CheckCircleIcon className={styles.thanksIcon} />
+            <span>Thanks for letting us know!</span>
+          </div>
+        </Card>
+      </Animate>
     );
   }
 
   return (
     <Card>
-      <CardHeader title="How was your meal?" />
+      <h2 className={styles.title}>How was your meal?</h2>
       <div className={styles.panel}>
         <div className={styles.stars} role="radiogroup" aria-label="Rating, 1 to 5 stars">
-          {STARS.map((star) => (
-            <button
-              key={star}
-              type="button"
-              role="radio"
-              aria-checked={rating === star}
-              aria-label={`${star} star${star === 1 ? "" : "s"}`}
-              className={styles.star}
-              data-filled={star <= rating}
-              onClick={() => setRating(star)}
-            >
-              ★
-            </button>
-          ))}
+          {STARS.map((star) => {
+            const filled = star <= rating;
+            const Comp = motionAllowed ? motion.button : "button";
+            return (
+              <Comp
+                key={star}
+                type="button"
+                role="radio"
+                aria-checked={filled}
+                aria-label={`${star} star${star === 1 ? "" : "s"}`}
+                className={styles.star}
+                data-filled={filled}
+                onClick={() => setRating(star)}
+                {...(motionAllowed ? { whileTap: { scale: 0.85 } } : {})}
+              >
+                ★
+              </Comp>
+            );
+          })}
         </div>
         <textarea
           className={styles.comment}
@@ -72,12 +82,7 @@ export function FeedbackForm() {
           onChange={(e) => setComment(e.target.value)}
           rows={3}
         />
-        {error && (
-          <p role="alert" className={styles.error}>
-            {error}
-          </p>
-        )}
-        <Button type="button" variant="primary" disabled={submitting} onClick={handleSubmit}>
+        <Button type="button" variant="primary" className={styles.submitButton} disabled={submitting} onClick={handleSubmit}>
           {submitting ? "Sending…" : "Send feedback"}
         </Button>
       </div>

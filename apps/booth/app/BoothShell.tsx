@@ -48,7 +48,7 @@ export function BoothShell({
         <div className={styles.right}>
           <nav className={styles.nav}>
             <Link href="/" className={styles.navLink} aria-current={pathname === "/" ? "page" : undefined}>
-              Your order
+              Order
             </Link>
             <Link href="/menu" className={styles.navLink} aria-current={pathname === "/menu" ? "page" : undefined}>
               Menu

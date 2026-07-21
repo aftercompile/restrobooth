@@ -1,13 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, CardHeader, formatPaiseAsRupees, TabularNumber, useToast } from "@restrobooth/ui";
+import {
+  Animate,
+  BankIcon,
+  Button,
+  Card,
+  CashIcon,
+  CheckCircleIcon,
+  ReceiptIcon,
+  SmartphoneIcon,
+  formatPaiseAsRupees,
+  useToast,
+} from "@restrobooth/ui";
 import { finalizeGuestBillAction, payGuestBillAction } from "../actions";
 import type { GuestBill, GuestPaymentMethod } from "../../lib/payment-mutations";
 import { FeedbackForm } from "./FeedbackForm";
 import styles from "./PayPanel.module.css";
 
 type View = "loading" | "error" | "choose" | "paying" | "paid" | "pending-cash" | "pending-upi";
+
+/** "Pay online" is its own prominent CTA, not a third grid tile — it's the
+ *  one method that actually completes the visit end to end (auto-settles,
+ *  closes the table). UPI/cash both still need a staff member to confirm
+ *  receipt before anything's final, so they read as the secondary,
+ *  "or hand it to your server" options underneath. */
+const ALT_METHODS: { value: GuestPaymentMethod; label: string; icon: typeof CashIcon }[] = [
+  { value: "upi_intent", label: "UPI app", icon: SmartphoneIcon },
+  { value: "cash", label: "Cash", icon: CashIcon },
+];
 
 /**
  * ADR-0010's hybrid settle model, entirely client-side state after the
@@ -24,6 +45,7 @@ export function PayPanel({ upiAvailable }: { upiAvailable: boolean }) {
   const [bill, setBill] = useState<GuestBill | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upiUrl, setUpiUrl] = useState<string | null>(null);
+  const [payingMethod, setPayingMethod] = useState<GuestPaymentMethod | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +66,7 @@ export function PayPanel({ upiAvailable }: { upiAvailable: boolean }) {
   }, []);
 
   async function handlePay(method: GuestPaymentMethod) {
+    setPayingMethod(method);
     setView("paying");
     const { error, result } = await payGuestBillAction(method);
     if (error || !result) {
@@ -61,63 +84,112 @@ export function PayPanel({ upiAvailable }: { upiAvailable: boolean }) {
     }
   }
 
-  if (view === "loading") return <p>Preparing your bill…</p>;
+  if (view === "loading") {
+    return (
+      <Card>
+        <p className={styles.loading}>Preparing your bill…</p>
+      </Card>
+    );
+  }
   if (view === "error") {
     return (
-      <p role="alert" className={styles.error}>
-        {error}
-      </p>
+      <Card>
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
+      </Card>
     );
   }
   if (!bill) return null;
 
   const showFeedback = view === "paid" || view === "pending-cash" || view === "pending-upi";
+  const altMethods = upiAvailable ? ALT_METHODS : ALT_METHODS.filter((m) => m.value !== "upi_intent");
+  const paying = view === "paying";
 
   return (
     <>
-      <Card>
-        <CardHeader title="Your bill" />
-        <div className={styles.panel}>
-          <div className={styles.totalRow}>
-            <span>Total payable</span>
-            <TabularNumber>₹{formatPaiseAsRupees(BigInt(bill.payablePaise))}</TabularNumber>
+      <Animate>
+        <Card className={styles.billCard}>
+          <div className={styles.billHead}>
+            <span className={styles.billHeadIconWrap}>
+              <ReceiptIcon className={styles.billHeadIcon} />
+            </span>
+            <div>
+              <div className={styles.billHeadTitle}>Your bill</div>
+              <div className={styles.invoice}>Invoice {bill.invoiceNo}</div>
+            </div>
           </div>
-          <p className={styles.invoice}>Invoice {bill.invoiceNo}</p>
+
+          <div className={styles.totalRow}>
+            <span className={styles.totalLabel}>Total payable</span>
+            <span className={styles.totalAmount}>₹{formatPaiseAsRupees(BigInt(bill.payablePaise))}</span>
+          </div>
 
           {(view === "choose" || view === "paying") && (
             <div className={styles.methods}>
-              <Button type="button" variant="primary" disabled={view === "paying"} onClick={() => handlePay("mock")}>
-                {view === "paying" ? "Paying…" : "Pay online"}
+              <Button type="button" variant="primary" className={styles.payOnlineButton} disabled={paying} onClick={() => handlePay("mock")}>
+                {paying && payingMethod === "mock" ? "Processing…" : "Pay online"}
               </Button>
-              {upiAvailable && (
-                <Button type="button" variant="secondary" disabled={view === "paying"} onClick={() => handlePay("upi_intent")}>
-                  Pay via UPI app
-                </Button>
-              )}
-              <Button type="button" variant="secondary" disabled={view === "paying"} onClick={() => handlePay("cash")}>
-                Pay with cash
-              </Button>
+
+              <div className={styles.altDivider}>
+                <span>or pay another way</span>
+              </div>
+
+              <div className={styles.altMethods}>
+                {altMethods.map((m) => {
+                  const isPaying = paying && payingMethod === m.value;
+                  return (
+                    <button key={m.value} type="button" className={styles.methodButton} disabled={paying} onClick={() => handlePay(m.value)}>
+                      <span className={styles.methodIconWrap}>
+                        <m.icon className={styles.methodIcon} />
+                      </span>
+                      <span className={styles.methodLabel}>{isPaying ? "Processing…" : m.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {view === "paid" && <p className={styles.confirmed}>Paid ✓ — thank you!</p>}
+          {view === "paid" && (
+            <Animate>
+              <div className={styles.confirmedBlock}>
+                <CheckCircleIcon className={styles.confirmedIcon} />
+                <span>Paid — thank you!</span>
+              </div>
+            </Animate>
+          )}
 
           {view === "pending-upi" && (
-            <div className={styles.pendingBlock}>
-              <p>Tap below to pay in your UPI app, then show your server — they&apos;ll confirm once received.</p>
-              {upiUrl && (
-                <a href={upiUrl} className={styles.upiLink}>
-                  Open UPI app
-                </a>
-              )}
-            </div>
+            <Animate>
+              <div className={styles.pendingBlock}>
+                <p className={styles.pendingText}>Tap below to pay in your UPI app, then show your server — they&apos;ll confirm once received.</p>
+                {upiUrl && (
+                  <a href={upiUrl} className={styles.upiLink}>
+                    <SmartphoneIcon className={styles.upiLinkIcon} />
+                    Open UPI app
+                  </a>
+                )}
+              </div>
+            </Animate>
           )}
 
-          {view === "pending-cash" && <p className={styles.confirmed}>Please pay your server — they&apos;ll confirm once received.</p>}
-        </div>
-      </Card>
+          {view === "pending-cash" && (
+            <Animate>
+              <div className={styles.pendingBlock}>
+                <BankIcon className={styles.pendingIcon} aria-hidden="true" />
+                <p className={styles.pendingText}>Please pay your server — they&apos;ll confirm once received.</p>
+              </div>
+            </Animate>
+          )}
+        </Card>
+      </Animate>
 
-      {showFeedback && <FeedbackForm />}
+      {showFeedback && (
+        <Animate delayIndex={1}>
+          <FeedbackForm />
+        </Animate>
+      )}
     </>
   );
 }

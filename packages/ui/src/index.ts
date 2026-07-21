@@ -31,6 +31,11 @@ export {
   CashIcon,
   SearchIcon,
   BellIcon,
+  CardIcon,
+  SmartphoneIcon,
+  BankIcon,
+  WalletIcon,
+  CheckCircleIcon,
 } from "./components/icons";
 export { Button, type ButtonVariant } from "./components/Button";
 export { Input } from "./components/Input";

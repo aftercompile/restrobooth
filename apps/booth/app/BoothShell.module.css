@@ -10,46 +10,69 @@
   padding: 0 var(--space-2);
   background: var(--enamel-700);
   color: #fff;
+  /* A hairline-plus-shadow edge, not just a flat colour stop — the same
+     "give a fixed surface a little depth" idea Card.module.css already
+     applies everywhere else, just tuned for a dark bar over a light page. */
+  box-shadow: 0 1px 0 rgb(255 255 255 / 8%) inset, 0 4px 12px rgb(18 32 29 / 12%);
 }
 
 .context {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  /* The original bug: no floor on this, so at phone width "Table T5" and
+     the nav links both ran out of room and word-wrapped mid-label instead
+     of the intended one-line layout. Nav + bell (.right) get flex-shrink:0
+     below — they always keep their full content width — and this is the
+     one side allowed to give, down to a legible floor, truncating with an
+     ellipsis rather than wrapping. */
+  min-width: 72px;
+  flex-shrink: 1;
 }
 
 .table {
   font-weight: 700;
   font-size: var(--text-lg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .brand {
   color: rgb(255 255 255 / 72%);
   font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .right {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .nav {
   display: flex;
-  gap: var(--space-1);
+  gap: 2px;
+  flex-shrink: 0;
+  background: rgb(255 255 255 / 10%);
+  border-radius: calc(var(--radius) + 4px);
+  padding: 3px;
 }
 
 .navLink {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 0 var(--space-1);
+  min-height: calc(var(--touch-target) - 6px);
+  padding: 0 10px;
   border-radius: var(--radius);
   color: rgb(255 255 255 / 80%);
   text-decoration: none;
   font-weight: 600;
   font-size: var(--text-sm);
   background: transparent;
+  white-space: nowrap;
 }
 
 .navLink[aria-current="page"] {

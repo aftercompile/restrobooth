@@ -1,13 +1,39 @@
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+.loading {
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--space-2) 0;
 }
 
-.totalRow {
+.billCard {
+  overflow: visible;
+}
+
+.billHead {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.billHeadIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--enamel-700) 10%, var(--surface));
+  color: var(--enamel-700);
+}
+
+.billHeadIcon {
+  width: 22px;
+  height: 22px;
+}
+
+.billHeadTitle {
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-lg);
 }
@@ -15,31 +41,152 @@
 .invoice {
   color: var(--text-muted);
   font-size: var(--text-sm);
-  margin: 0;
+  margin: 2px 0 0;
+}
+
+/* The hero number — this whole card exists to show it. A filled band
+   (same "one number, not one more row" idea as POS's own .grand total)
+   scaled up for a guest reading their phone across a table. */
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+  background: var(--surface-sunken);
+  border-radius: var(--radius);
+}
+
+.totalLabel {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.totalAmount {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-2xl);
+  font-weight: 700;
 }
 
 .methods {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-top: var(--space-1);
 }
 
-.confirmed {
+.payOnlineButton {
+  width: 100%;
+  min-height: calc(var(--touch-target) + 8px);
+  font-size: var(--text-base);
+}
+
+.altDivider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  margin: 2px 0;
+}
+
+.altDivider::before,
+.altDivider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.altMethods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-1);
+}
+
+.methodButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-1);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.methodButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.methodIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  color: var(--enamel-700);
+}
+
+.methodIcon {
+  width: 17px;
+  height: 17px;
+}
+
+.methodLabel {
+  font-size: var(--text-sm);
+}
+
+.confirmedBlock {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+  font-weight: 700;
+  font-size: var(--text-base);
   color: var(--ramp-fresh);
+}
+
+.confirmedIcon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
 }
 
 .pendingBlock {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-1);
+}
+
+.pendingIcon {
+  width: 24px;
+  height: 24px;
+  color: var(--enamel-700);
+}
+
+.pendingText {
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .upiLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  width: 100%;
   min-height: var(--touch-target);
   padding: 0 var(--space-2);
   background: var(--brass-500);
@@ -47,6 +194,11 @@
   font-weight: 700;
   text-decoration: none;
   border-radius: var(--radius);
+}
+
+.upiLinkIcon {
+  width: 18px;
+  height: 18px;
 }
 
 .error {

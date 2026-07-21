@@ -3,7 +3,25 @@
 import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Badge, Button, Card, CardHeader, Input, Select, useToast, type ToastTone } from "@restrobooth/ui";
+import {
+  Badge,
+  BankIcon,
+  Button,
+  CardIcon,
+  CashIcon,
+  Card,
+  CardHeader,
+  CheckCircleIcon,
+  Input,
+  MoneyInput,
+  ReceiptIcon,
+  Select,
+  SmartphoneIcon,
+  WalletIcon,
+  formatPaiseAsRupees,
+  useToast,
+  type ToastTone,
+} from "@restrobooth/ui";
 import { computeBill, type BillLineInput, type TaxRateInput } from "@restrobooth/domain";
 import { getOfflineDb, type OutboxEntry } from "../../../../lib/offline/db";
 import { enqueue, discardRejected } from "../../../../lib/offline/outbox";
@@ -51,6 +69,22 @@ function sumLocalPaid(entries: OutboxEntry[]): bigint {
   }, 0n);
 }
 
+/** The invoice header every bill state (preview aside) shares — a small
+ *  icon badge + invoice number, replacing a bare "Invoice X" text line. */
+function BillHead({ invoiceNo, meta }: { invoiceNo: string; meta: string }) {
+  return (
+    <div className={styles.billHead}>
+      <span className={styles.billHeadIconWrap}>
+        <ReceiptIcon className={styles.billHeadIcon} />
+      </span>
+      <div>
+        <div className={styles.billHeadInvoice}>{invoiceNo}</div>
+        <div className={styles.billHeadMeta}>{meta}</div>
+      </div>
+    </div>
+  );
+}
+
 export function BillView({ sessionId, preview, bills }: { sessionId: string; preview: BillPreview; bills: ExistingBill[] }) {
   const entries = useLiveQuery(() => getOfflineDb().outbox.where("sessionId").equals(sessionId).sortBy("createdAt"), [sessionId], [] as OutboxEntry[]) ?? [];
   const pendingFinalize = entries.find((e) => e.mutationType === "finalizeBill" && e.status !== "applied");
@@ -85,13 +119,11 @@ export function BillView({ sessionId, preview, bills }: { sessionId: string; pre
         if (bill.status === "settled") return <SettledView key={bill.billId} sessionId={sessionId} bill={bill} />;
         return (
           <Card padded key={bill.billId}>
-            <p>
-              Invoice <strong>{bill.invoiceNo}</strong> — {bill.status}
-            </p>
-            <p className={styles.totalsRow}>
+            <BillHead invoiceNo={bill.invoiceNo ?? "—"} meta={bill.status} />
+            <div className={styles.totalsRow}>
               <span>Payable</span>
               <span className={styles.lineAmount}>{formatRupees(bill.payablePaise)}</span>
-            </p>
+            </div>
             <Link href={`/bill/${bill.billId}`}>View / print invoice</Link>
           </Card>
         );
@@ -144,16 +176,32 @@ function FinalizeForm({ sessionId, preview }: { sessionId: string; preview: Bill
         </div>
       </Card>
 
-      <div className={styles.modeTabs}>
-        <Button type="button" variant={mode === "one" ? "primary" : "secondary"} onClick={() => setMode("one")}>
+      <div className={styles.segmented} role="tablist" aria-label="How to bill this table">
+        <button type="button" role="tab" aria-selected={mode === "one"} className={styles.segmentedButton} data-selected={mode === "one"} onClick={() => setMode("one")}>
           One bill
-        </Button>
-        <Button type="button" variant={mode === "items" ? "primary" : "secondary"} onClick={() => setMode("items")} disabled={preview.lines.length === 0}>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "items"}
+          className={styles.segmentedButton}
+          data-selected={mode === "items"}
+          disabled={preview.lines.length === 0}
+          onClick={() => setMode("items")}
+        >
           Split by item/guest
-        </Button>
-        <Button type="button" variant={mode === "amount" ? "primary" : "secondary"} onClick={() => setMode("amount")} disabled={preview.lines.length === 0}>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "amount"}
+          className={styles.segmentedButton}
+          data-selected={mode === "amount"}
+          disabled={preview.lines.length === 0}
+          onClick={() => setMode("amount")}
+        >
           Split by amount
-        </Button>
+        </button>
       </div>
 
       {mode === "one" && <OneBillControls sessionId={sessionId} preview={preview} />}
@@ -162,6 +210,8 @@ function FinalizeForm({ sessionId, preview }: { sessionId: string; preview: Bill
     </>
   );
 }
+
+type DiscountKind = "none" | "flat" | "percent";
 
 /**
  * ADR-0004: writes to the local outbox and returns instantly — no network
@@ -176,20 +226,21 @@ function FinalizeForm({ sessionId, preview }: { sessionId: string; preview: Bill
  */
 function OneBillControls({ sessionId, preview }: { sessionId: string; preview: BillPreview }) {
   const toast = useToast();
-  const [discountKind, setDiscountKind] = useState<"none" | "flat" | "percent">("none");
+  const [discountKind, setDiscountKind] = useState<DiscountKind>("none");
+  const [discountValue, setDiscountValue] = useState("");
+  const [serviceChargeBps, setServiceChargeBps] = useState("0");
   const [pending, setPending] = useState(false);
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit() {
     setPending(true);
     try {
-      const discountValue = String(formData.get("discountValue") ?? "0");
-      const serviceChargeBps = Number(formData.get("serviceChargeBps") ?? 0);
+      const serviceChargeBpsNum = Number(serviceChargeBps) || 0;
 
       const billDiscount =
         discountKind === "flat"
-          ? { kind: "flat" as const, amountPaise: BigInt(Math.round(Number(discountValue) * 100)) }
+          ? { kind: "flat" as const, amountPaise: BigInt(Math.round(Number(discountValue || 0) * 100)) }
           : discountKind === "percent"
-            ? { kind: "percent" as const, bps: Math.round(Number(discountValue) * 100) }
+            ? { kind: "percent" as const, bps: Math.round(Number(discountValue || 0) * 100) }
             : undefined;
 
       const lines: BillLineInput[] = preview.lines.map((l) => ({
@@ -202,8 +253,8 @@ function OneBillControls({ sessionId, preview }: { sessionId: string; preview: B
       );
       const subtotalPaise = lines.reduce((sum, l) => sum + l.grossPaise, 0n);
       const charges =
-        serviceChargeBps > 0
-          ? [{ name: "service_charge", taxClassId: taxRates[0]!.taxClassId, amountPaise: (subtotalPaise * BigInt(serviceChargeBps)) / 10_000n }]
+        serviceChargeBpsNum > 0
+          ? [{ name: "service_charge", taxClassId: taxRates[0]!.taxClassId, amountPaise: (subtotalPaise * BigInt(serviceChargeBpsNum)) / 10_000n }]
           : [];
 
       const local = computeBill({
@@ -218,7 +269,7 @@ function OneBillControls({ sessionId, preview }: { sessionId: string; preview: B
       await enqueue(
         "finalizeBill",
         sessionId,
-        { sessionId, billId, discountKind, discountValue, serviceChargeBps },
+        { sessionId, billId, discountKind, discountValue: discountValue || "0", serviceChargeBps: serviceChargeBpsNum },
         { billId, subtotalPaise: local.subtotalPaise.toString(), taxTotalPaise: local.taxTotalPaise.toString(), payablePaise: local.payablePaise.toString() },
       );
     } catch (err) {
@@ -229,43 +280,48 @@ function OneBillControls({ sessionId, preview }: { sessionId: string; preview: B
   }
 
   return (
-    <form action={handleSubmit}>
+    <Card padded>
+      <div className={styles.fieldGroup}>
+        <span className={styles.fieldLabel}>Discount</span>
+        <div className={styles.segmented}>
+          <button type="button" className={styles.segmentedButton} data-selected={discountKind === "none"} onClick={() => setDiscountKind("none")}>
+            None
+          </button>
+          <button type="button" className={styles.segmentedButton} data-selected={discountKind === "flat"} onClick={() => setDiscountKind("flat")}>
+            Flat ₹
+          </button>
+          <button type="button" className={styles.segmentedButton} data-selected={discountKind === "percent"} onClick={() => setDiscountKind("percent")}>
+            Percent %
+          </button>
+        </div>
+      </div>
+
       <div className={styles.controls}>
-        <Select
-          label="Discount"
-          name="discountKind"
-          className={styles.narrowInput}
-          value={discountKind}
-          onChange={(e) => setDiscountKind(e.target.value as typeof discountKind)}
-        >
-          <option value="none">None</option>
-          <option value="flat">Flat (₹)</option>
-          <option value="percent">Percent (%)</option>
-        </Select>
         {discountKind !== "none" && (
           <Input
             label={discountKind === "flat" ? "Amount (₹)" : "Percent (%)"}
             type="number"
-            name="discountValue"
             step="0.01"
             min={0}
             className={styles.narrowInput}
+            value={discountValue}
+            onChange={(e) => setDiscountValue(e.target.value)}
           />
         )}
         <Input
           label="Service charge (%)"
           type="number"
-          name="serviceChargeBps"
           step="1"
           min={0}
-          defaultValue={0}
           className={styles.narrowInput}
+          value={serviceChargeBps}
+          onChange={(e) => setServiceChargeBps(e.target.value)}
         />
-        <Button type="submit" variant="primary" disabled={pending || preview.lines.length === 0}>
+        <Button type="button" variant="primary" disabled={pending || preview.lines.length === 0} onClick={handleSubmit}>
           {pending ? "Finalising…" : "Finalise bill"}
         </Button>
       </div>
-    </form>
+    </Card>
   );
 }
 
@@ -292,17 +348,15 @@ function SplitByItemsControls({ sessionId, preview }: { sessionId: string; previ
     <form action={formAction}>
       <input type="hidden" name="sessionId" value={sessionId} />
       <div className={styles.controls}>
-        <label>
-          Guests
-          <input
-            type="number"
-            min={2}
-            max={12}
-            value={guestCount}
-            onChange={(e) => setGuestCount(Math.max(2, Math.min(12, Number(e.target.value) || 2)))}
-            className={styles.narrowInput}
-          />
-        </label>
+        <Input
+          label="Guests"
+          type="number"
+          min={2}
+          max={12}
+          value={guestCount}
+          onChange={(e) => setGuestCount(Math.max(2, Math.min(12, Number(e.target.value) || 2)))}
+          className={styles.narrowInput}
+        />
       </div>
 
       <Card padded={false}>
@@ -355,11 +409,7 @@ function SplitByAmountControls({ sessionId }: { sessionId: string }) {
     <form action={formAction}>
       <input type="hidden" name="sessionId" value={sessionId} />
       <div className={styles.controls}>
-        <label>
-          Split into
-          <input type="number" name="ways" min={2} max={12} defaultValue={2} className={styles.narrowInput} />
-          equal ways
-        </label>
+        <Input label="Split into (equal ways)" type="number" name="ways" min={2} max={12} defaultValue={2} className={styles.narrowInput} />
         <Button type="submit" variant="primary" disabled={pending}>
           {pending ? "Splitting…" : "Split evenly"}
         </Button>
@@ -369,9 +419,19 @@ function SplitByAmountControls({ sessionId }: { sessionId: string }) {
   );
 }
 
+const METHODS = [
+  { value: "cash", label: "Cash", icon: CashIcon, needsNetwork: false },
+  { value: "upi_intent", label: "UPI", icon: SmartphoneIcon, needsNetwork: true },
+  { value: "card", label: "Card", icon: CardIcon, needsNetwork: true },
+  { value: "netbanking", label: "Netbanking", icon: BankIcon, needsNetwork: true },
+  { value: "wallet", label: "Wallet", icon: WalletIcon, needsNetwork: true },
+] as const;
+
 /** Payment form shared by SettleView (real bill) and PendingFinalizeCard
  *  (bill still queued locally) — same dispatch, same offline rule (ADR-0004
- *  §5: card/UPI need the network; offline, only cash is offered). */
+ *  §5: card/UPI need the network; offline, only cash is offered). Tappable
+ *  method buttons, not a dropdown — a cashier picking a tender under time
+ *  pressure taps a visible choice rather than opening a native <select>. */
 function PayForm({
   billId,
   sessionId,
@@ -385,13 +445,17 @@ function PayForm({
 }) {
   const online = useOnlineStatus();
   const [pending, setPending] = useState(false);
+  const [method, setMethod] = useState<(typeof METHODS)[number]["value"]>("cash");
+  const [amountPaise, setAmountPaise] = useState<bigint | null>(remainingPaise);
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit() {
+    if (amountPaise === null || amountPaise <= 0n) {
+      toast("Enter a valid payment amount.", "critical");
+      return;
+    }
     setPending(true);
     try {
-      const method = String(formData.get("method") ?? "cash");
-      const amountRupees = String(formData.get("amount") ?? "");
-      await enqueue("settleBill", sessionId, { billId, sessionId, method, amountRupees });
+      await enqueue("settleBill", sessionId, { billId, sessionId, method, amountRupees: formatPaiseAsRupees(amountPaise) });
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not queue the payment.", "critical");
     } finally {
@@ -400,38 +464,34 @@ function PayForm({
   }
 
   return (
-    <form action={handleSubmit} className={styles.controls}>
-      <label>
-        Method
-        <select name="method" className={styles.select} defaultValue="cash">
-          <option value="cash">Cash</option>
-          <option value="upi_intent" disabled={!online}>
-            UPI{!online ? " (needs network)" : ""}
-          </option>
-          <option value="card" disabled={!online}>
-            Card{!online ? " (needs network)" : ""}
-          </option>
-          <option value="netbanking" disabled={!online}>
-            Netbanking{!online ? " (needs network)" : ""}
-          </option>
-          <option value="wallet" disabled={!online}>
-            Wallet{!online ? " (needs network)" : ""}
-          </option>
-        </select>
-      </label>
-      <input
-        type="number"
-        name="amount"
-        step="0.01"
-        min={0}
-        defaultValue={(Number(remainingPaise) / 100).toFixed(2)}
-        className={styles.narrowInput}
-        aria-label="Payment amount"
-      />
-      <Button type="submit" variant="primary" disabled={pending}>
-        {pending ? "Recording…" : "Add payment"}
-      </Button>
-    </form>
+    <div>
+      <span className={styles.fieldLabel}>Method</span>
+      <div className={styles.methodGrid}>
+        {METHODS.map((m) => {
+          const disabled = m.needsNetwork && !online;
+          return (
+            <button
+              key={m.value}
+              type="button"
+              className={styles.methodButton}
+              data-selected={method === m.value}
+              disabled={disabled}
+              onClick={() => setMethod(m.value)}
+            >
+              <m.icon className={styles.methodIcon} />
+              {m.label}
+              {disabled && <span className={styles.methodHint}>Needs network</span>}
+            </button>
+          );
+        })}
+      </div>
+      <div className={styles.payRow}>
+        <MoneyInput label="Amount" valuePaise={amountPaise} onChangePaise={setAmountPaise} />
+        <Button type="button" variant="primary" disabled={pending} onClick={handleSubmit}>
+          {pending ? "Recording…" : "Add payment"}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -451,9 +511,12 @@ function PendingFinalizeCard({ sessionId, entry, localSettles }: { sessionId: st
 
   return (
     <Card padded>
-      <p>
-        Invoice <Badge tone={entry.status === "rejected" ? "critical" : "warning"}>{entry.status === "rejected" ? "sync failed" : "pending sync"}</Badge>
-      </p>
+      <div className={styles.billHead}>
+        <span className={styles.billHeadIconWrap}>
+          <ReceiptIcon className={styles.billHeadIcon} />
+        </span>
+        <Badge tone={entry.status === "rejected" ? "critical" : "warning"}>{entry.status === "rejected" ? "sync failed" : "pending sync"}</Badge>
+      </div>
       {entry.status === "rejected" && (
         <>
           <p className={styles.error}>{entry.errorMessage}</p>
@@ -506,16 +569,19 @@ function PendingGuestPaymentRow({ sessionId, paymentId, method, amountPaise }: {
   }
 
   return (
-    <div className={styles.totalsRow}>
-      <span>
-        Guest claims paid <Badge tone="warning">{METHOD_LABEL[method] ?? method}</Badge>
-      </span>
-      <span className={styles.lineAmount}>
-        {formatRupees(amountPaise)}{" "}
+    <div className={styles.guestClaimRow}>
+      <div className={styles.guestClaimLabel}>
+        <SmartphoneIcon className={styles.guestClaimIcon} />
+        <span>
+          Guest claims paid <Badge tone="warning">{METHOD_LABEL[method] ?? method}</Badge>
+        </span>
+      </div>
+      <div className={styles.guestClaimAction}>
+        <span className={styles.lineAmount}>{formatRupees(amountPaise)}</span>
         <Button type="button" variant="primary" className={styles.smallButton} disabled={pending} onClick={handleConfirm}>
           {pending ? "Confirming…" : "Confirm"}
         </Button>
-      </span>
+      </div>
     </div>
   );
 }
@@ -533,9 +599,7 @@ function SettleView({ sessionId, bill, localSettles }: { sessionId: string; bill
 
   return (
     <Card padded>
-      <p>
-        Invoice <strong>{bill.invoiceNo}</strong>
-      </p>
+      <BillHead invoiceNo={bill.invoiceNo ?? "—"} meta="Awaiting payment" />
       <div className={styles.totalsRow}>
         <span>Payable</span>
         <span className={styles.lineAmount}>{formatRupees(payablePaise)}</span>
@@ -555,23 +619,23 @@ function SettleView({ sessionId, bill, localSettles }: { sessionId: string; bill
       </div>
       {rejected.map((e) => (
         <p key={e.id} className={styles.error}>
-          A queued payment failed to sync: {e.errorMessage}{" "}
-          <DiscardButton id={e.id} small />
+          A queued payment failed to sync: {e.errorMessage} <DiscardButton id={e.id} small />
         </p>
       ))}
 
       {remainingPaise > 0n && <PayForm billId={bill.billId} sessionId={sessionId} remainingPaise={remainingPaise} toast={toast} />}
 
-      <form action={voidAction}>
-        <input type="hidden" name="billId" value={bill.billId} />
-        <input type="hidden" name="sessionId" value={sessionId} />
-        <Button type="submit" variant="danger" disabled={voidPending}>
-          {voidPending ? "Voiding…" : "Void bill"}
-        </Button>
-        {voidState.error && <span className={styles.error}>{voidState.error}</span>}
-      </form>
-
-      {remainingPaise <= 0n && <Badge tone="live">settled</Badge>}
+      <div className={styles.dangerRow}>
+        <form action={voidAction}>
+          <input type="hidden" name="billId" value={bill.billId} />
+          <input type="hidden" name="sessionId" value={sessionId} />
+          <Button type="submit" variant="danger" disabled={voidPending}>
+            {voidPending ? "Voiding…" : "Void bill"}
+          </Button>
+          {voidState.error && <span className={styles.error}>{voidState.error}</span>}
+        </form>
+        {remainingPaise <= 0n && <Badge tone="live">settled</Badge>}
+      </div>
     </Card>
   );
 }
@@ -590,48 +654,61 @@ function SettledView({ sessionId, bill }: { sessionId: string; bill: ExistingBil
 
   return (
     <Card padded>
-      <p>
-        Invoice <strong>{bill.invoiceNo}</strong> — settled
-      </p>
+      <div className={styles.billHead}>
+        <span className={styles.billHeadIconWrap}>
+          <CheckCircleIcon className={styles.billHeadIcon} />
+        </span>
+        <div>
+          <div className={styles.billHeadInvoice}>{bill.invoiceNo}</div>
+          <Badge tone="live">Settled</Badge>
+        </div>
+      </div>
       <div className={styles.totalsRow}>
         <span>Payable</span>
         <span className={styles.lineAmount}>{formatRupees(bill.payablePaise)}</span>
       </div>
       <div className={styles.controls}>
-        <Link href={`/bill/${bill.billId}`}>View / print invoice</Link>
+        <Link href={`/bill/${bill.billId}`} className={styles.invoiceLink}>
+          <ReceiptIcon className={styles.smallIcon} />
+          View / print invoice
+        </Link>
         <Button type="button" variant="secondary" onClick={() => setShowRefund((v) => !v)}>
           {showRefund ? "Cancel refund" : "Refund…"}
         </Button>
       </div>
 
       {showRefund && (
-        <form action={formAction} className={styles.controls}>
+        <form action={formAction}>
           <input type="hidden" name="billId" value={bill.billId} />
           <input type="hidden" name="sessionId" value={sessionId} />
-          <label>
-            Amount
-            <select name="mode" className={styles.select} value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
-              <option value="full">Full refund</option>
-              <option value="partial">Partial</option>
-            </select>
-          </label>
-          {mode === "partial" && (
-            <input type="number" name="amount" step="0.01" min={0} className={styles.narrowInput} placeholder="Amount ₹" />
-          )}
-          <label>
-            Reason
-            <select name="reasonCode" className={styles.select} defaultValue={REFUND_REASONS[0]!.value}>
+          <div className={styles.fieldGroup}>
+            <span className={styles.fieldLabel}>Amount</span>
+            <div className={styles.segmented}>
+              <button type="button" className={styles.segmentedButton} data-selected={mode === "full"} onClick={() => setMode("full")}>
+                Full refund
+              </button>
+              <button type="button" className={styles.segmentedButton} data-selected={mode === "partial"} onClick={() => setMode("partial")}>
+                Partial
+              </button>
+            </div>
+            <input type="hidden" name="mode" value={mode} />
+          </div>
+          <div className={styles.controls}>
+            {mode === "partial" && <Input label="Amount (₹)" name="amount" type="number" step="0.01" min={0} className={styles.narrowInput} />}
+            <Select label="Reason" name="reasonCode" className={styles.narrowInput} defaultValue={REFUND_REASONS[0]!.value}>
               {REFUND_REASONS.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
                 </option>
               ))}
-            </select>
-          </label>
-          <input type="text" name="note" placeholder="Note (optional)" className={styles.select} />
-          <Button type="submit" variant="danger" disabled={pending}>
-            {pending ? "Issuing…" : "Issue credit note"}
-          </Button>
+            </Select>
+            <Input label="Note (optional)" name="note" type="text" />
+          </div>
+          <div className={styles.controls}>
+            <Button type="submit" variant="danger" disabled={pending}>
+              {pending ? "Issuing…" : "Issue credit note"}
+            </Button>
+          </div>
           {state.error && <p className={styles.error}>{state.error}</p>}
         </form>
       )}

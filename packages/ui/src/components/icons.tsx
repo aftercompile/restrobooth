@@ -112,3 +112,54 @@ export function BellIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function CardIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <path d="M2.5 9.5h19" />
+      <path d="M6 14.5h4" />
+    </svg>
+  );
+}
+
+/** UPI / mobile-pay — a phone with a rupee mark, not a generic wallet, so
+ *  it reads distinctly from CardIcon/WalletIcon at a glance. */
+export function SmartphoneIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2" />
+      <path d="M10.5 19h3" />
+      <path d="M9.5 8.5h5M9.5 8.5c0 2 1.5 2 2.5 2.7c1 .7 2.5 1 2.5 2.8h-5" />
+    </svg>
+  );
+}
+
+export function BankIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 9.5 12 4l9 5.5" />
+      <path d="M4.5 9.5h15v9.5h-15z" />
+      <path d="M4 19h16M8 9.5V19M12 9.5V19M16 9.5V19" />
+    </svg>
+  );
+}
+
+export function WalletIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 7.5A2 2 0 0 1 5 5.5h13a1.5 1.5 0 0 1 1.5 1.5v1" />
+      <rect x="3" y="7.5" width="18" height="12" rx="2" />
+      <path d="M15.5 13a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
+    </svg>
+  );
+}
+
+export function CheckCircleIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5 10.7 15.5 16 9.5" />
+    </svg>
+  );
+}
