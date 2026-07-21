@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Badge, BellIcon, Card, CardHeader, CashIcon, FloorIcon, RampLegend, ReceiptIcon, RefreshIcon, SeatIcon } from "@restrobooth/ui";
+import { Badge, BellIcon, Card, CardHeader, CashIcon, CheckCircleIcon, FloorIcon, RampLegend, ReceiptIcon, RefreshIcon, SeatIcon } from "@restrobooth/ui";
 import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS, type RampState } from "@restrobooth/domain";
 import { createClient } from "../../lib/supabase/client";
 import { acknowledgeWaiterCall } from "./actions";
@@ -44,12 +44,20 @@ function notifyTone(t: FloorTable): "critical" | "warning" | "positive" | "activ
   if (t.hasPendingGuestPayment) return "critical";
   if (t.billStatus === "printed") return "warning";
   if (t.billStatus === "paid") return "positive";
-  // Below bill status, not above it: once a bill's in motion, that's the
-  // more current story for this table even if a late add-on KOT is still
-  // technically active. Above the self-seated tag, which is a static
-  // context badge, not a live status.
+  // Ready-to-serve outranks still-cooking: it's the more actionable of the
+  // two (go get the food NOW vs. nothing to do yet), and a session can be
+  // in both states at once (one KOT bumped, another still on the pass).
+  // Both sit below bill status, not above it — once a bill's in motion
+  // that's the more current story for the table even if a late add-on KOT
+  // is technically still active.
+  if (t.hasReadyToServe) return "warning";
   if (t.hasActiveKot) return "active";
+  // Above the self-seated tag, which is a static context badge, not a
+  // live status.
   if (t.openedVia === "guest") return "neutral";
+  // The ambient "nothing to report" baseline once the table's actually
+  // eating — below self-seated, which is more specific/useful information.
+  if (t.sessionStatus === "dining") return "neutral";
   return "none";
 }
 
@@ -338,9 +346,9 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                               waiter-called table taller than its neighbours before).
                               Content is priority-ordered and mutually exclusive,
                               never stacked: waiter call > payment to confirm > bill
-                              status > cooking > self-seated tag > empty. Same slot
-                              future events (food ready, kitchen delay, ...) would
-                              extend, not a new layout each time. */}
+                              status > ready to serve > cooking > self-seated tag >
+                              dining > empty. Same slot future events (kitchen delay,
+                              ...) would extend, not a new layout each time. */}
                           <div className={styles.notifyBand} data-tone={notifyTone(t)}>
                             {t.waiterCalledAt && t.sessionId ? (
                               <WaiterAction sessionId={t.sessionId} />
@@ -363,6 +371,14 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                                 <span className={styles.notifyLabel}>{t.billStatus === "paid" ? "Paid" : "Bill printed"}</span>
                                 <span className={styles.notifyHint}>View bill</span>
                               </Link>
+                            ) : t.hasReadyToServe ? (
+                              // Not a Link like Payment/Bill above — there's no
+                              // distinct destination for this one, the whole card
+                              // already goes to the order pad, same as Cooking below.
+                              <div className={styles.notifySubtle}>
+                                <CheckCircleIcon className={styles.readyIcon} aria-hidden="true" />
+                                <span className={styles.notifyLabel}>Ready to serve</span>
+                              </div>
                             ) : t.hasActiveKot ? (
                               <div className={styles.notifySubtle}>
                                 <span className={styles.cookingPot} aria-hidden="true">
@@ -373,6 +389,10 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                             ) : t.openedVia === "guest" ? (
                               <div className={styles.notifySubtle}>
                                 <Badge tone="neutral">Self Seated</Badge>
+                              </div>
+                            ) : t.sessionStatus === "dining" ? (
+                              <div className={styles.notifySubtle}>
+                                <span className={styles.notifyReady}>Dining</span>
                               </div>
                             ) : null}
                           </div>

@@ -324,6 +324,57 @@ export async function unseatSession(_prev: ActionState, formData: FormData): Pro
 }
 
 /**
+ * A captain "delivers" a bumped ticket — marks every one of its still-fired
+ * order_items 'served' in one action, the same granularity KDS's own bump
+ * already operates at (a whole ticket carried to the table in one trip, not
+ * item-by-item). Only legal once the kitchen is actually done: a ticket
+ * that isn't 'bumped' yet has nothing to deliver.
+ */
+export async function markKotServed(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const kotId = String(formData.get("kotId") ?? "");
+  const sessionId = String(formData.get("sessionId") ?? "");
+  if (!kotId || !sessionId) return { error: "Missing KOT." };
+
+  try {
+    await queryAsCurrentUser(async (tx) => {
+      const kot = (await tx.select().from(schema.kots).where(eq(schema.kots.id, kotId)))[0];
+      if (!kot) throw new Error("KOT not found");
+      if (kot.status !== "bumped") throw new Error("the kitchen isn't done with this ticket yet");
+
+      const items = await tx.execute<{ [key: string]: unknown; id: string }>(sql`
+        select oi.id from order_items oi
+        join kot_items ki on ki.order_item_id = oi.id
+        where ki.kot_id = ${kotId} and oi.status = 'fired'
+      `);
+      if (items.rows.length === 0) return; // already delivered — idempotent no-op
+
+      // Static, not per-row: the query already filtered to status='fired',
+      // so every row is transitioning from the same state.
+      assertOrderItemTransition("fired", "served");
+      const itemIds = sql.join(
+        items.rows.map((r) => sql`${r.id}`),
+        sql`, `,
+      );
+      await tx.execute(sql`update order_items set status = 'served' where id in (${itemIds})`);
+
+      await emitOrderStatusEvent(tx, {
+        outletId: kot.outletId,
+        businessDate: kot.businessDate,
+        entityType: "kot",
+        entityId: kotId,
+        eventType: "kot.served",
+        payload: { kitchenSection: kot.kitchenSection, kotNumber: kot.kotNumber },
+      });
+    });
+  } catch (err) {
+    return { error: fullErrorMessage(err) || "Could not mark the ticket served." };
+  }
+
+  revalidatePath(`/floor/${sessionId}`);
+  return OK;
+}
+
+/**
  * "Call for bill" (PRD.md's own phrase for the captain's job). DOMAIN.md
  * §3.1: dining -> bill_requested freezes the menu for this session — an
  * item can't be added after the bill was asked for without an explicit

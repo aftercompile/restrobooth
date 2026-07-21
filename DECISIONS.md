@@ -4,7 +4,28 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-21 (latest) — Floor card gets a "Cooking" state, guest board gets the same emoji
+## 2026-07-21 (latest) — Ready-to-serve → Captain alert → Mark served, full loop closed
+
+**Decided by:** Mohammed — "Once bumped, show Ready and a Captain app gets alert, then the captain brings it to table and mark as Served. the table notification banner should show these status in POS as well (example: Ready To Serve, Dining)."
+
+**What was already there, discovered before writing anything:** `order_items.status` has had a `served` value in its DB check constraint since the original schema, and `packages/domain/src/orderItem.ts`'s state machine already declares `fired -> served` as a legal transition — but **no code path anywhere ever wrote it.** `OrderItemRowView` in both POS and Captain already renders a `served` badge, waiting for a status that nothing ever set. This was designed-for and never wired up, not a gap to invent around.
+
+**The granularity call**: "Mark served" operates per-KOT (marks every one of a bumped ticket's still-`fired` order_items served in one action), not per-item. Matches the unit a captain actually works at — a whole ticket carried to the table in one trip — and mirrors KDS's own `bumpKot`, which already operates at ticket granularity for the identical reason.
+
+**Two new floor-band signals**, added to both POS's and Captain's `getFloor()` queries (each app keeps its own duplicated query layer, existing precedent) as plain `EXISTS` lateral joins, same shape as the existing `hasPendingGuestPayment`/`hasActiveKot`:
+- `hasReadyToServe` — a `bumped` KOT with items still at `fired` (not yet delivered).
+- Slotted into the priority chain **above** cooking (more actionable — go get the food NOW vs. nothing to do yet) and **below** bill status (once a bill's in motion that's still the more current story). Full chain: waiter call > payment to confirm > bill status > **ready to serve** > cooking > self-seated > **dining** > empty.
+- **"Dining"** — a new bottom-of-the-chain fallback: `sessionStatus === 'dining'` with nothing more specific to report. Reuses the existing `neutral` (untinted) tone and the idle-card's own `.notifyReady` label styling — deliberately the least visually loud state, since it's genuinely just "nothing to report."
+
+**Captain's alert is the realtime push itself, not new motion.** Extended `FloorList.tsx` to subscribe to the SAME `outlet:<id>:kots` broadcast channel POS's `OrderPad.tsx` already uses (migration 0031 — `kots` is partitioned, `postgres_changes` structurally can't fire on this stack, see the prior realtime-fix entry), scoped per-outlet the same way KDS's `RealtimeSync.tsx` is. Captain has **no existing motion exception** (unlike POS's `.floorMotionScope`), and none was added — "Ready to serve" appearing live on the row, unprompted, already reads as the alert; adding animation on top wasn't asked for and would have been scope creep into a screen CLAUDE.md's floor rule has never touched.
+
+**A real bug caught by the first live test, not by typecheck**: `getKotsForSession`'s new `unservedCount` aggregate used `group by k.id` alone, which works for a normal single-column primary key but not here — `kots`' PK is composite (`id`, `business_date`) for partitioning, so Postgres can't use the functional-dependency shortcut and rejected the query outright (`column "k.kot_number" must appear in the GROUP BY clause`). Fixed by listing every selected column explicitly, matching the convention KDS's own `getActiveTickets`/`getRecentlyBumpedTickets` already use for the exact same reason — should have been the reference the first time, is now.
+
+**Verified for real, the entire chain in one script, not just each piece in isolation**: seated a table on POS, fired an item (→ "Cooking" appears on POS), bumped it on KDS, watched Captain's floor list show "Ready to serve" **without a manual refresh** (the realtime push working end to end), opened that session on Captain and clicked "Mark served," confirmed the item's badge flips to `served` and the button disappears, then confirmed POS's own floor card drops "Ready to serve" and falls back to "Dining." Full workspace typecheck + lint green (lint caught one real issue — an unused loop variable in the new action — fixed before commit).
+
+---
+
+## 2026-07-21 — Floor card gets a "Cooking" state, guest board gets the same emoji
 
 **Decided by:** Mohammed — "when an item is fired to KOTS/KDS, the notification bar in POS for that table should show something like 'Cooking' with an animated pot emoji," naming both POS and Booth.
 

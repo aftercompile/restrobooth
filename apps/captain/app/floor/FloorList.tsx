@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Badge, BellIcon, RefreshIcon, StateRail } from "@restrobooth/ui";
+import { Badge, BellIcon, CheckCircleIcon, RefreshIcon, StateRail } from "@restrobooth/ui";
 import { rampStateForElapsed, TABLE_DWELL_THRESHOLDS } from "@restrobooth/domain";
 import { createClient } from "../../lib/supabase/client";
 import { acknowledgeWaiterCall } from "./actions";
@@ -34,11 +34,14 @@ function WaiterAction({ sessionId }: { sessionId: string }) {
 
 /** Same priority order as apps/pos/app/floor/FloorMap.tsx's notifyTone —
  *  drives the band's own tone-tinted surface. */
-function notifyTone(t: FloorTable): "critical" | "warning" | "positive" | "neutral" | "none" {
+function notifyTone(t: FloorTable): "critical" | "warning" | "positive" | "active" | "neutral" | "none" {
   if (t.waiterCalledAt) return "critical";
   if (t.billStatus === "printed") return "warning";
   if (t.billStatus === "paid") return "positive";
+  if (t.hasReadyToServe) return "warning";
+  if (t.hasActiveKot) return "active";
   if (t.openedVia === "guest") return "neutral";
+  if (t.sessionStatus === "dining") return "neutral";
   return "none";
 }
 
@@ -88,6 +91,41 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
       supabase.removeChannel(channel);
     };
   }, [router]);
+
+  // The "Ready to serve" alert: `kots` is PARTITION BY RANGE
+  // (business_date), so — same story as apps/kds's RealtimeSync.tsx and
+  // apps/pos's OrderPad.tsx — a postgres_changes subscription on it never
+  // fires on this stack (its wal2json decoder doesn't understand
+  // publications). Migration 0031's parent-level trigger broadcasts every
+  // kots insert/update to its outlet's topic instead; this is that same
+  // broadcast, just subscribed per accessible outlet rather than per
+  // session. One outlet almost always (a captain's membership is
+  // outlet-scoped, same as kitchen's), but not assumed to be — derived
+  // from the tables actually on screen rather than a new query, since
+  // RLS already scoped `tables` to what this captain can see.
+  const outletIdsKey = useMemo(() => Array.from(new Set(tables.map((t) => t.outletId))).sort().join(","), [tables]);
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    let channels: ReturnType<typeof supabase.channel>[] = [];
+    const outletIds = outletIdsKey ? outletIdsKey.split(",") : [];
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      await supabase.realtime.setAuth(data.session?.access_token ?? null);
+      if (cancelled || outletIds.length === 0) return;
+      channels = outletIds.map((outletId) =>
+        supabase
+          .channel(`outlet:${outletId}:kots`, { config: { private: true } })
+          .on("broadcast", { event: "*" }, () => router.refresh())
+          .subscribe(),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      for (const channel of channels) void supabase.removeChannel(channel);
+    };
+  }, [router, outletIdsKey]);
 
   const byOutlet = useMemo(() => {
     const outlets = new Map<string, { outletName: string; areas: Map<string, { areaName: string; tables: FloorTable[] }> }>();
@@ -187,10 +225,14 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                             apps/pos/app/floor/FloorMap.tsx's .notifyBand (see its
                             comment for the full rationale). Outside the Link (an
                             <a>, can't nest a click-handling button). Priority:
-                            waiter call > bill status > self-seated tag > empty.
-                            Captain has no bill screen of its own (billing is a
-                            POS/cashier capability), so bill status here is a
-                            status only, no quick-link. */}
+                            waiter call > bill status > ready to serve > cooking >
+                            self-seated tag > dining > empty. Captain has no bill
+                            screen of its own (billing is a POS/cashier
+                            capability), so bill status here is a status only, no
+                            quick-link — same reasoning is why "ready to serve"
+                            isn't a link either: the action lives on THIS row's
+                            own /floor/[sessionId] screen (Mark served), which
+                            tapping the row already opens. */}
                         <div className={styles.notifyBand} data-tone={notifyTone(t)}>
                           {t.waiterCalledAt && t.sessionId ? (
                             <WaiterAction sessionId={t.sessionId} />
@@ -200,9 +242,25 @@ export function FloorList({ tables }: { tables: FloorTable[] }) {
                                 {t.billStatus === "paid" ? "Paid" : "Bill printed"}
                               </Badge>
                             </div>
+                          ) : t.hasReadyToServe ? (
+                            <div className={styles.notifySubtle}>
+                              <CheckCircleIcon className={styles.readyIcon} aria-hidden="true" />
+                              <span className={styles.notifyLabel}>Ready to serve</span>
+                            </div>
+                          ) : t.hasActiveKot ? (
+                            <div className={styles.notifySubtle}>
+                              <span className={styles.cookingPot} aria-hidden="true">
+                                🍲
+                              </span>
+                              <span className={styles.notifyLabel}>Cooking</span>
+                            </div>
                           ) : t.openedVia === "guest" ? (
                             <div className={styles.notifySubtle}>
                               <Badge tone="neutral">Self Seated</Badge>
+                            </div>
+                          ) : t.sessionStatus === "dining" ? (
+                            <div className={styles.notifySubtle}>
+                              <span className={styles.notifyReady}>Dining</span>
                             </div>
                           ) : null}
                         </div>

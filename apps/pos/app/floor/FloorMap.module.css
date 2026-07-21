@@ -405,12 +405,18 @@
   padding: 0 var(--space-2);
 }
 
-/* Cooking's label reads in enamel-700 (AA-safe as text, unlike the
-   band's own enamel-500 fill tint) rather than the default body colour,
-   so it visually pairs with the band tint above it the same way every
-   other tone's label matches its band. */
-.notifySubtle .notifyLabel {
+/* Each tone's label reads in its own AA-safe text colour (not the band's
+   own paler fill tint) so it visually pairs with the band above it, same
+   as every .notifyAction tone already does. Scoped by data-tone on the
+   BAND, not by .notifySubtle alone — Cooking and Ready-to-serve both use
+   .notifySubtle but need different colours. */
+.notifyBand[data-tone="active"] .notifyLabel {
   color: var(--enamel-700);
+  font-weight: 600;
+}
+
+.notifyBand[data-tone="warning"] .notifyLabel {
+  color: color-mix(in srgb, var(--ramp-warming) 70%, var(--text));
   font-weight: 600;
 }
 
@@ -418,6 +424,13 @@
   font-size: 20px;
   line-height: 1;
   flex-shrink: 0;
+}
+
+.readyIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--ramp-warming) 70%, var(--text));
 }
 
 .notifyReady {

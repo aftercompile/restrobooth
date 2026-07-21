@@ -4,7 +4,19 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-21 (latest), "Cooking" notify-band state
+## Where things stand — 2026-07-21 (latest), the "served" loop closed: Ready to serve → Captain alert → Mark served
+
+Requested directly by the owner. Full rationale, including a real bug caught by the first live test (a composite-PK `GROUP BY` gotcha): [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- **`order_items.status = 'served'` is now actually reachable.** It existed in the schema and `packages/domain`'s state machine since the start (and both apps' item rows already rendered a badge for it) but nothing ever wrote it until now.
+- **Captain**: a new `markKotServed` action — per-KOT granularity (matches a captain carrying a whole ticket, same unit KDS's own bump uses), gated on the ticket being `bumped`. The "Kitchen" section on `OrderScreen.tsx` now shows a "Mark served" button once a ticket's ready, replaced by a "served" badge once delivered.
+- **Both POS's and Captain's floor cards** gained two new notify-band states: **"Ready to serve"** (a bumped KOT with undelivered items — sits above Cooking, below bill status) and **"Dining"** (the calm baseline once a session is mid-meal with nothing more specific to report — the bottom of the priority chain).
+- **Captain's "alert"** is a real-time push: `FloorList.tsx` now subscribes to the same per-outlet `kots` broadcast channel POS's `OrderPad.tsx` already uses (the migration 0031 broadcast-trigger fix from earlier this session) — a bumped ticket shows up on the captain's floor list with zero manual refresh. No new motion was added — Captain has never had a motion exception and this didn't need to be the first.
+- Verified as one continuous live script: fire → Cooking (POS) → bump (KDS) → Ready to serve appears live (Captain, no refresh) → Mark served (Captain) → badge flips, button disappears → POS falls back to Dining. Full workspace typecheck + lint green.
+
+---
+
+## Where things stand — 2026-07-21, "Cooking" notify-band state
 
 Requested directly by the owner. Full rationale: [DECISIONS.md](DECISIONS.md)'s latest entry, [docs/DESIGN.md](docs/DESIGN.md)'s "Amendment 5."
 

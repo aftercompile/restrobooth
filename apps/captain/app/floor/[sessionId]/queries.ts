@@ -132,6 +132,10 @@ export interface KotSummary {
   kotNumber: number;
   kitchenSection: string;
   status: string;
+  /** order_items on this KOT still sitting at 'fired' — the count that
+   *  drives the "Mark served" button (only meaningful once status is
+   *  'bumped': the kitchen is done, the captain hasn't delivered it yet). */
+  unservedCount: number;
 }
 
 /** Read-only KOT status for the captain — no reprint control here (that's
@@ -143,17 +147,27 @@ export async function getKotsForSession(tx: RlsTx, sessionId: string): Promise<K
     kot_number: number;
     kitchen_section: string;
     status: string;
+    unserved_count: number;
   }>(sql`
-    select id as kot_id, kot_number, kitchen_section, status
-    from kots
-    where table_session_id = ${sessionId}
-    order by kot_number
+    select k.id as kot_id, k.kot_number, k.kitchen_section, k.status,
+      count(*) filter (where oi.status = 'fired') as unserved_count
+    from kots k
+    left join kot_items ki on ki.kot_id = k.id
+    left join order_items oi on oi.id = ki.order_item_id
+    where k.table_session_id = ${sessionId}
+    -- kots' primary key is composite (id, business_date) for partitioning,
+    -- so Postgres can't use the single-column functional-dependency
+    -- shortcut for "group by the PK, select the rest of the row free" —
+    -- every selected column needs to be named here explicitly.
+    group by k.id, k.kot_number, k.kitchen_section, k.status
+    order by k.kot_number
   `);
   return result.rows.map((r) => ({
     kotId: r.kot_id,
     kotNumber: r.kot_number,
     kitchenSection: r.kitchen_section,
     status: r.status,
+    unservedCount: Number(r.unserved_count),
   }));
 }
 

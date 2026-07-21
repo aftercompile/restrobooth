@@ -41,6 +41,11 @@ export interface FloorTable {
    *  short of bumped/voided). Drives the notify band's "Cooking" state —
    *  own signal, same footer slot, same as waiterCalledAt/hasPendingGuestPayment. */
   hasActiveKot: boolean;
+  /** At least one KOT is `bumped` (kitchen done) but still has order_items
+   *  sitting at `fired` (not yet delivered) — drives "Ready to serve".
+   *  Independent of hasActiveKot: a session can have one KOT still cooking
+   *  and another already ready at the same time. */
+  hasReadyToServe: boolean;
 }
 
 interface FloorRow {
@@ -63,6 +68,7 @@ interface FloorRow {
   waiter_called_at: string | null;
   has_pending_guest_payment: boolean;
   has_active_kot: boolean;
+  has_ready_to_serve: boolean;
 }
 
 /**
@@ -80,7 +86,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       t.area_id, a.name as area_name,
       ts.id as session_id, ts.status as session_status, ts.covers, ts.opened_at, ts.store_id,
       ts.guest_name, ts.opened_via, ts.waiter_called_at,
-      bs.bill_status, bs.has_pending_guest_payment, ak.has_active_kot
+      bs.bill_status, bs.has_pending_guest_payment, ak.has_active_kot, rs.has_ready_to_serve
     from tables t
     join areas a on a.id = t.area_id
     join outlets o on o.id = t.outlet_id
@@ -132,6 +138,19 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
           and k.status not in ('bumped', 'voided')
       ) as has_active_kot
     ) ak on true
+    -- "Ready to serve": a bumped ticket (kitchen done) with items still
+    -- sitting at 'fired' (not yet delivered) — the captain-facing "Mark
+    -- served" action is what clears this, not anything KDS does.
+    left join lateral (
+      select exists(
+        select 1 from kots k
+        join kot_items ki on ki.kot_id = k.id
+        join order_items oi on oi.id = ki.order_item_id
+        where k.table_session_id = ts.id
+          and k.status = 'bumped'
+          and oi.status = 'fired'
+      ) as has_ready_to_serve
+    ) rs on true
     where t.status = 'available'
     order by o.name, a.name, t.label
   `);
@@ -155,6 +174,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     waiterCalledAt: r.waiter_called_at,
     hasPendingGuestPayment: r.has_pending_guest_payment,
     hasActiveKot: r.has_active_kot,
+    hasReadyToServe: r.has_ready_to_serve,
   }));
 }
 

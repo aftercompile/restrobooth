@@ -27,6 +27,13 @@ export interface FloorTable {
   /** Non-null when a guest has tapped "Call waiter" and staff haven't
    *  acknowledged it yet (Slice 2c). Same signal apps/pos's getFloor() adds. */
   waiterCalledAt: string | null;
+  /** Same signal as apps/pos's getFloor() — at least one KOT hasn't
+   *  reached a terminal state yet. Drives "Cooking". */
+  hasActiveKot: boolean;
+  /** Same signal as apps/pos's getFloor() — a bumped KOT still has items
+   *  sitting at 'fired'. Drives "Ready to serve" — this is Captain's own
+   *  alert to go deliver the ticket, cleared by markKotServed(). */
+  hasReadyToServe: boolean;
 }
 
 interface FloorRow {
@@ -47,6 +54,8 @@ interface FloorRow {
   guest_name: string | null;
   opened_via: "staff" | "guest" | null;
   waiter_called_at: string | null;
+  has_active_kot: boolean;
+  has_ready_to_serve: boolean;
 }
 
 /**
@@ -64,7 +73,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       t.area_id, a.name as area_name,
       ts.id as session_id, ts.status as session_status, ts.covers, ts.opened_at, ts.store_id,
       ts.guest_name, ts.opened_via, ts.waiter_called_at,
-      bs.bill_status
+      bs.bill_status, ak.has_active_kot, rs.has_ready_to_serve
     from tables t
     join areas a on a.id = t.area_id
     join outlets o on o.id = t.outlet_id
@@ -90,6 +99,25 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       from bills b
       where b.table_session_id = ts.id
     ) bs on true
+    -- Same two signals as apps/pos/app/floor/queries.ts's getFloor() —
+    -- see that file's comment for the reasoning on each.
+    left join lateral (
+      select exists(
+        select 1 from kots k
+        where k.table_session_id = ts.id
+          and k.status not in ('bumped', 'voided')
+      ) as has_active_kot
+    ) ak on true
+    left join lateral (
+      select exists(
+        select 1 from kots k
+        join kot_items ki on ki.kot_id = k.id
+        join order_items oi on oi.id = ki.order_item_id
+        where k.table_session_id = ts.id
+          and k.status = 'bumped'
+          and oi.status = 'fired'
+      ) as has_ready_to_serve
+    ) rs on true
     where t.status = 'available'
     order by o.name, a.name, t.label
   `);
@@ -111,5 +139,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     guestName: r.guest_name,
     openedVia: r.opened_via,
     waiterCalledAt: r.waiter_called_at,
+    hasActiveKot: r.has_active_kot,
+    hasReadyToServe: r.has_ready_to_serve,
   }));
 }

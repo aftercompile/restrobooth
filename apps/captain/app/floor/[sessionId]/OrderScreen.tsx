@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Badge, Card, CardHeader, Button } from "@restrobooth/ui";
-import { callForBill, fireOrder, requestVoid, voidPendingItem, type ActionState } from "./actions";
+import { callForBill, fireOrder, markKotServed, requestVoid, voidPendingItem, type ActionState } from "./actions";
 import type { KotSummary, OrderableMenuItem, OrderItemRow, SessionDetail } from "./queries";
 import { AddItemPicker } from "./AddItemPicker";
 import { UnseatDialog } from "./UnseatDialog";
@@ -98,9 +98,7 @@ export function OrderScreen({
           <p className={styles.sectionTitle}>Kitchen</p>
           <Card padded={false}>
             {kots.map((k) => (
-              <div key={k.kotId} className={styles.kotRow}>
-                #{k.kotNumber} · {k.kitchenSection} · {k.status}
-              </div>
+              <KotRowView key={k.kotId} kot={k} sessionId={session.sessionId} />
             ))}
           </Card>
         </>
@@ -126,6 +124,35 @@ function FireButton({ sessionId, disabled }: { sessionId: string; disabled: bool
       </Button>
       {state.error && <p style={{ color: "var(--signal-600)", marginTop: 6 }}>{state.error}</p>}
     </form>
+  );
+}
+
+/** A ticket's kitchen status plus, once bumped, the one action a captain
+ *  actually takes on it: carry it to the table and mark it delivered. Not
+ *  bumped yet → status text only, nothing to do. Bumped with items still
+ *  'fired' → the button. Bumped and fully delivered → a quiet confirmation,
+ *  same shape as OrderItemRowView's own "served" badge below. */
+function KotRowView({ kot, sessionId }: { kot: KotSummary; sessionId: string }) {
+  const [state, formAction, pending] = useActionState(markKotServed, INITIAL);
+  const readyToServe = kot.status === "bumped" && kot.unservedCount > 0;
+
+  return (
+    <div className={styles.kotRow}>
+      <span className={styles.kotMeta}>
+        #{kot.kotNumber} · {kot.kitchenSection} · {kot.status}
+      </span>
+      {readyToServe && (
+        <form action={formAction}>
+          <input type="hidden" name="kotId" value={kot.kotId} />
+          <input type="hidden" name="sessionId" value={sessionId} />
+          <Button type="submit" variant="primary" className={styles.smallButton} disabled={pending}>
+            {pending ? "Marking…" : "Mark served"}
+          </Button>
+        </form>
+      )}
+      {kot.status === "bumped" && kot.unservedCount === 0 && <Badge tone="live">served</Badge>}
+      {state.error && <p style={{ color: "var(--signal-600)", width: "100%" }}>{state.error}</p>}
+    </div>
   );
 }
 

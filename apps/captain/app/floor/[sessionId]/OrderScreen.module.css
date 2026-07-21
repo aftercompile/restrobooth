@@ -93,6 +93,11 @@
   font-size: var(--text-sm);
 }
 
+.kotMeta {
+  flex: 1;
+  min-width: 0;
+}
+
 .fireBar {
   margin: var(--space-2) 0;
 }

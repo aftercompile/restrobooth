@@ -102,6 +102,13 @@
   border-top-color: color-mix(in srgb, var(--ramp-fresh) 35%, var(--border));
 }
 
+/* "Cooking" — same enamel "Live / fresh / OK" accent as
+   apps/pos/app/floor/FloorMap.module.css's identical rule. */
+.notifyBand[data-tone="active"] {
+  background: color-mix(in srgb, var(--enamel-500) 8%, var(--surface));
+  border-top-color: color-mix(in srgb, var(--enamel-500) 35%, var(--border));
+}
+
 .notifyAction {
   display: flex;
   align-items: center;
@@ -162,6 +169,7 @@
 .notifySubtle {
   display: flex;
   align-items: center;
+  gap: 8px;
   padding: 0 var(--space-2);
 }
 
@@ -169,6 +177,32 @@
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-muted);
+}
+
+/* Same tone-scoped label colours as apps/pos/app/floor/FloorMap.module.css
+   — Cooking and Ready-to-serve both use .notifySubtle but need different
+   colours, so this is keyed off the band's own data-tone, not the class. */
+.notifyBand[data-tone="active"] .notifyLabel {
+  color: var(--enamel-700);
+  font-weight: 600;
+}
+
+.notifyBand[data-tone="warning"] .notifyLabel {
+  color: color-mix(in srgb, var(--ramp-warming) 70%, var(--text));
+  font-weight: 600;
+}
+
+.cookingPot {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.readyIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--ramp-warming) 70%, var(--text));
 }
 
 .tableLabelGroup {
