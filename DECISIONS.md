@@ -4,7 +4,23 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-21 (latest) — Native `<select>`s get a hand-drawn chevron app-wide
+## 2026-07-21 (latest) — Floor card gets a "Cooking" state, guest board gets the same emoji
+
+**Decided by:** Mohammed — "when an item is fired to KOTS/KDS, the notification bar in POS for that table should show something like 'Cooking' with an animated pot emoji," naming both POS and Booth.
+
+**POS** (`apps/pos/app/floor/`): a new `hasActiveKot` field on `FloorTable` (`queries.ts`'s `getFloor()`) — a plain `EXISTS` against `kots` for anything short of `bumped`/`voided`, same shape as the existing `hasPendingGuestPayment` signal. Slotted into the notify band's priority chain (`FloorMap.tsx`'s `notifyTone()`) between bill status and the self-seated tag: **waiter call > payment to confirm > bill status > cooking > self-seated > empty.** Reasoning for that placement: once a bill's in motion that's the more current story for the table even if a late add-on KOT is technically still active (so cooking sits below bill status, not above); a live kitchen status is more current than a static context badge (so it sits above self-seated).
+
+**A new tone.** Cooking isn't alarming, so it doesn't borrow the existing warning/critical colours — a new `active` tone uses `--enamel-500`/`--enamel-700` (the token table's own documented "Live / fresh / OK" brand accent), matching the fill/text split every other tone already follows.
+
+**A third floor-grid motion exception**, same scoping discipline as Amendments 2 and 4 (`.floorMotionScope` only, `prefers-reduced-motion`-gated, `!important` over the blanket POS kill-switch): the 🍲 rotates gently (±8°, 1.2s loop). Full writeup: [docs/DESIGN.md](docs/DESIGN.md)'s "Amendment 5," referenced from CLAUDE.md's motion rule per the standing practice of tracking every such exception inline.
+
+**Booth** (`apps/booth/app/OrderStatusBoard.tsx`) already labelled a fired item "Cooking" — guest-facing presentation, not a business rule, per that file's own comment — so this only added the same 🍲 next to the existing label, animated via `framer-motion` and gated on `useMotionAllowed()` exactly like the rest of that component (Booth has full motion allowance already; this needed no new exception, unlike POS's).
+
+**Verified for real**: seated a table, fired an item, confirmed the POS floor card shows the tinted "Cooking" band with no card-height change; scanned the same table's QR (minted a real token via `mintTableToken` for the test rather than guessing at the DB's hashed fixture) and confirmed Booth's own board shows the same emoji next to its existing "Cooking" label. Full workspace typecheck + lint green.
+
+---
+
+## 2026-07-21 — Native `<select>`s get a hand-drawn chevron app-wide
 
 **Decided by:** Mohammed — "update the native dropdowns and everything from UI to an updated look," a follow-on to the shared-`Dialog` focus bug found while testing Unseat.
 

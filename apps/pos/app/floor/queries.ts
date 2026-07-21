@@ -36,6 +36,11 @@ export interface FloorTable {
   /** ADR-0010 — a guest paid via the Booth (cash or UPI) and staff
    *  haven't confirmed receipt yet. Own signal, same footer slot. */
   hasPendingGuestPayment: boolean;
+  /** At least one KOT on this session hasn't reached a terminal state yet
+   *  (queued/printed/print_failed/acknowledged/preparing/ready — anything
+   *  short of bumped/voided). Drives the notify band's "Cooking" state —
+   *  own signal, same footer slot, same as waiterCalledAt/hasPendingGuestPayment. */
+  hasActiveKot: boolean;
 }
 
 interface FloorRow {
@@ -57,6 +62,7 @@ interface FloorRow {
   opened_via: "staff" | "guest" | null;
   waiter_called_at: string | null;
   has_pending_guest_payment: boolean;
+  has_active_kot: boolean;
 }
 
 /**
@@ -74,7 +80,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       t.area_id, a.name as area_name,
       ts.id as session_id, ts.status as session_status, ts.covers, ts.opened_at, ts.store_id,
       ts.guest_name, ts.opened_via, ts.waiter_called_at,
-      bs.bill_status, bs.has_pending_guest_payment
+      bs.bill_status, bs.has_pending_guest_payment, ak.has_active_kot
     from tables t
     join areas a on a.id = t.area_id
     join outlets o on o.id = t.outlet_id
@@ -115,6 +121,17 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
       from bills b
       where b.table_session_id = ts.id
     ) bs on true
+    -- "Cooking": at least one KOT for this session hasn't reached a
+    -- terminal state. Deliberately a plain EXISTS, not a count/status
+    -- breakdown — the notify band only ever needs yes/no, same as
+    -- waiter_called_at/has_pending_guest_payment above.
+    left join lateral (
+      select exists(
+        select 1 from kots k
+        where k.table_session_id = ts.id
+          and k.status not in ('bumped', 'voided')
+      ) as has_active_kot
+    ) ak on true
     where t.status = 'available'
     order by o.name, a.name, t.label
   `);
@@ -137,6 +154,7 @@ export async function getFloor(tx: RlsTx): Promise<FloorTable[]> {
     openedVia: r.opened_via,
     waiterCalledAt: r.waiter_called_at,
     hasPendingGuestPayment: r.has_pending_guest_payment,
+    hasActiveKot: r.has_active_kot,
   }));
 }
 

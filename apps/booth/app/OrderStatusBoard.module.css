@@ -26,8 +26,16 @@
 }
 
 .statusLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+.cookingPot {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .statusLabel[data-tone="fresh"] {

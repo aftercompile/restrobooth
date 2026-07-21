@@ -51,6 +51,21 @@ export function OrderStatusBoard({ items }: { items: GuestOrderItem[] }) {
               {item.quantity > 1 && <span className={styles.qty}>×{item.quantity}</span>}
             </span>
             <span className={styles.statusLabel} data-tone={rail}>
+              {item.status === "fired" &&
+                (motionAllowed ? (
+                  <motion.span
+                    aria-hidden="true"
+                    className={styles.cookingPot}
+                    animate={{ rotate: [-8, 8, -8] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    🍲
+                  </motion.span>
+                ) : (
+                  <span aria-hidden="true" className={styles.cookingPot}>
+                    🍲
+                  </span>
+                ))}
               {label}
             </span>
           </div>

@@ -39,11 +39,16 @@ function WaiterAction({ sessionId }: { sessionId: string }) {
  *  separate from the table details above it, not just another line of
  *  text. Priority order lives here, once, rather than being re-derived by
  *  each branch that reads it. */
-function notifyTone(t: FloorTable): "critical" | "warning" | "positive" | "neutral" | "none" {
+function notifyTone(t: FloorTable): "critical" | "warning" | "positive" | "active" | "neutral" | "none" {
   if (t.waiterCalledAt) return "critical";
   if (t.hasPendingGuestPayment) return "critical";
   if (t.billStatus === "printed") return "warning";
   if (t.billStatus === "paid") return "positive";
+  // Below bill status, not above it: once a bill's in motion, that's the
+  // more current story for this table even if a late add-on KOT is still
+  // technically active. Above the self-seated tag, which is a static
+  // context badge, not a live status.
+  if (t.hasActiveKot) return "active";
   if (t.openedVia === "guest") return "neutral";
   return "none";
 }
@@ -333,9 +338,9 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                               waiter-called table taller than its neighbours before).
                               Content is priority-ordered and mutually exclusive,
                               never stacked: waiter call > payment to confirm > bill
-                              status > self-seated tag > empty. Same slot future events
-                              (food ready, kitchen delay, ...) would extend, not a new
-                              layout each time. */}
+                              status > cooking > self-seated tag > empty. Same slot
+                              future events (food ready, kitchen delay, ...) would
+                              extend, not a new layout each time. */}
                           <div className={styles.notifyBand} data-tone={notifyTone(t)}>
                             {t.waiterCalledAt && t.sessionId ? (
                               <WaiterAction sessionId={t.sessionId} />
@@ -358,6 +363,13 @@ export function FloorMap({ tables }: { tables: FloorTable[] }) {
                                 <span className={styles.notifyLabel}>{t.billStatus === "paid" ? "Paid" : "Bill printed"}</span>
                                 <span className={styles.notifyHint}>View bill</span>
                               </Link>
+                            ) : t.hasActiveKot ? (
+                              <div className={styles.notifySubtle}>
+                                <span className={styles.cookingPot} aria-hidden="true">
+                                  🍲
+                                </span>
+                                <span className={styles.notifyLabel}>Cooking</span>
+                              </div>
                             ) : t.openedVia === "guest" ? (
                               <div className={styles.notifySubtle}>
                                 <Badge tone="neutral">Self Seated</Badge>

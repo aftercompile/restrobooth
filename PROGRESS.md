@@ -4,7 +4,17 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-21 (latest), native `<select>` chevron pass
+## Where things stand — 2026-07-21 (latest), "Cooking" notify-band state
+
+Requested directly by the owner. Full rationale: [DECISIONS.md](DECISIONS.md)'s latest entry, [docs/DESIGN.md](docs/DESIGN.md)'s "Amendment 5."
+
+- POS's floor card notify band shows "Cooking" (enamel-tinted, new `active` tone) with a gently-rotating 🍲 whenever a table has a KOT that hasn't reached `bumped`/`voided` yet — a new `hasActiveKot` field on `getFloor()`'s query, slotted into the existing priority chain between bill status and the self-seated tag.
+- Booth's guest-facing `OrderStatusBoard.tsx` already said "Cooking" for a fired item; now shows the same 🍲 next to it, animated via the app's existing full motion allowance.
+- Verified live on both apps (POS floor card, Booth's own scanned QR session). Typecheck + lint green.
+
+---
+
+## Where things stand — 2026-07-21, native `<select>` chevron pass
 
 Quick follow-on UI polish after the Dialog focus-bug fix: audited the whole repo for raw/unstyled native form controls (grepped every app for `<select>`/`<textarea>`/unstyled `<input>`) and found the remaining "looks old" tell was specifically the OS-drawn `<select>` arrow, not missing borders/padding (both already had those). Full rationale: [DECISIONS.md](DECISIONS.md)'s latest entry.
 
