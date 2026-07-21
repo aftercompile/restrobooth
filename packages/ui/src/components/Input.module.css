@@ -25,6 +25,22 @@
   cursor: not-allowed;
 }
 
+/* A native <select> keeps its own OS-drawn arrow unless told otherwise —
+   the single most common "this looks like an old form" tell. Swapped for
+   a hand-drawn chevron matching icons.tsx's own recipe (stroke, no fill),
+   inlined as a background-image since a <select> can't take a child
+   element. Colour is baked into the SVG (--text-muted's hex) rather than
+   currentColor — background-image SVGs don't reliably pick up CSS custom
+   properties across browsers. */
+select.input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235c6b66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 34px;
+}
+
 .error {
   color: var(--signal-600);
   font-size: var(--text-sm);

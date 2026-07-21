@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button, Dialog } from "@restrobooth/ui";
+import { Button, Dialog, Select } from "@restrobooth/ui";
 import { unseatSession, type ActionState } from "./actions";
 
 const UNSEAT_REASONS = [
@@ -42,19 +42,16 @@ export function UnseatDialog({
             ? "This table has fired or served items. Unseating releases the table without billing them — this cannot be undone."
             : "This releases the table back to available. This cannot be undone."}
         </p>
-        <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>
-          Reason
-          <select name="reason" required defaultValue="" style={{ font: "inherit", padding: "8px", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-            <option value="" disabled>
-              Choose a reason…
+        <Select name="reason" label="Reason" required defaultValue="">
+          <option value="" disabled>
+            Choose a reason…
+          </option>
+          {UNSEAT_REASONS.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
             </option>
-            {UNSEAT_REASONS.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          ))}
+        </Select>
         {state.error && (
           <p role="alert" style={{ color: "var(--signal-600)", fontSize: "var(--text-sm)", margin: 0 }}>
             {state.error}

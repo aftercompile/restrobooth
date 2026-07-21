@@ -4,7 +4,19 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-21 (latest), KDS/OrderPad realtime actually fixed
+## Where things stand — 2026-07-21 (latest), native `<select>` chevron pass
+
+Quick follow-on UI polish after the Dialog focus-bug fix: audited the whole repo for raw/unstyled native form controls (grepped every app for `<select>`/`<textarea>`/unstyled `<input>`) and found the remaining "looks old" tell was specifically the OS-drawn `<select>` arrow, not missing borders/padding (both already had those). Full rationale: [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- `packages/ui/src/components/Input.module.css`'s `select.input` now has `appearance: none` + a hand-drawn chevron (same recipe as `icons.tsx`) — every `<Select>` call site gets this for free.
+- POS's and Captain's `UnseatDialog.tsx` converted from raw inline-`style` `<select>` to the shared `<Select>` component.
+- POS's `OrderPad.tsx` reason/merge selects stayed native (no room for a labeled block in a dense row) but got the same chevron treatment copied into `OrderPad.module.css`.
+- Split-bill checkbox matrix (`BillView.tsx`) got `accent-color: var(--enamel-700)` — was plain OS-blue.
+- Verified via real screenshots across the style guide's four densities plus POS/Captain's Unseat dialogs and OrderPad's inline select. Full workspace typecheck + lint green.
+
+---
+
+## Where things stand — 2026-07-21, KDS/OrderPad realtime actually fixed
 
 The previous session's fix (migration 0030, `publish_via_partition_root`) turned out to be necessary but not sufficient — the self-hosted Realtime stack's `postgres_changes` decoder (wal2json) doesn't support publications at all on this Postgres image, so it was structurally unable to honor that setting regardless. Full root-cause story and verification: [DECISIONS.md](DECISIONS.md)'s latest entry.
 

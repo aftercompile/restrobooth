@@ -339,4 +339,9 @@
 .splitTable input[type="checkbox"] {
   width: 20px;
   height: 20px;
+  /* Default OS checkbox colour (blue on Windows Chrome) has nothing to do
+     with the palette — accent-color is the one-line native fix, still a
+     real <input>, no custom-control markup needed. */
+  accent-color: var(--enamel-700);
+  cursor: pointer;
 }

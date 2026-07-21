@@ -4,7 +4,25 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-21 (latest) — KDS/OrderPad realtime actually fixed: broadcast, not postgres_changes
+## 2026-07-21 (latest) — Native `<select>`s get a hand-drawn chevron app-wide
+
+**Decided by:** Mohammed — "update the native dropdowns and everything from UI to an updated look," a follow-on to the shared-`Dialog` focus bug found while testing Unseat.
+
+**Scope, audited via a repo-wide grep for raw `<select>`/`<textarea>`/unstyled `<input>` before touching anything:** every genuinely raw, unstyled native control left after the Bill/Pay pass turned out to be exactly four spots — POS's `OrderPad.tsx` (void-reason ×2, merge-target ×1) and both apps' `UnseatDialog.tsx` (reason). Everything else (Booth's `FeedbackForm` textarea, HeaderSearch's input) already had deliberate, already-reviewed styling from prior passes and was left alone rather than re-touched for its own sake.
+
+**The actual "looks old" tell wasn't missing borders or padding — both `packages/ui`'s `Select` and OrderPad's local `.reasonSelect`/`.mergeSelect` already had a proper border, radius, and recessed background. It was the OS-drawn dropdown arrow**, which no amount of border styling touches (native `<select>` chrome is browser-drawn, not stylable via normal CSS) — the one part of a "redesigned" select that still visibly belonged to Windows Chrome. Fixed once, at the root, in `packages/ui/src/components/Input.module.css`'s `select.input` rule: `appearance: none` + a hand-drawn chevron background-image matching `icons.tsx`'s own recipe (stroke, no fill, `--text-muted`'s hex baked in since background-image SVGs don't reliably resolve `currentColor`). This is what every `<Select>` call site already gets for free — the style guide's Console/POS/KDS/Booth density rows, `UnseatDialog` in both apps (converted from raw inline-`style` `<select>` to the shared component in the same pass, since Unseat's dialog has room for a proper labeled field).
+
+**OrderPad's three selects stayed native** (not `<Select>`) — they live in a dense, per-row inline form with no space for a labeled block — but got the identical chevron treatment copied locally into `OrderPad.module.css`, so a compact row select and a full labeled one read as the same design language rather than two different ones.
+
+**One near-miss caught before it shipped:** an initial pass added `.input:focus-visible { outline: 2px solid var(--enamel-500) }`, only to find a global `[data-density] :focus-visible { outline: 3px solid var(--focus-ring) }` already existed (`tokens/index.css`, `--focus-ring: var(--brass-500)` — matching DESIGN.md's own canonical token table, which names "focus ring" as one of brass's three documented fill uses). Would have shipped a second, conflicting focus style instead of fixing anything; removed before commit.
+
+**Also picked up in the same sweep:** the split-bill checkbox matrix (`BillView.tsx`'s per-guest share grid) had no `accent-color` — plain OS-blue checkboxes on an enamel-green app. One-line fix (`accent-color: var(--enamel-700)`), no custom-control markup needed.
+
+**Verified for real**, not just reasoned about: screenshotted the style guide's `<Select>` across all four densities, POS's Unseat dialog, Captain's Unseat dialog, and OrderPad's inline reason select via real Playwright — chevron renders correctly and consistently everywhere. Full-workspace typecheck + lint green.
+
+---
+
+## 2026-07-21 — KDS/OrderPad realtime actually fixed: broadcast, not postgres_changes
 
 **Reported by:** Mohammed — "The KDS does not show an order realtime I have to refresh everytime," immediately after the previous session's fix (c2a6831, migration 0030: `publish_via_partition_root = true`) had already landed and was believed to have closed this out.
 
