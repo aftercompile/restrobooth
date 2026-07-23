@@ -4,7 +4,21 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-23 (latest) — Phase 6 Slice 0: "Ember & Oak" fixture, built as a generator from a real dataset shape
+## 2026-07-23 (latest) — Phase 6 Slice 2 foundation: spice/mood tagging + real gte-small embeddings
+
+**Decided by:** Mohammed, via `AskUserQuestion` — two real forks at the start of Slice 2 (Booth Host).
+
+**Fork 1 — embeddings.** ADR-0007 specifies gte-small via a Supabase Edge Function (Deno + ONNX); this project has zero Edge Function infrastructure (verified: no `supabase/functions` directory exists), and standing that up live was a real, separate feasibility bet. Chose: **real embeddings now, via a Node backfill script** (`packages/db/scripts/backfill-embeddings.ts`, `@huggingface/transformers` — the actively-maintained successor to `@xenova/transformers`, confirmed via a live package check rather than assumed — running the `Supabase/gte-small` ONNX fork, the exact model Supabase's own docs use). The Edge Function's actual job in ADR-0007 — auto-re-embedding on menu publish — is **not built**, a named, deferred follow-up, not silently dropped. New dependency, flagged per CLAUDE.md #10: `@huggingface/transformers` (pulls in `onnxruntime-node` + `protobufjs` as native builds, approved in `pnpm-workspace.yaml`'s `allowBuilds`) — replaces nothing, this project had no embedding capability before.
+
+**Fork 2 — spice/mood tagging.** The 3-tap intake wants to filter on spice level and mood/occasion, but `menu_items` only had `diet`/`allergens`. Chose: **a real, small migration** (`0033_swift_krista_starr.sql` — `spice_level` text + check constraint, `tags` text[]) over leaving them as LLM-prompt-only flavor text with nothing to actually filter. `packages/db/scripts/backfill-menu-tags.ts` hand-tags all 165 existing items (Spice Route's ~120 + Ember & Oak's 12) by real culinary judgement — comfort gravies mild, Chettinad/Kolhapuri/Schezwan/indo-chinese-dry hot, tandoor items medium — not derived or randomized, since a filter that's wrong defeats the point.
+
+**A migration-tooling gap found and worked around, not silently absorbed**: `drizzle-kit generate` re-emitted 0032's tables (`ai_response_cache`, `ai_usage_ledger`, `outlets.ai_monthly_token_budget`) as if new, because 0032 was a `--custom` migration and those never update drizzle-kit's tracked snapshot from `schema.ts` — so from its diffing perspective those columns were still "pending." Fixed by hand-trimming 0033's generated SQL to only the genuinely new `spice_level`/`tags` statements (the auto-generated `0033_snapshot.json` is still correct — it reflects the real current `schema.ts` — only the redundant SQL needed removing). Applied cleanly to all three DBs.
+
+**Verified for real**: 165/165 items tagged (zero left unmatched — the lookup table's coverage was checked against the actual seeded names, not assumed complete), 165/165 real embeddings generated on both local DBs, and a live semantic sanity check — `Chicken Chettinad` (hot) sits closer in vector space to `Vegetable Kolhapuri` (hot, distance 0.145) than to `Gulab Jamun` (dessert, distance 0.181) — proving the embeddings encode real similarity, not just populated placeholders.
+
+---
+
+## 2026-07-23 — Phase 6 Slice 0: "Ember & Oak" fixture, built as a generator from a real dataset shape
 
 **Decided by:** Mohammed — provided a real steakhouse POS export ("attached is a simulated data set") in response to Slice 0's blocking ask. 12 items, a full year of US-priced line-item sales, no order/session grouping, no tax data, no menu descriptions.
 

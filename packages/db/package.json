@@ -21,9 +21,12 @@
     "seed:kitchen-sections": "tsx scripts/seed-kitchen-sections.ts",
     "purge": "tsx scripts/purge-order-data.ts",
     "tokens:mint": "tsx scripts/mint-table-tokens.ts",
-    "import:steakhouse": "tsx scripts/import-steakhouse.ts"
+    "import:steakhouse": "tsx scripts/import-steakhouse.ts",
+    "backfill:menu-tags": "tsx scripts/backfill-menu-tags.ts",
+    "backfill:embeddings": "tsx scripts/backfill-embeddings.ts"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.22.0"
   },

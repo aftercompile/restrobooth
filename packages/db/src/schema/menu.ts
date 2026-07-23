@@ -100,6 +100,15 @@ export const menuItems = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'`),
+    // Phase 6 Slice 2 (ADR-0007 §5A, the Booth Host) — real SQL filters,
+    // not LLM-guessed: spiceLevel narrows the shortlist directly,
+    // tags (occasion/mood/texture descriptors — "comfort", "shareable",
+    // "light", "spicy-regional", ...) are a soft ranking signal and also
+    // feed the reason-string prompt. Both nullable/empty by default:
+    // an untagged item still resolves normally through diet/allergen/
+    // budget/popularity, it just can't be spice- or mood-matched yet.
+    spiceLevel: text("spice_level"),
+    tags: text("tags").array().notNull().default(sql`'{}'`),
     status: text("status").notNull().default("draft"),
     // Which kitchen line cooks this item — decides KOT routing at fire time
     // (DOMAIN.md §3.3, Phase 3a). A single "fire" produces one KOT per
@@ -111,6 +120,7 @@ export const menuItems = pgTable(
   (t) => [
     check("base_price_non_negative", sql`${t.basePricePaise} >= 0`),
     check("diet_valid", sql`${t.diet} is null or ${t.diet} in ('veg','non_veg','egg','jain')`),
+    check("spice_level_valid", sql`${t.spiceLevel} is null or ${t.spiceLevel} in ('mild','medium','hot')`),
     check("menu_item_status_valid", sql`${t.status} in ('draft','published','archived')`),
     check("kitchen_section_valid", sql`${t.kitchenSection} in ('hot','cold','bar')`),
   ],
