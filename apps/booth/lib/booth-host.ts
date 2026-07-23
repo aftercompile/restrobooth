@@ -224,7 +224,7 @@ export async function getBoothHostRecommendations(guest: { storeId: string; outl
   }
 
   const prompt = buildReasonPrompt(candidates, prefs);
-  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 600, temperature: 0.4 }), BOOTH_TIMEOUT_MS);
+  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 2000, temperature: 0.4 }), BOOTH_TIMEOUT_MS);
   if (!result) return withFallback();
 
   const reasons = parseReasons(result.text, candidates);
