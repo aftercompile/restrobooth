@@ -3,6 +3,7 @@ import { getGuestContext } from "../../lib/guest-context";
 import { getBoothMenu, type BoothMenuItem } from "../../lib/menu-queries";
 import { getGuestOrderStatus } from "../../lib/order-queries";
 import { BoothShell } from "../BoothShell";
+import { BoothHostIntake } from "./BoothHostIntake";
 import { MenuBrowser } from "./MenuBrowser";
 
 export default async function MenuPage() {
@@ -25,7 +26,10 @@ export default async function MenuPage() {
       {items.length === 0 ? (
         <p>Nothing on the menu right now — please ask a staff member.</p>
       ) : (
-        <MenuBrowser groups={Array.from(groups.entries())} cartCount={cartCount} />
+        <>
+          <BoothHostIntake />
+          <MenuBrowser groups={Array.from(groups.entries())} cartCount={cartCount} />
+        </>
       )}
     </BoothShell>
   );

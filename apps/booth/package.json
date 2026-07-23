@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@restrobooth/ai": "workspace:*",
     "@restrobooth/db": "workspace:*",
     "@restrobooth/domain": "workspace:*",
     "next": "^16.2.10",

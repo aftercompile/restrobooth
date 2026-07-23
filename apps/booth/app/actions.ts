@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { addToCart, callWaiter, placeOrder, removeFromCart } from "../lib/order-mutations";
 import { finalizeGuestBill, payGuestBill, submitFeedback, type GuestBill, type GuestPaymentMethod, type GuestPaymentResult } from "../lib/payment-mutations";
+import { getBoothHostRecommendations, type BoothHostPreferences, type BoothHostResult } from "../lib/booth-host";
+import { getGuestContext } from "../lib/guest-context";
 
 export interface SimpleActionState {
   error: string | null;
@@ -72,4 +74,15 @@ export async function submitFeedbackAction(rating: number, comment: string): Pro
   const result = await submitFeedback(rating, comment);
   if (!result.ok) return { error: result.error };
   return OK;
+}
+
+/** Called from BoothHostIntake on submit — never blocks the menu itself,
+ *  which is already rendered by the time a guest can even reach this
+ *  (ADR-0007 §3). A missing/expired guest session degrades to an empty
+ *  rail rather than an error — this is a "nice to have" surface, not a
+ *  core flow, so it fails quiet the same way a timed-out AI call does. */
+export async function getBoothHostRecommendationsAction(prefs: BoothHostPreferences): Promise<BoothHostResult> {
+  const guest = await getGuestContext();
+  if (!guest) return { items: [], aiUsed: false };
+  return getBoothHostRecommendations({ storeId: guest.storeId, outletId: guest.outletId }, prefs);
 }

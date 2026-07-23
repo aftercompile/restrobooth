@@ -7,6 +7,7 @@ import { GUEST_SESSION_COOKIE } from "./guest-session";
 export interface GuestContext {
   guestSessionId: string;
   storeId: string;
+  outletId: string;
   tableSessionId: string;
   tableLabel: string;
   brandName: string;
@@ -54,6 +55,7 @@ export async function getGuestContext(options: { allowClosed?: boolean } = {}): 
       waiterCalledAt: schema.tableSessions.waiterCalledAt,
       brandName: schema.brands.name,
       upiVpa: schema.outlets.upiVpa,
+      outletId: schema.outlets.id,
     })
     .from(schema.guestSessions)
     // guest_sessions.table_session_id is nullable (a guest could in
@@ -82,6 +84,7 @@ export async function getGuestContext(options: { allowClosed?: boolean } = {}): 
   return {
     guestSessionId: row.guestSessionId,
     storeId: row.storeId,
+    outletId: row.outletId,
     tableSessionId: row.tableSessionId,
     tableLabel: tableRows.map((t) => t.label).join(", "),
     brandName: row.brandName,
