@@ -4,7 +4,32 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-23 (latest) — Phase 6 Slice 1 (the AI spine) built; provider swapped to OpenRouter
+## 2026-07-23 (latest) — Phase 6 Slice 0: "Ember & Oak" fixture, built as a generator from a real dataset shape
+
+**Decided by:** Mohammed — provided a real steakhouse POS export ("attached is a simulated data set") in response to Slice 0's blocking ask. 12 items, a full year of US-priced line-item sales, no order/session grouping, no tax data, no menu descriptions.
+
+**What it actually was, and the gap between that and "import it":** a flat, denormalized sales-report export — not a relational POS dump. No table/session/order ID (line items only correlate by exact date+time+server, an unreliable grouping signal), no tax fields, US dollar amounts, and a US-casual-dining menu against a product whose entire domain (GST, GSTIN, business_date, UPI) assumes an Indian restaurant. Turning this into a real RestroBooth seed required real interpretation, not a mechanical field-mapping — so two things were asked rather than decided silently:
+
+1. **Currency/market mismatch** — resolved via `AskUserQuestion`: re-brand as an Indian premium-grill restaurant, keeping the real relative price spread and item shape but repricing to realistic INR points (roughly the ~35x scale of the example preview shown and approved), not a literal `$`→`₹` relabel and not kept as a literal US fixture.
+2. **How to actually get the data in** — the pasted file was too large (several thousand rows) to mechanically retype into a file in one response without a real risk of truncation/transcription errors. Resolved via `AskUserQuestion`: build a **statistically-faithful generator** — the real 12 items, real price spread, real category/payment-method/order-type/day-of-week/hour-of-day shape observed in the pasted data, reproduced as a seeded (`mulberry32`, fixed seed `20260723`), deterministic, re-runnable generator — rather than a literal line-for-line transcription. This is *why* `packages/db/scripts/import-steakhouse.ts` is a generator, not a CSV parser, and why it's honestly documented as one in its own header rather than presented as a faithful import.
+
+**New outlet, new org — not folded into the believable-chain fixture.** "Ember & Oak," Mumbai — Bandra West, its own org/brand/outlet/store under `packages/db/scripts/data/steakhouse-fixture-ids.ts` (a distinct `"10000000-…"` UUID prefix, guaranteeing zero collision with `fixture-ids.ts`'s `"00000000-…"` namespace even by accident). The believable-chain fixture (`seed-believable-chain.ts`) is precision-tuned for the RLS adversarial suite and the override precedence suite — sharing its namespace risked perturbing suites that assert on its exact shape. This is purely additive: run `pnpm seed` first, then `pnpm --filter @restrobooth/db import:steakhouse`.
+
+**Two real, worth-flagging findings from actually running this, not just writing it:**
+1. **`@restrobooth/domain` isn't consumable from `packages/db`'s stricter `nodenext` module resolution** — its `package.json` points `main`/`types` at raw `./src/index.ts` with extensionless relative imports, which only resolves under the laxer setting `apps/*` happen to use. First attempt used the real `computeBill`/`financialYearFor`/`formatInvoiceNumber` from `packages/domain` directly (the "sacred, don't reinvent" instinct) — reverted to the same small local `computeSimpleBill` reimplementation `seed-believable-chain.ts` already uses for exactly this reason, rather than fix a cross-cutting module-resolution gap inside a data-import task. **Real follow-up, not done here:** give `packages/domain` an actual build step (matching how `packages/db` itself is built to `dist/`) so a future strict-resolution consumer doesn't hit this.
+2. **The partitioned tables (`orders`, `bills`, etc.) only materialize partitions for a rolling window around real `now()`** (`create_partitions_ahead(12, 3)`) — a hardcoded `2024-10-01`–`2024-11-30` range (matching the source file's own date labels) failed outright with "no partition of relation found," since 12 months back from 2026-07-23 doesn't reach 2024 at all. Fixed by making the window relative to `new Date()` (the ~60 days ending yesterday) instead of the source file's labels — more correct given this is a generator, not a historical import, and it stays valid on every future re-run instead of going stale.
+
+**Verified for real, not just "it ran":** on both local DBs (docker-compose 54329, Supabase-local 54322) — 1,424 orders, 4,629 order items, 2,999 KOTs (split hot/cold/bar by kitchen section, not one monolithic KOT per order), 1,424 settled bills, 1,424 captured payments. Zero `totals_reconcile` violations. `Σ payments == Σ bills.payable` exactly (₹36,46,918). Invoice numbers gapless and sequential (`A1/2627/000001`–`A1/2627/001424`). **RLS isolation confirmed against real Postgres, not assumed**: an existing staff member (a real believable-chain fixture user) sees 0 rows from this new, unrelated outlet and their normal 5 from their own.
+
+**Known, deliberate simplifications** (each documented inline in the generator/menu data files, not silently absorbed):
+- Alcohol (Cabernet Sauvignon, Old Fashioned) taxed at `GOODS_18` — matching how this codebase already treats every beverage, not a claim that it's legally precise. Real Indian law puts alcohol outside GST (state VAT/excise instead), which no schema in this project models yet. A real, flagged gap, not a silent workaround.
+- No `order_status_events` rows — that log feeds live KDS reconnect-replay, not needed for historical closed-out data.
+- The source file's "Server" column isn't modelled — `orders` has no server/created-by column (staff identity comes from the acting RLS session, not a stored column); dropped rather than forced into a field that doesn't fit.
+- **No memberships/staff logins created for this outlet** — the data exists and is directly queryable (what Slice 2+'s AI/reporting features need), but nobody can currently see it through the POS/Console UI. Deliberately out of scope for "give the AI features data to validate against"; add a membership later if UI-level demo access is ever wanted.
+
+---
+
+## 2026-07-23 — Phase 6 Slice 1 (the AI spine) built; provider swapped to OpenRouter
 
 **Decided by:** Mohammed — "I'd like to use OpenRouter API not Claude API. Do not use Claude API anywhere. Ask me for OpenRouter Key when you need it. Use Model 'GPT OSS 20B Free' which is free unlimited," given mid-build (I had just written `claudeProvider.ts` per ADR-0007's original "Primary: Anthropic Claude" pick when this landed).
 

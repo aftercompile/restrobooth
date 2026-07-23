@@ -20,7 +20,8 @@
     "seed:categories": "tsx scripts/seed-categories.ts",
     "seed:kitchen-sections": "tsx scripts/seed-kitchen-sections.ts",
     "purge": "tsx scripts/purge-order-data.ts",
-    "tokens:mint": "tsx scripts/mint-table-tokens.ts"
+    "tokens:mint": "tsx scripts/mint-table-tokens.ts",
+    "import:steakhouse": "tsx scripts/import-steakhouse.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
