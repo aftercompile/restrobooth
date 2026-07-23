@@ -15,13 +15,13 @@ The brief already warns about this, in its own words: *"Modelling for chains fro
 
 Here is the honest failure mode, and it is by far the most likely way RestroBooth dies: the chain model is genuinely interesting. Central kitchen, franchise royalty, inter-GSTIN transfers, staged rollout, cluster dashboards, network benchmarking — these are the fun problems. Billing a table of four correctly, at 9 PM, when the WiFi is down, is not fun. It is fiddly, unglamorous, and it is the entire product. **A project that builds the fun parts first ends up with a beautiful multi-brand franchise-royalty engine and no restaurant using it.**
 
-There is a ten-phase plan here and **the pilot happens at Phase 5**. Phases 6–10 are more than half the plan and none of them are required for a restaurant to run its service.
+There is a ten-phase plan here and **the pilot was originally scheduled for Phase 5**, with Phases 6–10 gated on it happening first — more than half the plan, none of it required for a restaurant to run its service.
 
-**Mitigation — and this one is structural, not aspirational:**
-- **The single-outlet pilot path in [ROADMAP.md](ROADMAP.md) §2 is the plan of record.** Everything else is a stretch.
-- **Phase 8 (central kitchen, royalty) does not begin until a real restaurant has run a real service on RestroBooth.** Not a demo. A service, with real guests and real money. This is a hard gate.
-- Chain features are **modelled** in the Phase 1 schema (they are irreversible) and **not built**. The distinction must be defended at every phase review, because the pressure to build them will be constant and it will feel productive.
-- **The test: if the pilot restaurant would not notice a feature's absence, it is not v1.** Apply it ruthlessly.
+**Status, 2026-07-23: the schedule gate is superseded, not the risk.** With no pilot restaurant available, the owner made a deliberate, informed call to build Phases 6–10 ahead of the pilot ([DECISIONS.md](../DECISIONS.md)) — accepting exactly the trade-off this risk describes, in exchange for having the full product ready when a pilot does become available. This makes the mitigation harder, not unnecessary:
+- **Every phase still gets its own written, approved plan** (CLAUDE.md non-negotiable #1) — the discipline that catches drift toward "interesting" over "unglamorous" now has to work without the schedule gate's help.
+- **The unglamorous core (offline billing, RLS, money math, KDS ticket-loss protection) stays "never cut"** — see §4 below — regardless of how much of the chain layer gets built alongside it.
+- **The test still applies inside each phase**: if the pilot restaurant would not notice a feature's absence, don't gold-plate it. Build the honest version and move on — the new failure mode to watch for is polishing a feature to a level nobody will validate until a real pilot happens.
+- Chain features were **modelled** in the Phase 1 schema (irreversible, already done) and are now being **built**, not deferred — the distinction that used to matter here (modelled vs. built) has collapsed by design; what still matters is not letting the build quality on the boring, load-bearing stuff slip while doing it.
 
 ---
 

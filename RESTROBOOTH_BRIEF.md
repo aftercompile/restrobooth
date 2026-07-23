@@ -16,6 +16,8 @@ Phase 0 is complete. **Three things in the original text were wrong and have bee
 
 **Also:** §10's eight open decisions are **resolved** — see [docs/OPEN-DECISIONS.md](docs/OPEN-DECISIONS.md). §7's `frontend-design` skill does not exist; `ui-ux-pro-max` was used instead.
 
+**Update, 2026-07-23:** amendment #3's gate is superseded, not retracted — kept here as the historical record of why it was added. With Phase 5 complete and no pilot restaurant available, the owner made a deliberate, informed call to build Phases 6–10 ahead of the pilot rather than wait on it. See [DECISIONS.md](DECISIONS.md) for the decision and CLAUDE.md's current status note.
+
 ---
 
 ## 1. Role
@@ -313,15 +315,7 @@ The Booth Host (§5A), smart upsell (§5E), and the review→action pipeline (§
 
 ### Phase 8 — Inventory, Recipes, Purchasing, Central Kitchen
 
-> ## ⛔ HARD GATE — added 2026-07-13
-> **Phase 8 does not begin until a real restaurant has run a real service on RestroBooth.**
-> **Not a demo. A service — real guests, real money, a real day close.**
->
-> **Why this gate exists:** the chain features are the *fun* ones. Central kitchen, franchise royalty, inter-GSTIN transfers, network benchmarking — these are genuinely interesting engineering. Billing a table of four correctly at 9 PM with the WiFi down is not. It is fiddly, unglamorous, and **it is the entire product.** Without a gate, this plan drifts toward the fun work and it feels productive the whole way. That is the single most likely way RestroBooth dies. See [docs/RISKS.md](docs/RISKS.md) R1.
->
-> **The test, applied at every phase review:** *would the pilot restaurant notice this feature's absence?* If no, **it is not v1.** Apply it ruthlessly.
->
-> This gate is also a standing rule in `CLAUDE.md`, because a gate that depends on someone's willpower six weeks from now is not a gate.
+> **Status, 2026-07-23:** this phase was previously hard-gated on a real restaurant running a real service (added 2026-07-13, R1's mitigation for the "chain features are the fun ones" risk). With no pilot restaurant available, the owner made a deliberate, informed call to build ahead of the pilot instead — see [DECISIONS.md](DECISIONS.md). The underlying risk (R1) is still real and still worth naming: central kitchen, franchise royalty, and inter-GSTIN transfers are genuinely interesting engineering, and billing a table correctly with the WiFi down is not, but is still the entire product. Building ahead of the pilot doesn't excuse skipping the unglamorous case coverage — it just means both get built without a real restaurant's feedback yet.
 
 Stock items, units + conversions, recipes/BOM, semi-finished goods, auto-deduction on bill settle, wastage entry, physical stock take with variance, low-stock alerts, vendors, purchase orders, per-location costing, food-cost %.
 Then the chain layer: **central kitchen** — indent → transfer order → dispatch → receive-with-variance, inter-outlet transfers, and inter-GSTIN transfers flagged as taxable supplies. Franchise royalty on net sales.

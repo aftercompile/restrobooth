@@ -17,9 +17,9 @@ Every phase ends with a **runnable demo**, an updated `PROGRESS.md`, and an **ex
 
 ---
 
-## 2. The single-outlet pilot path ⭐
+## 2. The build sequence
 
-**The cut line.** This is the plan of record; everything outside it is a stretch goal.
+**Status, 2026-07-23:** Phase 5 shipped with no pilot restaurant lined up yet. Rather than wait, the owner made a deliberate, informed call to build Phases 6–10 now — see [DECISIONS.md](DECISIONS.md) for the decision and the trade-off it accepts. This section previously named Phase 5 as a hard cut line with everything past it gated on a real service; that gate is superseded, not forgotten (R1 below is still real and still worth reading).
 
 ```
 Phase 1  Foundation ────────── schema, RLS, seed. The chain model is BUILT but DORMANT.
@@ -28,20 +28,22 @@ Phase 2  Menu ──────────────── override resolver
 Phase 3a Ordering, tables, KOT
 Phase 3b Billing, day close, OFFLINE ← the crown jewels. Go slow.
 Phase 4  KDS
-Phase 5  Booth ─────────────── QR → order → pay → feedback
-         ══════════════════════════════════════════════════════
-         ▶ PILOT. A real restaurant runs a real service. Real guests. Real money.
-         ══════════════════════════════════════════════════════
-Phase 6  AI v1                 } everything past the line is
-Phase 7  Channels              } a stretch, and is gated on
-Phase 8  Inventory + CK        } the pilot actually working
-Phase 9  Reports + AI v2       }
+Phase 5  Booth ─────────────── QR → order → pay → feedback. Complete 2026-07-20.
+Phase 6  AI v1 ──────────────── Booth Host, upsell, review→action. IN PROGRESS.
+Phase 7  Channels              } dependency-ordered from here — see
+Phase 8  Inventory + CK        } each phase's own section below and
+Phase 9  Reports + AI v2       } the detailed plan at C:\Users\Mohammed\.claude\plans\phase-0-merry-pie.md
 Phase 10 Hardening             }
+         ══════════════════════════════════════════════════════
+         ▶ PILOT — still the real-world validation milestone: a real
+           restaurant, real guests, real money, a real day close.
+           No longer a gate on when phases 6–10 start; still the
+           thing that proves offline billing, KDS ticket-loss
+           protection, and load under real traffic actually hold.
+         ══════════════════════════════════════════════════════
 ```
 
-**Hard gate: Phase 8 (central kitchen, franchise royalty) does not begin until a real restaurant has run a real service.** Not a demo — a service.
-
-**The test for whether something belongs in v1: would the pilot restaurant notice its absence?** If no, it is not v1. Apply this ruthlessly; the pressure to build the interesting chain features will be constant and will feel productive.
+**The test for whether something belongs in v1 still applies inside each phase**: would the pilot restaurant notice its absence? If no, don't gold-plate it — build the honest version and move on. Apply this to avoid a different failure mode now that the schedule gate is gone: building chain features to an unnecessary polish level nobody will validate until a real pilot happens.
 
 ---
 
@@ -141,8 +143,8 @@ Phase 10 Hardening             }
 
 **Demo:** Scan → order → KOT prints in the kitchen → pay → feedback lands in the DB. **End to end on a real phone.**
 
-> ### ▶ PILOT GATE
-> **A real restaurant runs a real service on RestroBooth.** Everything below is gated on this actually happening.
+> ### ▶ PILOT — no longer a gate, still the real-world validation milestone
+> Previously: "everything below is gated on this actually happening." Superseded 2026-07-23 — with no pilot restaurant available, the owner chose to build Phases 6–10 ahead of the pilot rather than wait. See [DECISIONS.md](../DECISIONS.md). A real restaurant running a real service is still the thing that will actually prove offline billing, KDS ticket-loss protection, and real load hold up — that hasn't gotten less important, just decoupled from *when* the phases below get built.
 
 ---
 

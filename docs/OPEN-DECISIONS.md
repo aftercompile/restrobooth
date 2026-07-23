@@ -23,6 +23,8 @@ The honest failure mode, and by far the most likely way this project dies: **the
 
 And a test to apply at every phase review: **would the pilot restaurant notice this feature's absence?** If no, it is not v1. I have written this into [ROADMAP.md](ROADMAP.md) §2 and [RISKS.md](RISKS.md) R1 as the plan of record. **This is the disagreement I care most about**, and it is the one you can most easily overrule by simply not enforcing it — which is exactly why I want it agreed now, in writing, while it costs nothing.
 
+**Update, 2026-07-23: overruled, deliberately and in writing** — exactly the way this entry predicted, and named as a live possibility rather than a surprise. With no pilot restaurant available, the owner chose to build Phases 6–10 ahead of the pilot. See [DECISIONS.md](../DECISIONS.md) for the decision; [ROADMAP.md](ROADMAP.md) §2 and [RISKS.md](RISKS.md) R1 now carry superseded-status notes rather than the original gate language. Left here, unedited above, as the historical argument for why the gate existed.
+
 ---
 
 ## Disagreement 2 — The override chain keys on the wrong entity, and the brief's own model says so

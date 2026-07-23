@@ -8,15 +8,11 @@ Phase 0 is complete. The architecture lives in [docs/](docs/). **[docs/OPEN-DECI
 
 ---
 
-## ⛔ The gate
+## Status: building ahead of the pilot
 
-> **Phase 8+ (central kitchen, franchise royalty, cluster dashboards) does not begin until a real restaurant has run a real service on RestroBooth. Not a demo. A service — real guests, real money, a real day close.**
+Phase 5 is complete. There is no pilot restaurant available yet, and the owner has made a deliberate, informed call ([DECISIONS.md](DECISIONS.md), 2026-07-23) to build Phases 6–10 now rather than wait — overriding the pilot gate that previously stood here. **Money, RLS, offline sync and the domain layer are unaffected**: those non-negotiables below are permanent, not scheduling. What changed is only *when* the AI/channels/inventory/reporting layers get built.
 
-**At every phase review, ask: *would the pilot restaurant notice this feature's absence?* If no, it is not v1.** Apply it ruthlessly.
-
-**Why this rule exists, and why it is here rather than in a doc:** the chain features are the *fun* ones. Central kitchen, inter-GSTIN transfers, network benchmarking — genuinely interesting engineering. Billing a table of four correctly at 9 PM with the WiFi down is not. It is fiddly, unglamorous, and it is **the entire product.** Without a gate, the work drifts toward the interesting problems and it feels productive the whole way. That is the single most likely way this project dies ([docs/RISKS.md](docs/RISKS.md) R1). A gate that depends on willpower six weeks from now is not a gate — so it is in the file that loads every session.
-
-**The pilot path (the plan of record):** Phases 1 → 2 → 3a → 3b → 4 → 5 → **PILOT**. Everything after is a stretch. ([docs/ROADMAP.md](docs/ROADMAP.md) §2)
+**Current plan of record:** Phases 1 → 2 → 3a → 3b → 4 → 5 → **6 (AI) → 7 (Channels) → 8 (Inventory/Central Kitchen) → 9 (Reports/AI v2) → 10 (Hardening)**, each phase still starting with its own written, approved plan (non-negotiable #1, unchanged). See [docs/ROADMAP.md](docs/ROADMAP.md) §2.
 
 ---
 

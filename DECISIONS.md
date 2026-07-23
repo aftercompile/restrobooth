@@ -4,7 +4,26 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-21 (latest) — Phase 5 acceptance: QR replay proven, Booth LCP audited (with an honest null result)
+## 2026-07-23 (latest) — Pilot gate lifted: building Phases 6–10 ahead of the pilot
+
+**Decided by:** Mohammed — "I do not have a restaurant to do pilot, but would like to build all features before pilot itself. Whatever data you need you can ask for analysis, etc but everything in the plan has to be built before pilot."
+
+**What this overrides.** This project's single most-defended decision: R1 in [RISKS.md](docs/RISKS.md) ("the single biggest threat to this project"), the Phase 8 hard gate added to [RESTROBOOTH_BRIEF.md](RESTROBOOTH_BRIEF.md) at Phase 0 (amendment #3) specifically to close a gap in the original brief, and CLAUDE.md's `⛔ The gate` section — present in every session's context for exactly this reason ("a gate that depends on willpower six weeks from now is not a gate"). Before acting on it, this was flagged back to the owner explicitly, naming the conflict between CLAUDE.md's "Phase 8+" wording and `ROADMAP.md`'s own gate banner sitting right after Phase 5 — standing rule #12, "flag it when the brief is wrong," applied to the project's own docs disagreeing with each other. The owner's answer was unambiguous: lift it.
+
+**Why now, despite R1's warning being correct.** There is no pilot restaurant lined up, and waiting indefinitely for one isn't the trade-off the owner wants to make. The owner explicitly accepts R1's named risk (chain features are the more interesting engineering; the unglamorous core is the entire product) in exchange for having the full feature set built and ready whenever a pilot does materialize.
+
+**What changed vs. what didn't:**
+- **Changed:** the *scheduling* gate. `docs/ROADMAP.md` §2's cut line is gone; CLAUDE.md's `⛔ The gate` section is now a status note; `RESTROBOOTH_BRIEF.md`'s Phase 8 hard-gate blockquote is now a superseded-status note (the Phase 0 amendments changelog entry itself is left untouched as the historical record — amended, not rewritten, same discipline DESIGN.md's dated amendments already follow); `RISKS.md` R1's mitigation section now describes discipline-without-a-schedule-gate instead of the schedule gate itself.
+- **Did not change:** every non-negotiable in CLAUDE.md — `packages/domain` stays pure/100%-covered, money stays `bigint` paise server-authoritative, **the AI never touches the ledger** (ADR-0007 §6's SELECT-only DB role is structural, not a policy that could quietly erode), RLS as the security model, idempotency everywhere, migrations-only schema changes, no invented API contracts. "Plan before code" is if anything **more** load-bearing now — each of Phases 6–10 still gets its own written, approved plan; only the top-level restructure was approved as a single pass (owner's explicit choice, confirmed via `AskUserQuestion`, over spec'ing all five phases in detail up front).
+- **R1's actual risk is unretired.** It's now a discipline problem instead of a schedule-enforced one: the "never cut" list (offline billing, money-math coverage, the RLS adversarial suite, KDS ticket-loss protection) stays the bar every phase is held to, gate or no gate.
+
+**New plan of record**: Phases 1→2→3a→3b→4→5 (done) → **6 (AI) → 7 (Channels) → 8 (Inventory/Central Kitchen) → 9 (Reports/AI v2) → 10 (Hardening)**, dependency-ordered, each with its own detailed plan at the point it's reached. Full replan, including Phase 6 sliced to implementation detail: `C:\Users\Mohammed\.claude\plans\phase-0-merry-pie.md`.
+
+**Data strategy for Phase 6+**: the AI/reporting/forecasting features need believable transaction volume the current seed doesn't have (a handful of end-to-end narrative transactions per outlet, enough for RLS/UI testing, nowhere near enough for co-occurrence, sentiment trends, or forecast baselines). Rather than build a synthetic generator, **the owner will provide a real anonymized dataset** — menu + a few months of orders/bills/reviews. Phase 6 Slice 0 is an importer for that data, not a generator; it is the blocking input for the rest of Phase 6 and hasn't been provided yet as of this entry.
+
+---
+
+## 2026-07-21 — Phase 5 acceptance: QR replay proven, Booth LCP audited (with an honest null result)
 
 **Decided by:** Mohammed — asked to pick up Phase 5's remaining `ROADMAP.md` acceptance items, chose "QR replay/rotation verification" and "Booth LCP audit" via `AskUserQuestion` (Razorpay webhook verification explicitly excluded — needs a real account/credentials, the owner's call).
 

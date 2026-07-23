@@ -4,7 +4,23 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-21 (latest), Phase 5 acceptance: QR replay closed, Booth LCP audited
+## Where things stand — 2026-07-23 (latest), pilot gate lifted — Phase 6 (AI Layer v1) starting
+
+**The plan of record changed.** Phase 5 shipped with no pilot restaurant available; the owner made a deliberate call to build Phases 6–10 now rather than wait, explicitly overriding R1/the Phase 8 gate with the trade-off named. Full reasoning: [DECISIONS.md](DECISIONS.md)'s latest entry. Docs updated to match: `CLAUDE.md`'s gate section, `RESTROBOOTH_BRIEF.md`'s Phase 8 blockquote, `docs/ROADMAP.md` §2, `docs/RISKS.md` R1 — all now carry a superseded-status note rather than the original gate language; nothing was silently deleted.
+
+**New sequence**: 6 (AI) → 7 (Channels) → 8 (Inventory/Central Kitchen) → 9 (Reports/AI v2) → 10 (Hardening), dependency-ordered. Replan + Phase 6 sliced to implementation detail: `C:\Users\Mohammed\.claude\plans\phase-0-merry-pie.md`.
+
+**Phase 6 — AI Layer v1 — status: Slice 1 starting.** Mostly implements the already-accepted [ADR-0007](docs/adr/0007-ai-provider.md) (provider interface, free local embeddings via pgvector — `menu_items.embedding vector(384)` already exists from Phase 1's `0009_pgvector_embedding.sql` — budget guard, cache, hard degradation). `packages/ai` and `packages/channels` are still empty Phase-1 stubs, about to be filled.
+
+- **Slice 0 (real-data importer) is blocked** on the owner providing an anonymized real dataset (menu + a few months of orders/bills/reviews) — the current seed is a thin narrative fixture, nowhere near enough volume for co-occurrence/sentiment/forecast validation. Asked for it; not yet provided as of this entry.
+- **Slice 1 (the AI spine — `packages/ai`) needs no external data**, so it's proceeding in parallel rather than sitting idle on Slice 0.
+
+### Local dev note
+If a future session sees `packages/ai`/`packages/channels` still as empty stubs and CLAUDE.md's gate section reading like a status note rather than a hard rule, that's correct as of 2026-07-23 — check DECISIONS.md's latest entry before assuming something regressed.
+
+---
+
+## Where things stand — 2026-07-21, Phase 5 acceptance: QR replay closed, Booth LCP audited
 
 Picked up two of the three remaining boxes on `docs/ROADMAP.md`'s Phase 5 acceptance checklist (the third, real Razorpay webhook verification, needs a real account/credentials — the owner's call, not something to build speculatively). Full chain of reasoning: [DECISIONS.md](DECISIONS.md)'s latest entry.
 
