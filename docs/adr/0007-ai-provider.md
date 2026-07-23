@@ -24,7 +24,7 @@ interface AIProvider {
 }
 ```
 
-Primary: **Anthropic Claude** — **Haiku 4.5** for high-volume guest-facing calls (the Booth Host reason strings, upsell one-liners), **Sonnet 5** for analysis (menu engineering, review extraction, Ask RestroBooth). A dev-time free/mock provider is swappable in via config, and the test suite runs against a **deterministic stub provider** so AI-adjacent tests are not flaky and cost nothing.
+~~Primary: **Anthropic Claude** — **Haiku 4.5** for high-volume guest-facing calls (the Booth Host reason strings, upsell one-liners), **Sonnet 5** for analysis (menu engineering, review extraction, Ask RestroBooth).~~ **Amended 2026-07-23 (owner's explicit call, Phase 6 Slice 1): the primary provider is [OpenRouter](https://openrouter.ai), not Anthropic directly** — `openai/gpt-oss-20b:free`, free and unlimited as of this writing (`packages/ai/src/openRouterProvider.ts`). OpenRouter's chat-completions endpoint is OpenAI-compatible, so this is a drop-in swap of *which* model sits behind the same `AIProvider` interface — nothing about the interface, the budget guard, the cache, or the degradation contract below changed. Reconsider the model choice (a paid one, a different free one, a different router) at any point without touching a caller — that's the whole point of the interface existing. A dev-time free/mock provider is swappable in via config either way, and the test suite runs against a **deterministic stub provider** so AI-adjacent tests are not flaky and cost nothing.
 
 Model IDs are configuration, not code. They change.
 

@@ -6,3 +6,4 @@ export * from "./operations.js";
 export * from "./invoicing.js";
 export * from "./idempotency.js";
 export * from "./booth.js";
+export * from "./ai.js";

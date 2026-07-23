@@ -4,19 +4,19 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-23 (latest), pilot gate lifted — Phase 6 (AI Layer v1) starting
+## Where things stand — 2026-07-23 (latest), pilot gate lifted — Phase 6 Slice 1 (the AI spine) done
 
-**The plan of record changed.** Phase 5 shipped with no pilot restaurant available; the owner made a deliberate call to build Phases 6–10 now rather than wait, explicitly overriding R1/the Phase 8 gate with the trade-off named. Full reasoning: [DECISIONS.md](DECISIONS.md)'s latest entry. Docs updated to match: `CLAUDE.md`'s gate section, `RESTROBOOTH_BRIEF.md`'s Phase 8 blockquote, `docs/ROADMAP.md` §2, `docs/RISKS.md` R1 — all now carry a superseded-status note rather than the original gate language; nothing was silently deleted.
+**The plan of record changed.** Phase 5 shipped with no pilot restaurant available; the owner made a deliberate call to build Phases 6–10 now rather than wait, explicitly overriding R1/the Phase 8 gate with the trade-off named. Full reasoning: [DECISIONS.md](DECISIONS.md). Docs updated to match: `CLAUDE.md`'s gate section, `RESTROBOOTH_BRIEF.md`'s Phase 8 blockquote, `docs/ROADMAP.md` §2 (two banners), `docs/RISKS.md` R1, `docs/OPEN-DECISIONS.md` — all now carry a superseded-status note rather than the original gate language; nothing was silently deleted.
 
 **New sequence**: 6 (AI) → 7 (Channels) → 8 (Inventory/Central Kitchen) → 9 (Reports/AI v2) → 10 (Hardening), dependency-ordered. Replan + Phase 6 sliced to implementation detail: `C:\Users\Mohammed\.claude\plans\phase-0-merry-pie.md`.
 
-**Phase 6 — AI Layer v1 — status: Slice 1 starting.** Mostly implements the already-accepted [ADR-0007](docs/adr/0007-ai-provider.md) (provider interface, free local embeddings via pgvector — `menu_items.embedding vector(384)` already exists from Phase 1's `0009_pgvector_embedding.sql` — budget guard, cache, hard degradation). `packages/ai` and `packages/channels` are still empty Phase-1 stubs, about to be filled.
-
-- **Slice 0 (real-data importer) is blocked** on the owner providing an anonymized real dataset (menu + a few months of orders/bills/reviews) — the current seed is a thin narrative fixture, nowhere near enough volume for co-occurrence/sentiment/forecast validation. Asked for it; not yet provided as of this entry.
-- **Slice 1 (the AI spine — `packages/ai`) needs no external data**, so it's proceeding in parallel rather than sitting idle on Slice 0.
+**Phase 6 — AI Layer v1:**
+- **Slice 0 (real-data importer) is still blocked** on the owner providing an anonymized real dataset (menu + a few months of orders/bills/reviews) — the current seed is a thin narrative fixture, nowhere near enough volume for co-occurrence/sentiment/forecast validation. Asked for it twice now; not yet provided.
+- **Slice 1 (the AI spine, `packages/ai`) is done** — no longer an empty stub. `AIProvider` interface, `OpenRouterProvider` (`openai/gpt-oss-20b:free` — owner's explicit call, **not** Anthropic despite ADR-0007's original pick; amended in place) live-verified against the real API, `StubProvider` for free/non-flaky tests, `withTimeout` (never throws, verified including the "loses the race but rejects later" edge case), the per-outlet budget guard + usage ledger (new migration `0032_ai_layer_spine.sql`, applied to all three DBs), the content-hash response cache, the structural `ai_readonly` DB role (no grants yet — Slice 2 allowlists its first view), and the eval-harness mechanism (no scenarios yet). 25 tests passing; DB confirmed clean after every run.
+- **A real finding, not just a build note**: `gpt-oss-20b` is a reasoning model that needs 300+ `maxTokens` of headroom even for a one-word answer (a 20-token budget hit `finish_reason:"length"` mid-reasoning with `content: null`), and free-tier latency was observed anywhere from 4s to 30s+ on the same call. Slice 2's Booth Host has a **1200ms** hard timeout on guest-facing calls — expect the degradation path (rules-only ranking) to fire for a real fraction of guests on this model/tier, by design, not as a bug to chase.
 
 ### Local dev note
-If a future session sees `packages/ai`/`packages/channels` still as empty stubs and CLAUDE.md's gate section reading like a status note rather than a hard rule, that's correct as of 2026-07-23 — check DECISIONS.md's latest entry before assuming something regressed.
+If a future session sees `packages/channels` still an empty stub, `packages/ai` filled in, and CLAUDE.md's gate section reading like a status note rather than a hard rule, that's correct as of 2026-07-23 — check DECISIONS.md before assuming something regressed. The OpenRouter API key used for the live smoke test is NOT stored in any tracked file — get it from the owner again if `packages/ai/src/openRouterProvider.live.test.ts` needs to be re-run.
 
 ---
 

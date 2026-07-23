@@ -79,6 +79,11 @@ export const outlets = pgTable(
     // not enforced here — an outlet can legitimately run cash-only).
     upiVpa: text("upi_vpa"),
     upiPayeeName: text("upi_payee_name"),
+    // ADR-0007 §4 — "an outlet cannot generate an unbounded bill." NOT
+    // NULL with a real default rather than nullable-means-unlimited: a
+    // newly-provisioned outlet is bounded from the moment it exists, not
+    // only once someone remembers to configure a budget for it.
+    aiMonthlyTokenBudget: integer("ai_monthly_token_budget").notNull().default(500_000),
   },
   (t) => [
     unique().on(t.orgId, t.code),

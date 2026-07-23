@@ -2,7 +2,7 @@
   "name": "@restrobooth/ai",
   "private": true,
   "version": "0.0.0",
-  "description": "AI provider abstraction. See docs/adr/0007-ai-provider.md. Empty stub in Phase 1; implemented in Phase 6.",
+  "description": "AI provider abstraction. See docs/adr/0007-ai-provider.md. Phase 6 Slice 1: the spine (provider interface, budget guard, cache, degradation, eval harness).",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -10,6 +10,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@restrobooth/db": "workspace:*"
   },
   "devDependencies": {
     "@restrobooth/config": "workspace:*",
