@@ -4,10 +4,17 @@
   gap: var(--space-1);
 }
 
+/* Stacked, not side-by-side: name+price get the full card width on their
+   own row, and the QuantityStepper (~3 x 48px + gaps — fixed, non-
+   negotiable touch-target width) sits on a separate row below. Squeezing
+   both into one row left too little space for even a heavily-truncated
+   name to read as anything (the same overflow class fixed elsewhere in
+   this redesign — see MenuItemCard/ItemDetailSheet/PayPanel's own
+   comments — but there min-width:0+ellipsis alone was enough; here the
+   stepper's footprint was too large for that to be sufficient). */
 .row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-1) 0;
 }
@@ -16,39 +23,24 @@
   border-top: 1px solid var(--border);
 }
 
+.rowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .name {
   font-weight: 600;
 }
 
-.qty {
+.linePrice {
   color: var(--text-muted);
-  margin-left: 4px;
-}
-
-.trailing {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.removeButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
   font-size: var(--text-sm);
-  line-height: 1;
 }
 
-.removeButton:disabled {
-  opacity: 0.5;
-  cursor: default;
+.stepperRow {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .totalRow {
@@ -59,6 +51,12 @@
   border-top: 1px solid var(--border-strong);
   font-weight: 700;
   font-size: var(--text-lg);
+}
+
+.taxNote {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 2px 0 0;
 }
 
 .placeOrderButton {

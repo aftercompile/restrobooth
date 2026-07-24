@@ -4,7 +4,21 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-24 (latest), Booth UI/UX Redesign Pass 2 done
+## Where things stand — 2026-07-24 (latest), Booth UI/UX Redesign Pass 3 done
+
+**Booth guest-app redesign scope is now complete — Pass 1 (welcome/menu/item-detail), Pass 2 (AI-companion positioning), Pass 3 (cart/checkout/feedback) close out everything named in the original brief.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- **Cart review** (`CartSection.tsx`) — grouped by dish, a real `QuantityStepper` per row instead of the old "×N label + remove" pattern. Underlying data model unchanged (`addToCart` still inserts one qty=1 row per tap, by design); grouping is display-only, the stepper's +/− add/remove one underlying row at a time.
+- **Real subtotal/tax/round-off breakdown on `/pay`** — no new money logic, just selecting `computeBill()`'s already-stored output (`bills.subtotal_paise`/`tax_paise`/`round_off_paise`) back out to the guest UI for the first time.
+- **`FeedbackForm`** restyled with warmer copy and a rating-aware thank-you message (empathetic for ≤2 stars, neutral for 3, enthusiastic for ≥4) — still a reaction to real submitted input, nothing invented.
+- **Two real bugs found live**: cart row name truncation (QuantityStepper's fixed footprint left too little room even with the usual `min-width:0`+ellipsis defence — fixed by stacking name+price above the stepper instead of squeezing them side by side); the bill breakdown's Subtotal+Tax not summing to Total payable (a real, un-shown signed `round_off_paise` — fixed by surfacing it, shown only when non-zero).
+- **Not touched, consciously**: `UpsellRail`'s occasionally-identical reason text across two cards — real data, not a bug, and out of this pass's scope (Pass 2/Slice-3-era shared logic).
+- Verified live end-to-end via Playwright against real Ember & Oak data on two fresh tables. `pnpm --filter @restrobooth/booth typecheck && lint` clean.
+- **No open Booth UI polish scope remains** from the original redesign brief.
+
+---
+
+## Where things stand — 2026-07-24, Booth UI/UX Redesign Pass 2 done
 
 **The Booth now positions itself as an AI dining companion, not a QR menu — built on real data throughout, no invented photos/metrics.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entry, including how food imagery, "chef recommendation," and "ready in ~X min" — all things that looked like they'd need invented data — turned out to have honest paths (illustrated placeholders + a real, currently-empty `image_url` column; reusing the existing "signature" tag; a real historical-average query over `kots.fired_at`/`bumped_at`).
 
@@ -22,7 +36,7 @@ Ember & Oak's local Supabase-local data (1,423 orders, menu, tags, descriptions,
 
 ---
 
-## Where things stand — 2026-07-24 (latest), Booth UI/UX Redesign Pass 1 done
+## Where things stand — 2026-07-24, Booth UI/UX Redesign Pass 1 done
 
 **The Booth guest app got a full presentation-layer redesign — a guided, premium ordering journey instead of a plain Order/Menu tab split.** Zero business logic, API, routing, or AI-flow changes; every server action and query is untouched. Full reasoning (including the "brief says photo-driven, schema has no photos" collision and how it was resolved) in [DECISIONS.md](DECISIONS.md)'s latest entry; step-by-step detail in the plan file.
 

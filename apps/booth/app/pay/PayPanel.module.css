@@ -44,6 +44,22 @@
   margin: 2px 0 0;
 }
 
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+.breakdownRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 /* The hero number — this whole card exists to show it. A filled band
    (same "one number, not one more row" idea as POS's own .grand total)
    scaled up for a guest reading their phone across a table.

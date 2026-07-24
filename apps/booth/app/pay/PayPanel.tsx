@@ -120,6 +120,22 @@ export function PayPanel({ upiAvailable }: { upiAvailable: boolean }) {
             </div>
           </div>
 
+          <div className={styles.breakdown}>
+            <div className={styles.breakdownRow}>
+              <span>Subtotal</span>
+              <span>₹{formatPaiseAsRupees(BigInt(bill.subtotalPaise))}</span>
+            </div>
+            <div className={styles.breakdownRow}>
+              <span>Tax</span>
+              <span>₹{formatPaiseAsRupees(BigInt(bill.taxPaise))}</span>
+            </div>
+            {BigInt(bill.roundOffPaise) !== 0n && (
+              <div className={styles.breakdownRow}>
+                <span>Round off</span>
+                <span>₹{formatPaiseAsRupees(BigInt(bill.roundOffPaise))}</span>
+              </div>
+            )}
+          </div>
           <div className={styles.totalRow}>
             <span className={styles.totalLabel}>Total payable</span>
             <span className={styles.totalAmount}>₹{formatPaiseAsRupees(BigInt(bill.payablePaise))}</span>

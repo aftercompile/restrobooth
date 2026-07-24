@@ -7,6 +7,16 @@ import styles from "./FeedbackForm.module.css";
 
 const STARS = [1, 2, 3, 4, 5] as const;
 
+/** The thank-you message reacts to the REAL rating the guest just
+ *  submitted — not a generic line for every outcome. Still entirely
+ *  honest: this is a reaction to real input, not a claim about anything
+ *  that didn't happen. */
+function thanksMessage(rating: number): string {
+  if (rating >= 4) return "So glad you enjoyed it — see you again soon!";
+  if (rating === 3) return "Thanks for the honest feedback.";
+  return "Thanks for telling us — we'll do better next time.";
+}
+
 /**
  * Rating (required) + free-text comment (optional) — the owner-confirmed
  * scope for this slice. Deliberately no aspect tags / structured
@@ -43,7 +53,7 @@ export function FeedbackForm() {
         <Card>
           <div className={styles.thanks}>
             <CheckCircleIcon className={styles.thanksIcon} />
-            <span>Thanks for letting us know!</span>
+            <span>{thanksMessage(rating)}</span>
           </div>
         </Card>
       </Animate>
@@ -52,7 +62,8 @@ export function FeedbackForm() {
 
   return (
     <Card>
-      <h2 className={styles.title}>How was your meal?</h2>
+      <h2 className={styles.title}>How was your dining experience?</h2>
+      <p className={styles.subtitle}>Your feedback helps our chef and team get even better.</p>
       <div className={styles.panel}>
         <div className={styles.stars} role="radiogroup" aria-label="Rating, 1 to 5 stars">
           {STARS.map((star) => {

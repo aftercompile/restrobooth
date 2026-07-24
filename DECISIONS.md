@@ -4,7 +4,28 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-24 (latest) — Booth UI/UX Redesign Pass 2: AI-dining-companion positioning, resolved through honest data, not around it
+## 2026-07-24 (latest) — Booth UI/UX Redesign Pass 3: cart review, checkout breakdown, feedback restyle
+
+**Decided by:** Mohammed, a one-word "Pass 3" directive selecting the remaining Booth polish scope I'd already named when asked "What's next?" — cart-review visual polish, checkout/`pay` redesign proper, feedback-form restyle. No new requirements; this closes out the Pass 2 "deliberately not touched" list.
+
+- **Cart review** (`CartSection.tsx`) — replaced the old "×N inline label + × remove button" row with a real `QuantityStepper` per distinct dish. The underlying data model didn't change to make this possible: `addToCart` still always inserts a fresh qty=1 `order_items` row per tap (no native "set quantity" mutation exists, by design — see `order-mutations.ts`'s own comment). Solved by client-side grouping (`groupByMenuItem`, by `menuItemId`) for display only; the stepper's +/− add/remove one underlying row at a time, `min={0}` so the last unit isn't blocked from removal. Total relabeled "Subtotal" with a "Taxes calculated at billing" note — it was never the payable amount and now says so.
+- **Real subtotal/tax breakdown, not new computation.** `packages/domain`'s `computeBill()` output (subtotal/tax/round-off/payable) was already being stored on `bills` — just never selected back out to the guest UI. Extended `GuestBill` (`payment-mutations.ts`) to return `subtotalPaise`/`taxPaise`/`roundOffPaise` alongside the existing `payablePaise`, at both return sites (existing-bill and newly-finalised). Zero money logic touched — this is "select more of what's already real," the same category of change as Pass 1's `getBoothMenu()` extension.
+- **`PayPanel`** now shows the real breakdown (Subtotal / Tax / conditionally Round off) above the existing "Total payable" band.
+- **`FeedbackForm`** — warmer heading ("How was your dining experience?" + a one-line subtitle) and a `thanksMessage(rating)` helper that reacts to the guest's actual submitted rating (≥4: enthusiastic, =3: neutral, ≤2: empathetic "we'll do better next time") instead of one static line for every outcome — still entirely honest, a reaction to real input, not a claim about anything that didn't happen.
+
+**One real bug found live, not caught by typecheck/lint** (the same overflow class fixed repeatedly in Pass 1/2, but a variant that needed a different fix): the cart row's `.rowInfo` (name+price) beside the `QuantityStepper` truncated dish names to ~6-7 characters ("Grille...", "Filet ...") — the stepper's ~170-190px fixed touch-target footprint left too little room even with the usual `min-width:0`+ellipsis defence. Unlike `MenuItemCard`/`ItemDetailSheet`/`PayPanel`'s totalRow (where that defence was enough), here the fix had to go one step further: stack name+price on their own full-width row, stepper on a separate row below, rather than squeeze them side by side. Verified live afterward — full names render.
+
+**A second, smaller finding while reviewing the bill breakdown screenshot**: Subtotal + Tax didn't sum to Total payable (₹2010.00 + ₹100.50 ≠ ₹2111.00) — not a bug, but a real, un-shown `round_off_paise` (signed, `computeBill`'s own half-up rounding to the rupee) made the breakdown look like it didn't add up. Fixed the same way as the subtotal/tax addition: `roundOffPaise` was already on the `bills` row, just not selected; added it to `GuestBill` and to `PayPanel`'s breakdown (shown only when non-zero, sign-aware via the existing `formatPaiseAsRupees`). Caught by actually reading the screenshot's numbers, not by any automated check.
+
+**Not touched, consciously**: `UpsellRail`'s two cards showing an identical reason string ("Guests who ordered Filet Mignon loved this too") when both real candidates pair best with the same cart anchor — genuine data, not a bug, just visually repetitive. This is Pass 2/Slice-3-era shared logic (`packages/ai/src/upsell.ts`), not something Pass 3 introduced or was scoped to touch; left as-is rather than silently expanding scope.
+
+**Verified live** via Playwright against real Ember & Oak data on two fresh tables: add 3× Grilled Asparagus + 1× Filet Mignon → cart shows full names, correct grouped quantities and subtotal (₹2290.00) → decrease Grilled Asparagus by one → row and subtotal update correctly (₹2010.00) → place order → request bill → `/pay` shows Subtotal/Tax/Round off summing exactly to Total payable → pay online → paid confirmation + new feedback heading/subtitle → submit a 2-star rating → the empathetic thank-you copy renders. `pnpm --filter @restrobooth/booth typecheck && lint` clean throughout.
+
+This closes out the Booth guest-app redesign scope named across Pass 1/2/3 — welcome/menu/item-detail (Pass 1), AI-companion positioning (Pass 2), cart/checkout/feedback (Pass 3). No open Booth UI polish items remain from the original brief.
+
+---
+
+## 2026-07-24 — Booth UI/UX Redesign Pass 2: AI-dining-companion positioning, resolved through honest data, not around it
 
 **Decided by:** Mohammed, a follow-up brief explicitly asking for food imagery, a multi-step AI questionnaire, transparent recommendation reasoning ("ready in ~X minutes," "chef recommendation"), micro-interactions, and a full copy pass repositioning the Booth as "a personal AI dining assistant, not just a QR menu." This is the same tension Pass 1 hit (the brief benchmarks photo-driven apps against a schema with no photos) — but re-read carefully, every item in it had a real, honest path this time. None were blocking; all four were resolved and built directly:
 
@@ -27,7 +48,7 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-24 (latest) — Booth UI/UX Redesign, Pass 1 (foundation + hero screens)
+## 2026-07-24 — Booth UI/UX Redesign, Pass 1 (foundation + hero screens)
 
 **Decided by:** Mohammed, prompted by a detailed redesign brief (Apple/Uber Eats/CAVA-calibre guest experience) delivered via `/model opus` in plan mode. Three scoping decisions confirmed via `AskUserQuestion` before any code: **no food images** (refined text-forward cards — the schema has none and the project forbids UI built on invented data), **foundation + hero screens first** (not the full journey in one pass), and a **guided journey that's returning-guest-safe** (a mid-meal guest never gets re-onboarded).
 

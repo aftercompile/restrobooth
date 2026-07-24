@@ -28,6 +28,9 @@ const DEFAULT_SERIES_CODE = "A1"; // matches apps/pos/app/floor/[sessionId]/bill
 export interface GuestBill {
   billId: string;
   invoiceNo: string;
+  subtotalPaise: string;
+  taxPaise: string;
+  roundOffPaise: string;
   payablePaise: string;
   status: string;
 }
@@ -38,8 +41,17 @@ export async function finalizeGuestBill(): Promise<Result<GuestBill>> {
     db.transaction(async (tx) => {
       const session = await resolveOwnSession(tx);
 
-      const existing = await tx.execute<{ [key: string]: unknown; id: string; status: string; payable_paise: string; invoice_no: string | null }>(sql`
-        select id, status, payable_paise, invoice_no from bills where table_session_id = ${session.tableSessionId} and status <> 'voided'
+      const existing = await tx.execute<{
+        [key: string]: unknown;
+        id: string;
+        status: string;
+        subtotal_paise: string;
+        tax_paise: string;
+        round_off_paise: string;
+        payable_paise: string;
+        invoice_no: string | null;
+      }>(sql`
+        select id, status, subtotal_paise, tax_paise, round_off_paise, payable_paise, invoice_no from bills where table_session_id = ${session.tableSessionId} and status <> 'voided'
       `);
       const active = existing.rows.filter((r) => r.status === "finalised" || r.status === "settled");
       if (active.length > 1) {
@@ -47,7 +59,15 @@ export async function finalizeGuestBill(): Promise<Result<GuestBill>> {
       }
       if (active.length === 1) {
         const b = active[0]!;
-        return { billId: b.id, invoiceNo: b.invoice_no ?? "", payablePaise: b.payable_paise, status: b.status };
+        return {
+          billId: b.id,
+          invoiceNo: b.invoice_no ?? "",
+          subtotalPaise: b.subtotal_paise,
+          taxPaise: b.tax_paise,
+          roundOffPaise: b.round_off_paise,
+          payablePaise: b.payable_paise,
+          status: b.status,
+        };
       }
 
       if (session.status !== "dining" && session.status !== "bill_requested") {
@@ -160,7 +180,15 @@ export async function finalizeGuestBill(): Promise<Result<GuestBill>> {
       }
       await tx.update(schema.tableSessions).set({ status: "settling" }).where(eq(schema.tableSessions.id, session.tableSessionId));
 
-      return { billId, invoiceNo, payablePaise: computed.payablePaise.toString(), status: "finalised" };
+      return {
+        billId,
+        invoiceNo,
+        subtotalPaise: computed.subtotalPaise.toString(),
+        taxPaise: computed.taxTotalPaise.toString(),
+        roundOffPaise: computed.roundOffPaise.toString(),
+        payablePaise: computed.payablePaise.toString(),
+        status: "finalised",
+      };
     }),
   );
 }
