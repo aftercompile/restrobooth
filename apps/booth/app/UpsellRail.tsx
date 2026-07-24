@@ -22,14 +22,14 @@ export function UpsellRail({ result }: { result: UpsellResult }) {
     startTransition(async () => {
       const res = await addToCartAction(item.menuItemId);
       if (res.error) toast(res.error, "critical");
-      else toast(`Added ${item.name}`, "neutral");
+      else toast(`Added to your table`, "neutral");
       setPendingId(null);
     });
   }
 
   return (
     <div className={styles.section}>
-      <p className={styles.title}>Goes well with your order</p>
+      <p className={styles.title}>Perfect with your meal</p>
       <div className={styles.rail}>
         {result.items.map((item) => (
           <div key={item.menuItemId} className={styles.card}>

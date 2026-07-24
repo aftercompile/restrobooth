@@ -4,6 +4,24 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
+## Where things stand — 2026-07-24 (latest), Booth UI/UX Redesign Pass 2 done
+
+**The Booth now positions itself as an AI dining companion, not a QR menu — built on real data throughout, no invented photos/metrics.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entry, including how food imagery, "chef recommendation," and "ready in ~X min" — all things that looked like they'd need invented data — turned out to have honest paths (illustrated placeholders + a real, currently-empty `image_url` column; reusing the existing "signature" tag; a real historical-average query over `kots.fired_at`/`bumped_at`).
+
+- **New real signals surfaced**: `menu_items.image_url` (migration `0034`, nullable, empty everywhere — a future real photo needs no schema change), `isChefSignature` (from the existing "signature" tag), and `apps/booth/lib/prep-time.ts`'s real per-kitchen-section average prep time (verified ~17 min for Ember & Oak) now drives an honest "usually ready in about N min" on the order-tracking screen.
+- **Multi-step AI questionnaire**: `BoothHostIntake.tsx` is now a real step-by-step wizard (progress dots, Back, per-step Skip-the-whole-thing) — a deliberate reversal of Pass 1's "keep it one screen" call, done because the owner asked for it twice with real detail.
+- **Copy repositioned** around "knowledgeable host," not "algorithm": `PickedForYouRail` → "✨ Picked just for you" (genuinely personalised) kept **distinct** from Welcome's "⭐ Popular Picks" (real aggregate popularity, not personalised — the two are worded differently on purpose so neither over-claims). `UpsellRail` → "Perfect with your meal." Both AI system prompts rewritten toward hospitality framing; the underlying SQL shortlist and LLM-vs-fallback split are unchanged.
+- **Micro-interactions**: cart-pill count pop, Add-button `whileTap` + "✓ Added" confirmation state. A literal "card flies to the cart" animation was deliberately scope-trimmed (real engineering cost, smaller marginal gain) — noted as a cut, not silently dropped.
+- **Two real bugs found live**: `MenuItemCard`'s description text was collapsing to ~4 characters/line once art was added to the existing 3-column row (fixed by restructuring to two rows — art+name on top, description and price/Add each full-width below); `Date.now()` inside `HomePage`'s Server Component body tripped `react-hooks/purity` (fixed by moving it into a plain non-component helper).
+- **A real mistake, corrected**: `pnpm purge` was run against local Supabase-local to reset a table for testing and accidentally wiped Ember & Oak's entire 1,423-order history (that script's `TRUNCATE table_sessions CASCADE` is scoped for the believable-chain fixture's "reset the floor" workflow, not realized to also cascade through Ember & Oak's real seeded orders). Recovered via a scoped delete + full re-import + re-backfill — **`pnpm purge` should not be run against any local DB that also holds the Ember & Oak fixture** without checking what it actually touches first.
+- Verified live end-to-end via Playwright against real (recovered) Ember & Oak data. `pnpm -w typecheck && pnpm -w lint` green across all 12 packages.
+- **Pass 2 scope not covered**: cart-review visual polish beyond what Pass 1 already did, checkout/`pay` redesign proper (only the pre-existing overflow bug there was fixed, not a full restyle), feedback-form restyle, empty/error-state polish beyond the recommendation rails' own empty states.
+
+### Local dev note
+Ember & Oak's local Supabase-local data (1,423 orders, menu, tags, descriptions, embeddings) was fully wiped and re-imported this session (see DECISIONS.md) — if anything looks thin locally (popularity badges missing, no upsell signal), check row counts before assuming a code regression; the live cloud DB was never touched by this and still has its own separate history untouched.
+
+---
+
 ## Where things stand — 2026-07-24 (latest), Booth UI/UX Redesign Pass 1 done
 
 **The Booth guest app got a full presentation-layer redesign — a guided, premium ordering journey instead of a plain Order/Menu tab split.** Zero business logic, API, routing, or AI-flow changes; every server action and query is untouched. Full reasoning (including the "brief says photo-driven, schema has no photos" collision and how it was resolved) in [DECISIONS.md](DECISIONS.md)'s latest entry; step-by-step detail in the plan file.

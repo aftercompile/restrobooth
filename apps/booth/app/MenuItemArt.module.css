@@ -1,0 +1,78 @@
+.artCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.artSheet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 160px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: var(--space-1);
+}
+
+.imageCard {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+
+.imageSheet {
+  width: 100%;
+  height: 160px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  margin-bottom: var(--space-1);
+}
+
+.glyph {
+  font-size: 28px;
+  opacity: 0.8;
+}
+
+.artSheet .glyph {
+  font-size: 48px;
+}
+
+/* Soft, low-saturation gradients in the existing warm-stone palette —
+   illustrative tone, not a rainbow of category "brand colours". */
+.artCard[data-tone="gold"],
+.artSheet[data-tone="gold"] {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brass-500) 35%, var(--surface-sunken)), var(--surface-sunken));
+}
+
+.artCard[data-tone="green"],
+.artSheet[data-tone="green"] {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--enamel-500) 28%, var(--surface-sunken)), var(--surface-sunken));
+}
+
+.artCard[data-tone="enamel"],
+.artSheet[data-tone="enamel"] {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--enamel-700) 30%, var(--surface-sunken)), var(--surface-sunken));
+}
+
+.artCard[data-tone="rose"],
+.artSheet[data-tone="rose"] {
+  background: linear-gradient(135deg, color-mix(in srgb, #c96a5c 30%, var(--surface-sunken)), var(--surface-sunken));
+}
+
+.artCard[data-tone="teal"],
+.artSheet[data-tone="teal"] {
+  background: linear-gradient(135deg, color-mix(in srgb, #2f8f8a 28%, var(--surface-sunken)), var(--surface-sunken));
+}
+
+.artCard[data-tone="neutral"],
+.artSheet[data-tone="neutral"] {
+  background: var(--surface-sunken);
+}

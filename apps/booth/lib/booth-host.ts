@@ -157,8 +157,8 @@ function fallbackReason(c: RankedCandidate): string {
   if (c.matchedSpice && c.matchedMood) return "Matches your spice and mood picks";
   if (c.matchedMood) return "Fits what you're in the mood for";
   if (c.matchedSpice) return "Right at your spice level";
-  if (c.matchedBudget && c.popularity > 0) return "A popular pick in your budget";
-  if (c.popularity > 0) return "A guest favourite here";
+  if (c.matchedBudget && c.popularity > 0) return "Popular with guests, and in your budget";
+  if (c.popularity > 0) return "Popular with similar guests";
   if (c.matchedBudget) return "Fits your budget";
   return "Worth trying";
 }
@@ -172,9 +172,12 @@ function getProvider(): AIProvider | null {
 }
 
 const REASON_SYSTEM_PROMPT =
-  "You are a concise restaurant host writing one-line reasons a guest should try specific dishes. " +
-  "Reply with ONLY a JSON object mapping each given dish id to a reason string under 12 words. " +
-  "No markdown, no code fences, no extra text — just the JSON object. Never invent facts about a dish you weren't given.";
+  "You are a knowledgeable, warm dining host helping a guest discover dishes they'll genuinely love — " +
+  "not an algorithm listing matches. Write one-line reasons under 12 words that build trust by being " +
+  "specific about WHY (their stated mood, spice preference, or what's popular tonight), the way a " +
+  "great waiter would explain a recommendation. Reply with ONLY a JSON object mapping each given dish " +
+  "id to its reason string. No markdown, no code fences, no extra text — just the JSON object. Never " +
+  "invent facts about a dish you weren't given.";
 
 function buildReasonPrompt(candidates: RankedCandidate[], prefs: BoothHostPreferences): string {
   const guestContext = [

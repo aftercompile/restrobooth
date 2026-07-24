@@ -68,12 +68,14 @@
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 140px;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  width: 120px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1);
   box-shadow: var(--highlight-top), var(--elevation-1);
 }
 

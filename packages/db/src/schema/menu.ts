@@ -109,6 +109,13 @@ export const menuItems = pgTable(
     // budget/popularity, it just can't be spice- or mood-matched yet.
     spiceLevel: text("spice_level"),
     tags: text("tags").array().notNull().default(sql`'{}'`),
+    // Booth redesign Pass 2 — real, nullable, empty for every current
+    // fixture (no photography exists yet for any seeded item). Never
+    // rendered as a fake photo: the Booth falls back to illustrated
+    // category art when this is null, exactly the "elegant placeholder,
+    // not invented content" split CLAUDE.md's honest-data rule requires.
+    // A real photo just slots in later without a schema change.
+    imageUrl: text("image_url"),
     status: text("status").notNull().default("draft"),
     // Which kitchen line cooks this item — decides KOT routing at fire time
     // (DOMAIN.md §3.3, Phase 3a). A single "fire" produces one KOT per

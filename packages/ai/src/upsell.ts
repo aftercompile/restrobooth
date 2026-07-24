@@ -146,7 +146,7 @@ async function getRankedCandidates(db: Database, storeId: string, cartMenuItemId
 }
 
 function fallbackReason(c: RankedCandidate): string {
-  return `Often ordered with ${c.pairedWithName}`;
+  return `Guests who ordered ${c.pairedWithName} loved this too`;
 }
 
 function getProvider(): AIProvider | null {
@@ -156,10 +156,11 @@ function getProvider(): AIProvider | null {
 }
 
 const REASON_SYSTEM_PROMPT =
-  "You are a concise restaurant server suggesting one add-on dish per already-ordered dish. " +
-  "Reply with ONLY a JSON object mapping each given suggestion id to a short reason under 10 words, " +
-  "written as if speaking to the guest (e.g. 'Pairs perfectly with your X'). " +
-  "No markdown, no code fences, no extra text — just the JSON object. Never invent facts you weren't given.";
+  "You are a warm, knowledgeable host suggesting one thoughtful add-on per already-ordered dish — " +
+  "hospitality, not a sales pitch. Reply with ONLY a JSON object mapping each given suggestion id to a " +
+  "short reason under 10 words, written as if speaking to the guest (e.g. 'Perfect with your X', " +
+  "'Our chef recommends this alongside your X'). No markdown, no code fences, no extra text — just the " +
+  "JSON object. Never invent facts you weren't given.";
 
 function buildReasonPrompt(candidates: RankedCandidate[]): string {
   const lines = candidates

@@ -1,8 +1,7 @@
 .card {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: var(--space-1);
   width: 100%;
   text-align: left;
   background: var(--surface);
@@ -17,11 +16,18 @@
   filter: brightness(0.98);
 }
 
+.top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
 .info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
+  padding-top: 4px;
 }
 
 .name {
@@ -45,15 +51,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 2px;
 }
 
-.trailing {
+.footer {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-1);
-  flex-shrink: 0;
 }
 
 .price {
@@ -81,4 +85,8 @@
 .addButton:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.addButton[data-added="true"] {
+  background: var(--ramp-fresh);
 }

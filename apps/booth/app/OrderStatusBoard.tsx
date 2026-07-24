@@ -33,62 +33,87 @@ function guestStatus(status: string): { label: string; rail: RailState } {
  * render here — a still-editable cart line lives in CartSection.tsx
  * instead, since "in your cart" isn't kitchen status, it's an order the
  * guest can still change.
+ *
+ * `estimatedMinutesRemaining` is real, not invented (apps/booth/app/page.tsx's
+ * own comment has the derivation — this store's real historical average
+ * prep time per kitchen section, minus real elapsed time since the KOT
+ * fired) — null whenever nothing's still cooking or there's no history
+ * yet to estimate from, in which case the friendly header just omits it
+ * rather than guessing.
  */
-export function OrderStatusBoard({ items }: { items: GuestOrderItem[] }) {
+export function OrderStatusBoard({
+  items,
+  estimatedMinutesRemaining,
+}: {
+  items: GuestOrderItem[];
+  estimatedMinutesRemaining?: number | null;
+}) {
   const motionAllowed = useMotionAllowed();
 
   if (items.length === 0) return null;
 
+  const stillCooking = items.some((i) => i.status === "fired");
+
   return (
-    <StateRail state="fresh" glow>
-      <div className={styles.board}>
-        {items.map((item) => {
-        const { label, rail } = guestStatus(item.status);
-        const tile = (
-          <div className={styles.tile}>
-            <span>
-              <span className={styles.name}>{item.name}</span>
-              {item.quantity > 1 && <span className={styles.qty}>×{item.quantity}</span>}
-            </span>
-            <span className={styles.statusLabel} data-tone={rail}>
-              {item.status === "fired" &&
-                (motionAllowed ? (
-                  <motion.span
-                    aria-hidden="true"
-                    className={styles.cookingPot}
-                    animate={{ rotate: [-8, 8, -8] }}
-                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    🍲
-                  </motion.span>
-                ) : (
-                  <span aria-hidden="true" className={styles.cookingPot}>
-                    🍲
-                  </span>
-                ))}
-              {label}
-            </span>
-          </div>
-        );
+    <>
+      {stillCooking && (
+        <p className={styles.heading}>
+          Your order is on its way
+          {estimatedMinutesRemaining != null && (
+            <span className={styles.estimate}> — usually ready in about {estimatedMinutesRemaining} min</span>
+          )}
+        </p>
+      )}
+      <StateRail state="fresh" glow>
+        <div className={styles.board}>
+          {items.map((item) => {
+          const { label, rail } = guestStatus(item.status);
+          const tile = (
+            <div className={styles.tile}>
+              <span>
+                <span className={styles.name}>{item.name}</span>
+                {item.quantity > 1 && <span className={styles.qty}>×{item.quantity}</span>}
+              </span>
+              <span className={styles.statusLabel} data-tone={rail}>
+                {item.status === "fired" &&
+                  (motionAllowed ? (
+                    <motion.span
+                      aria-hidden="true"
+                      className={styles.cookingPot}
+                      animate={{ rotate: [-8, 8, -8] }}
+                      transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      🍲
+                    </motion.span>
+                  ) : (
+                    <span aria-hidden="true" className={styles.cookingPot}>
+                      🍲
+                    </span>
+                  ))}
+                {label}
+              </span>
+            </div>
+          );
 
-        if (!motionAllowed) return <div key={item.orderItemId}>{tile}</div>;
+          if (!motionAllowed) return <div key={item.orderItemId}>{tile}</div>;
 
-        return (
-          <AnimatePresence mode="wait" key={item.orderItemId} initial={false}>
-            <motion.div
-              key={item.status}
-              initial={{ rotateX: -90, opacity: 0 }}
-              animate={{ rotateX: 0, opacity: 1 }}
-              exit={{ rotateX: 90, opacity: 0 }}
-              transition={BOOTH_TRANSITION}
-              style={{ transformStyle: "preserve-3d" }}
-            >
-              {tile}
-            </motion.div>
-          </AnimatePresence>
-        );
-        })}
-      </div>
-    </StateRail>
+          return (
+            <AnimatePresence mode="wait" key={item.orderItemId} initial={false}>
+              <motion.div
+                key={item.status}
+                initial={{ rotateX: -90, opacity: 0 }}
+                animate={{ rotateX: 0, opacity: 1 }}
+                exit={{ rotateX: 90, opacity: 0 }}
+                transition={BOOTH_TRANSITION}
+                style={{ transformStyle: "preserve-3d" }}
+              >
+                {tile}
+              </motion.div>
+            </AnimatePresence>
+          );
+          })}
+        </div>
+      </StateRail>
+    </>
   );
 }

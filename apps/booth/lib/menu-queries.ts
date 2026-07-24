@@ -12,10 +12,21 @@ export interface BoothMenuItem {
   allergens: string[];
   spiceLevel: string | null;
   tags: string[];
+  kitchenSection: string;
+  /** Real, nullable — no fixture has photography yet. The Booth falls
+   *  back to illustrated category art when this is null; never a fake
+   *  photo standing in for a real one. */
+  imageUrl: string | null;
   /** Top-3-by-real-sales-in-this-store, never invented (CLAUDE.md: no
    *  metric the schema can't actually answer) — see the popularity
    *  subquery's comment below for the exact source. */
   isPopular: boolean;
+  /** Derived from the existing "signature" tag (Slice 2's hand-authored
+   *  tagging — Filet Mignon, Ribeye Steak, New York Strip), not a new
+   *  invented flag: reusing a real, already-curated editorial signal
+   *  instead of adding a second "is this special" concept that would
+   *  start out meaning nothing until someone filled it in. */
+  isChefSignature: boolean;
 }
 
 const POPULAR_RANK_CUTOFF = 3;
@@ -55,10 +66,12 @@ export async function getBoothMenu(storeId: string): Promise<BoothMenuItem[]> {
     allergens: string[];
     spice_level: string | null;
     tags: string[];
+    kitchen_section: string;
+    image_url: string | null;
     qty_sold: string;
   }>(sql`
     select mi.id as menu_item_id, mi.name, c.name as category_name, rm.price_paise,
-      mi.description, mi.diet, mi.allergens, mi.spice_level, mi.tags,
+      mi.description, mi.diet, mi.allergens, mi.spice_level, mi.tags, mi.kitchen_section, mi.image_url,
       coalesce(pop.qty_sold, 0) as qty_sold
     from resolve_menu(${storeId}, 'dinein') rm
     join menu_items mi on mi.id = rm.menu_item_id
@@ -91,6 +104,9 @@ export async function getBoothMenu(storeId: string): Promise<BoothMenuItem[]> {
     allergens: r.allergens,
     spiceLevel: r.spice_level,
     tags: r.tags,
+    kitchenSection: r.kitchen_section,
+    imageUrl: r.image_url,
     isPopular: popularIds.has(r.menu_item_id),
+    isChefSignature: r.tags.includes("signature"),
   }));
 }

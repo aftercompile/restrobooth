@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge, BottomSheet, Button, QuantityStepper, formatPaiseAsRupees } from "@restrobooth/ui";
 import type { BoothMenuItem } from "../../lib/menu-queries";
+import { MenuItemArt } from "../MenuItemArt";
 import styles from "./ItemDetailSheet.module.css";
 
 const DIET_LABEL: Record<string, string> = {
@@ -75,9 +76,12 @@ function ItemDetailContent({
 
   return (
     <div className={styles.content}>
+      <MenuItemArt imageUrl={item.imageUrl} categoryName={item.categoryName} size="sheet" />
+
       {item.description && <p className={styles.description}>{item.description}</p>}
 
       <div className={styles.badges}>
+        {item.isChefSignature && <Badge tone="warning">✨ Chef&apos;s Signature</Badge>}
         {item.isPopular && <Badge tone="live">Popular</Badge>}
         {item.diet && <Badge tone="neutral">{DIET_LABEL[item.diet] ?? item.diet}</Badge>}
         {(item.spiceLevel === "medium" || item.spiceLevel === "hot") && (

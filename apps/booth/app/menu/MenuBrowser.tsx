@@ -20,6 +20,7 @@ import styles from "./MenuBrowser.module.css";
 export function MenuBrowser({ groups, cartItems }: { groups: [string, BoothMenuItem[]][]; cartItems: GuestOrderItem[] }) {
   const toast = useToast();
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<BoothMenuItem | null>(null);
   const [activeCategory, setActiveCategory] = useState(groups[0]?.[0] ?? "");
 
@@ -59,8 +60,16 @@ export function MenuBrowser({ groups, cartItems }: { groups: [string, BoothMenuI
     setPendingItemId(item.menuItemId);
     addToCartAction(item.menuItemId)
       .then((result) => {
-        if (result.error) toast(result.error, "critical");
-        else toast(`Added ${item.name}`, "neutral");
+        if (result.error) {
+          toast(result.error, "critical");
+          return;
+        }
+        toast(`Added to your table`, "neutral");
+        // A brief "✓ Added" on the button itself, not just the toast —
+        // set from this event handler (not an effect), so the timer
+        // cleanup here never trips react-hooks/set-state-in-effect.
+        setJustAddedId(item.menuItemId);
+        setTimeout(() => setJustAddedId((current) => (current === item.menuItemId ? null : current)), 1200);
       })
       .finally(() => setPendingItemId(null));
   }
@@ -74,7 +83,7 @@ export function MenuBrowser({ groups, cartItems }: { groups: [string, BoothMenuI
         return;
       }
     }
-    toast(quantity === 1 ? `Added ${item.name}` : `Added ${quantity}× ${item.name}`, "neutral");
+    toast(quantity === 1 ? "Added to your table" : `Added ${quantity} to your table`, "neutral");
     setDetailItem(null);
   }
 
@@ -108,6 +117,7 @@ export function MenuBrowser({ groups, cartItems }: { groups: [string, BoothMenuI
                   key={item.menuItemId}
                   item={item}
                   adding={pendingItemId === item.menuItemId}
+                  justAdded={justAddedId === item.menuItemId}
                   onOpenDetail={() => setDetailItem(item)}
                   onQuickAdd={() => handleQuickAdd(item)}
                 />

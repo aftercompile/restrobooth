@@ -5,6 +5,7 @@ import { getUpsellSuggestions } from "@restrobooth/ai";
 import { getGuestContext } from "../lib/guest-context";
 import { getGuestOrderStatus } from "../lib/order-queries";
 import { getBoothMenu } from "../lib/menu-queries";
+import { getAvgPrepTimeMinutes, estimateMinutesRemaining } from "../lib/prep-time";
 import { getDb } from "../lib/db";
 import { BoothShell } from "./BoothShell";
 import { BoothPoll } from "./BoothPoll";
@@ -55,6 +56,16 @@ export default async function HomePage() {
   // instead.
   const popularItems = isFreshGuest ? (await getBoothMenu(guest.storeId)).filter((i) => i.isPopular).slice(0, 3) : [];
 
+  // A real remaining-time estimate, not an invented one: for every KOT
+  // still cooking (not yet bumped), avg-prep-time-for-its-section minus
+  // real elapsed-since-fired (apps/booth/lib/prep-time.ts's own comment
+  // explains why that computation lives in a plain helper, not inline
+  // here). The whole order isn't ready until the slowest section is, so
+  // the estimate is the max across active sections.
+  const activeKots = status.kots.filter((k) => k.status !== "bumped" && k.status !== "voided");
+  const estimatedMinutesRemaining =
+    activeKots.length > 0 ? estimateMinutesRemaining(activeKots, await getAvgPrepTimeMinutes(guest.storeId)) : null;
+
   return (
     <BoothShell tableLabel={guest.tableLabel} brandName={guest.brandName} waiterCalled={guest.waiterCalled}>
       <BoothPoll />
@@ -78,7 +89,7 @@ export default async function HomePage() {
               {upsell && <UpsellRail result={upsell} />}
             </div>
           )}
-          <OrderStatusBoard items={liveItems} />
+          <OrderStatusBoard items={liveItems} estimatedMinutesRemaining={estimatedMinutesRemaining} />
           {(guest.sessionStatus === "dining" || guest.sessionStatus === "bill_requested" || guest.sessionStatus === "settling") && (
             <RequestBillButton sessionStatus={guest.sessionStatus} />
           )}

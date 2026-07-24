@@ -239,6 +239,13 @@
       "when": 1784820949101,
       "tag": "0033_swift_krista_starr",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1784885340944,
+      "tag": "0034_menu_item_image_url",
+      "breakpoints": true
     }
   ]
 }
