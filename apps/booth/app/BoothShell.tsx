@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTransition } from "react";
 import type { ReactNode } from "react";
 import { BellIcon, useToast } from "@restrobooth/ui";
@@ -14,6 +12,12 @@ import styles from "./BoothShell.module.css";
  * a phone, one guest, two destinations — a slim bar is the whole shell it
  * needs. Same ADR-0001 split as every other app's own Shell: the design
  * system owns tokens/components, the app owns its own chrome and routing.
+ *
+ * The old Order/Menu tab toggle is gone (Booth redesign Pass 1, guided
+ * journey) — discovery now lives on the menu itself (the persistent
+ * CartPill routes menu → order) and the order screen carries its own
+ * "Add more items" link back to the menu, so nothing that toggle did is
+ * actually lost, it's just not header chrome anymore.
  */
 export function BoothShell({
   tableLabel,
@@ -26,7 +30,6 @@ export function BoothShell({
   waiterCalled: boolean;
   children: ReactNode;
 }) {
-  const pathname = usePathname();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
 
@@ -45,27 +48,17 @@ export function BoothShell({
           <span className={styles.table}>Table {tableLabel}</span>
           <span className={styles.brand}>{brandName}</span>
         </div>
-        <div className={styles.right}>
-          <nav className={styles.nav}>
-            <Link href="/" className={styles.navLink} aria-current={pathname === "/" ? "page" : undefined}>
-              Order
-            </Link>
-            <Link href="/menu" className={styles.navLink} aria-current={pathname === "/menu" ? "page" : undefined}>
-              Menu
-            </Link>
-          </nav>
-          <button
-            type="button"
-            className={styles.callWaiterButton}
-            data-called={waiterCalled}
-            disabled={pending}
-            onClick={handleCallWaiter}
-            aria-label={waiterCalled ? "Waiter notified — tap to call again" : "Call waiter"}
-            title={waiterCalled ? "Waiter notified" : "Call waiter"}
-          >
-            <BellIcon className={styles.bellIcon} />
-          </button>
-        </div>
+        <button
+          type="button"
+          className={styles.callWaiterButton}
+          data-called={waiterCalled}
+          disabled={pending}
+          onClick={handleCallWaiter}
+          aria-label={waiterCalled ? "Waiter notified — tap to call again" : "Call waiter"}
+          title={waiterCalled ? "Waiter notified" : "Call waiter"}
+        >
+          <BellIcon className={styles.bellIcon} />
+        </button>
       </header>
       <main className={styles.main}>{children}</main>
     </>

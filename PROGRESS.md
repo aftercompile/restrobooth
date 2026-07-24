@@ -4,6 +4,21 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
+## Where things stand — 2026-07-24 (latest), Booth UI/UX Redesign Pass 1 done
+
+**The Booth guest app got a full presentation-layer redesign — a guided, premium ordering journey instead of a plain Order/Menu tab split.** Zero business logic, API, routing, or AI-flow changes; every server action and query is untouched. Full reasoning (including the "brief says photo-driven, schema has no photos" collision and how it was resolved) in [DECISIONS.md](DECISIONS.md)'s latest entry; step-by-step detail in the plan file.
+
+- **New guest journey**: scan → **Welcome** (real "Popular today" picks, not invented ones) → **Menu** (sticky scroll-spied category chips, refined cards with real diet/spice/popularity badges, whole-card tap → a premium **BottomSheet** item detail with a quantity stepper) → persistent floating cart pill → **order screen** (unchanged cart/upsell, now with an explicit "Add more items" link back to the menu since the header's old tab toggle is gone). A returning guest with anything in progress lands straight on their live order — never re-shown Welcome.
+- **Four new `packages/ui` primitives** that didn't exist before: `Chip`, `BottomSheet` (the system's first bottom sheet — Dialog was centered-modal-only), `Skeleton`, `QuantityStepper`. All lint-clean (`lint-brass`, `lint-motion`).
+- **Two real bugs found and fixed mid-build**: a nested `<button>` inside a `<button>` (silently breaks click targeting — HTML parser issue, not obvious from a visual check) in the first draft of the menu card; and a `BottomSheet` exit-animation content flash, fixed with React's own "adjust state during render" pattern after React 19's stricter lints (`react-hooks/set-state-in-effect`, `react-hooks/refs`) rejected the two more obvious fixes.
+- Verified live end-to-end via Playwright against real Ember & Oak data — including the one behavior this redesign could have silently broken: reloading mid-order stays on the order screen, never re-shows Welcome. `pnpm -w typecheck && pnpm -w lint` green across all 12 packages.
+- **Pass 2, not yet started**: cart review polish, `UpsellRail` restyle, `/pay` checkout redesign, the order-tracking timeline (evolving the split-flap `OrderStatusBoard`, not replacing it), `FeedbackForm` restyle, empty/error-state polish.
+
+### Local dev note
+`menu_items.description` is now populated for Ember & Oak's 12 items on all three DBs (docker-compose, Supabase-local, live cloud) — re-run `pnpm --filter @restrobooth/db backfill:menu-descriptions` if it's ever missing (idempotent, matched by name). The QR codes minted during this session's live verification are LOCAL-only test tokens (`http://localhost:3003/...`) — they do not affect the live Vercel deployment's QR codes.
+
+---
+
 ## Where things stand — 2026-07-24 (latest), Phase 6 Slice 3 (Smart upsell) done
 
 **Slice 3 (§5E) is done.** `packages/ai/src/upsell.ts` — new, and deliberately NOT app-local like the Booth Host (Slice 2) — computes real market-basket lift entirely in SQL (order_items co-occurring within the same order, scoped per store, voided lines excluded, `distinct on` picks each candidate's single best-lift pairing) and, only when an AI provider is configured and under budget, asks the LLM for a one-line "goes well with" reason; AI-off fallback is a real, varied "Often ordered with {item}" label, never a placeholder. Shared (not duplicated) because this is explicitly a two-surface feature: `apps/booth/app/UpsellRail.tsx` (the guest cart, between the cart rows and Place order) and `apps/captain/app/floor/[sessionId]/UpsellStrip.tsx` (the order screen, between the order card and Fire to kitchen) both call the same `getUpsellSuggestions()`. An 86'd item is never suggested (joined through `resolve_menu()`, same discipline as the Booth Host). "Measured: attach rate, AOV delta" (brief §5E) is explicitly **not** built — that needs its own impression/conversion log and a report to read it, Phase 9 territory once the rollup layer exists; `ai_usage_ledger` (feature="upsell") gives call-volume only, not attach rate.

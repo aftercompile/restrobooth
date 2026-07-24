@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import Link from "next/link";
 import { Button, Card, CardHeader, formatPaiseAsRupees, TabularNumber, useToast } from "@restrobooth/ui";
 import type { GuestOrderItem } from "../lib/order-queries";
 import { placeOrderAction, removeFromCartAction, type SimpleActionState } from "./actions";
@@ -74,18 +73,5 @@ export function CartSection({ items }: { items: GuestOrderItem[] }) {
         </form>
       </div>
     </Card>
-  );
-}
-
-/** The pre-cart empty state — nothing pending AND nothing live yet. */
-export function EmptyOrderState() {
-  return (
-    <p>
-      Nothing here yet —{" "}
-      <Link href="/menu" style={{ color: "var(--enamel-700)", fontWeight: 600 }}>
-        browse the menu
-      </Link>{" "}
-      to get started.
-    </p>
   );
 }

@@ -11,7 +11,7 @@ export default async function MenuPage() {
   if (!guest) redirect("/invalid?message=Your session has ended — please rescan the code on your table.");
 
   const [items, status] = await Promise.all([getBoothMenu(guest.storeId), getGuestOrderStatus(guest.guestSessionId)]);
-  const cartCount = status.items.filter((i) => i.status === "pending").length;
+  const cartItems = status.items.filter((i) => i.status === "pending");
 
   const groups = new Map<string, BoothMenuItem[]>();
   for (const item of items) {
@@ -28,7 +28,7 @@ export default async function MenuPage() {
       ) : (
         <>
           <BoothHostIntake />
-          <MenuBrowser groups={Array.from(groups.entries())} cartCount={cartCount} />
+          <MenuBrowser groups={Array.from(groups.entries())} cartItems={cartItems} />
         </>
       )}
     </BoothShell>

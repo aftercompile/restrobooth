@@ -1,14 +1,17 @@
 import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { getUpsellSuggestions } from "@restrobooth/ai";
 import { getGuestContext } from "../lib/guest-context";
 import { getGuestOrderStatus } from "../lib/order-queries";
+import { getBoothMenu } from "../lib/menu-queries";
 import { getDb } from "../lib/db";
 import { BoothShell } from "./BoothShell";
 import { BoothPoll } from "./BoothPoll";
-import { CartSection, EmptyOrderState } from "./CartSection";
+import { CartSection } from "./CartSection";
 import { RequestBillButton } from "./RequestBillButton";
 import { UpsellRail } from "./UpsellRail";
+import { Welcome } from "./Welcome";
 
 // The only component on this page that imports framer-motion — dynamic()
 // still renders it server-side (the split-flap board's real content is in
@@ -31,6 +34,7 @@ export default async function HomePage() {
   const status = await getGuestOrderStatus(guest.guestSessionId);
   const cartItems = status.items.filter((i) => i.status === "pending");
   const liveItems = status.items.filter((i) => i.status !== "pending");
+  const isFreshGuest = cartItems.length === 0 && liveItems.length === 0;
 
   // Every order_item already in the cart or fired/served counts as "the
   // basket so far" — not just what's still pending — so the suggestion
@@ -46,22 +50,39 @@ export default async function HomePage() {
         })
       : null;
 
+  // Only fetched for a fresh guest (Welcome's "Popular today" teaser) —
+  // no point paying for this query once there's a real cart/board to show
+  // instead.
+  const popularItems = isFreshGuest ? (await getBoothMenu(guest.storeId)).filter((i) => i.isPopular).slice(0, 3) : [];
+
   return (
     <BoothShell tableLabel={guest.tableLabel} brandName={guest.brandName} waiterCalled={guest.waiterCalled}>
       <BoothPoll />
-      <h1 className="rb-display" style={{ fontSize: "var(--text-xl)", marginBottom: "var(--space-2)" }}>
-        Your order
-      </h1>
-      {cartItems.length === 0 && liveItems.length === 0 && <EmptyOrderState />}
-      {cartItems.length > 0 && (
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <CartSection items={cartItems} />
-          {upsell && <UpsellRail result={upsell} />}
-        </div>
-      )}
-      <OrderStatusBoard items={liveItems} />
-      {(guest.sessionStatus === "dining" || guest.sessionStatus === "bill_requested" || guest.sessionStatus === "settling") && (
-        <RequestBillButton sessionStatus={guest.sessionStatus} />
+      {isFreshGuest ? (
+        <Welcome brandName={guest.brandName} popularItems={popularItems} />
+      ) : (
+        <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
+            <h1 className="rb-display" style={{ fontSize: "var(--text-xl)", margin: 0 }}>
+              Your order
+            </h1>
+            {/* The header's old Menu tab is gone — this is the order screen's
+                own way back, so dropping that tab never became a dead end. */}
+            <Link href="/menu" style={{ color: "var(--enamel-700)", fontWeight: 600, fontSize: "var(--text-sm)" }}>
+              + Add more items
+            </Link>
+          </div>
+          {cartItems.length > 0 && (
+            <div style={{ marginBottom: "var(--space-3)" }}>
+              <CartSection items={cartItems} />
+              {upsell && <UpsellRail result={upsell} />}
+            </div>
+          )}
+          <OrderStatusBoard items={liveItems} />
+          {(guest.sessionStatus === "dining" || guest.sessionStatus === "bill_requested" || guest.sessionStatus === "settling") && (
+            <RequestBillButton sessionStatus={guest.sessionStatus} />
+          )}
+        </>
       )}
     </BoothShell>
   );

@@ -18,10 +18,17 @@
 }
 
 .title {
-  font-size: var(--text-base);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
   font-weight: 700;
   color: var(--text);
   margin: 0;
+}
+
+.subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 2px 0 0;
 }
 
 .skip {
@@ -43,36 +50,16 @@
   gap: var(--space-1);
 }
 
-.rowLabel {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.question {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text);
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-}
-
-.chip {
-  min-height: var(--touch-target);
-  padding: 0 var(--space-2);
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.chip[data-selected="true"] {
-  background: var(--brass-500);
-  border-color: var(--brass-500);
-  color: var(--enamel-700);
 }
 
 .freeText {

@@ -1,59 +1,124 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import Link from "next/link";
-import { Animate, useToast, formatPaiseAsRupees } from "@restrobooth/ui";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animate, Chip, useToast } from "@restrobooth/ui";
 import type { BoothMenuItem } from "../../lib/menu-queries";
+import type { GuestOrderItem } from "../../lib/order-queries";
 import { addToCartAction } from "../actions";
+import { CartPill } from "../CartPill";
+import { MenuItemCard } from "./MenuItemCard";
+import { ItemDetailSheet } from "./ItemDetailSheet";
 import styles from "./MenuBrowser.module.css";
 
-/** Same tap-to-add pattern as apps/captain's AddItemPicker.tsx — always
- *  +1 per tap, no stepper (matches this design system's established
- *  quantity UX everywhere else). */
-export function MenuBrowser({ groups, cartCount }: { groups: [string, BoothMenuItem[]][]; cartCount: number }) {
+/**
+ * The menu centerpiece: a sticky, scroll-spied category chip bar over
+ * refined item cards, a whole-card tap opening the item-detail bottom
+ * sheet, and a persistent cart pill replacing the old bottom cartBar
+ * link. Add-to-cart still goes through the same addToCartAction every
+ * other Booth surface uses — the redesign changes presentation only.
+ */
+export function MenuBrowser({ groups, cartItems }: { groups: [string, BoothMenuItem[]][]; cartItems: GuestOrderItem[] }) {
   const toast = useToast();
-  const [pending, startTransition] = useTransition();
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
+  const [detailItem, setDetailItem] = useState<BoothMenuItem | null>(null);
+  const [activeCategory, setActiveCategory] = useState(groups[0]?.[0] ?? "");
 
-  function handleAdd(item: BoothMenuItem) {
+  const sectionRefs = useRef(new Map<string, HTMLDivElement>());
+
+  const cartCount = cartItems.length;
+  const cartTotalPaise = useMemo(
+    () => cartItems.reduce((sum, i) => sum + BigInt(i.unitPricePaise) * BigInt(i.quantity), 0n),
+    [cartItems],
+  );
+
+  // Scroll-spy: a section counts as "active" once its top has crossed
+  // just below the sticky header+chip bar — rootMargin's negative top
+  // matches that combined height (56px header + ~52px chip bar), and the
+  // large negative bottom keeps only sections near the top of the
+  // viewport eligible, not everything currently on screen.
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length === 0) return;
+        const topmost = visible.reduce((a, b) => (a.boundingClientRect.top < b.boundingClientRect.top ? a : b));
+        const category = topmost.target.getAttribute("data-category");
+        if (category) setActiveCategory(category);
+      },
+      { rootMargin: "-108px 0px -70% 0px", threshold: 0 },
+    );
+    for (const el of sectionRefs.current.values()) observer.observe(el);
+    return () => observer.disconnect();
+  }, [groups]);
+
+  function scrollToCategory(category: string) {
+    sectionRefs.current.get(category)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function handleQuickAdd(item: BoothMenuItem) {
     setPendingItemId(item.menuItemId);
-    startTransition(async () => {
+    addToCartAction(item.menuItemId)
+      .then((result) => {
+        if (result.error) toast(result.error, "critical");
+        else toast(`Added ${item.name}`, "neutral");
+      })
+      .finally(() => setPendingItemId(null));
+  }
+
+  async function handleDetailAdd(item: BoothMenuItem, quantity: number) {
+    for (let i = 0; i < quantity; i++) {
       const result = await addToCartAction(item.menuItemId);
-      if (result.error) toast(result.error, "critical");
-      else toast(`Added ${item.name}`, "neutral");
-      setPendingItemId(null);
-    });
+      if (result.error) {
+        toast(result.error, "critical");
+        setDetailItem(null);
+        return;
+      }
+    }
+    toast(quantity === 1 ? `Added ${item.name}` : `Added ${quantity}× ${item.name}`, "neutral");
+    setDetailItem(null);
   }
 
   return (
     <>
-      <div className={styles.list}>
-        {groups.map(([categoryName, items], gi) => (
-          <Animate key={categoryName} delayIndex={gi}>
-            <div className={styles.category}>
-              <p className={styles.categoryName}>{categoryName}</p>
-              {items.map((item) => (
-                <button
-                  key={item.menuItemId}
-                  type="button"
-                  className={styles.itemButton}
-                  disabled={pending && pendingItemId === item.menuItemId}
-                  onClick={() => handleAdd(item)}
-                >
-                  <span className={styles.itemName}>{item.name}</span>
-                  <span className={styles.itemPrice}>₹{formatPaiseAsRupees(BigInt(item.pricePaise))}</span>
-                </button>
-              ))}
-            </div>
-          </Animate>
+      <div className={styles.chipBar}>
+        {groups.map(([categoryName]) => (
+          <Chip key={categoryName} selected={categoryName === activeCategory} onToggle={() => scrollToCategory(categoryName)}>
+            {categoryName}
+          </Chip>
         ))}
       </div>
 
-      {cartCount > 0 && (
-        <Link href="/" className={styles.cartBar}>
-          {cartCount} item{cartCount === 1 ? "" : "s"} in your order · View order →
-        </Link>
-      )}
+      <div className={styles.list}>
+        {groups.map(([categoryName, items], gi) => (
+          <div
+            key={categoryName}
+            data-category={categoryName}
+            ref={(el) => {
+              if (el) sectionRefs.current.set(categoryName, el);
+              else sectionRefs.current.delete(categoryName);
+            }}
+            className={styles.category}
+          >
+            <Animate delayIndex={gi}>
+              <p className={styles.categoryName}>{categoryName}</p>
+            </Animate>
+            <div className={styles.cards}>
+              {items.map((item) => (
+                <MenuItemCard
+                  key={item.menuItemId}
+                  item={item}
+                  adding={pendingItemId === item.menuItemId}
+                  onOpenDetail={() => setDetailItem(item)}
+                  onQuickAdd={() => handleQuickAdd(item)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <ItemDetailSheet item={detailItem} onClose={() => setDetailItem(null)} onAdd={handleDetailAdd} />
+      <CartPill count={cartCount} totalPaise={cartTotalPaise} />
     </>
   );
 }

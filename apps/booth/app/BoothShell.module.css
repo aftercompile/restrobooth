@@ -19,12 +19,12 @@
 .context {
   display: flex;
   flex-direction: column;
-  /* The original bug: no floor on this, so at phone width "Table T5" and
-     the nav links both ran out of room and word-wrapped mid-label instead
-     of the intended one-line layout. Nav + bell (.right) get flex-shrink:0
-     below — they always keep their full content width — and this is the
-     one side allowed to give, down to a legible floor, truncating with an
-     ellipsis rather than wrapping. */
+  /* The original bug: no floor on this, so at phone width "Table T5" ran
+     out of room and word-wrapped mid-label instead of the intended
+     one-line layout. The bell button keeps flex-shrink:0 below — it
+     always keeps its full size — and this is the one side allowed to
+     give, down to a legible floor, truncating with an ellipsis rather
+     than wrapping. */
   min-width: 72px;
   flex-shrink: 1;
 }
@@ -43,41 +43,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.nav {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-  background: rgb(255 255 255 / 10%);
-  border-radius: calc(var(--radius) + 4px);
-  padding: 3px;
-}
-
-.navLink {
-  display: inline-flex;
-  align-items: center;
-  min-height: calc(var(--touch-target) - 6px);
-  padding: 0 10px;
-  border-radius: var(--radius);
-  color: rgb(255 255 255 / 80%);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: var(--text-sm);
-  background: transparent;
-  white-space: nowrap;
-}
-
-.navLink[aria-current="page"] {
-  background: rgb(255 255 255 / 16%);
-  color: #fff;
 }
 
 .callWaiterButton {

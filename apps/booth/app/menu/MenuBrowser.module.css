@@ -1,15 +1,39 @@
+/* 56px BoothShell header — see that component's own .bar min-height —
+   is what this sticky offset is coupled to. */
+.chipBar {
+  position: sticky;
+  top: 56px;
+  z-index: 20;
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  padding: var(--space-1) 0;
+  margin: 0 calc(var(--space-2) * -1);
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+  background: var(--bg);
+  /* A soft bottom edge so cards scrolling underneath don't read as
+     clipping through the bar. */
+  box-shadow: 0 8px 8px -8px rgb(18 32 29 / 8%);
+}
+
 .list {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  /* Room for the fixed cart bar so the last item isn't hidden behind it. */
-  padding-bottom: 72px;
+  padding-top: var(--space-2);
+  /* Room for the fixed cart pill so the last card isn't hidden behind it. */
+  padding-bottom: 96px;
 }
 
 .category {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  /* Matches .chipBar's own sticky offset (56px header + its own height)
+     so scrollIntoView("start") doesn't land a section's heading UNDER
+     the sticky bars. */
+  scroll-margin-top: 116px;
 }
 
 .categoryName {
@@ -21,55 +45,8 @@
   margin: 0;
 }
 
-.itemButton {
+.cards {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--space-1);
-  text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  min-height: var(--touch-target);
-  padding: var(--space-1) var(--space-2);
-  color: var(--text);
-  font: inherit;
-  box-shadow: var(--highlight-top), var(--elevation-1);
-}
-
-.itemButton:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.itemName {
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-.itemPrice {
-  font-family: var(--font-data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
-.cartBar {
-  position: fixed;
-  left: var(--space-2);
-  right: var(--space-2);
-  bottom: var(--space-2);
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--touch-target);
-  padding: 0 var(--space-2);
-  background: var(--enamel-700);
-  color: #fff;
-  font-weight: 700;
-  border-radius: var(--radius);
-  text-decoration: none;
-  box-shadow: var(--elevation-2);
 }

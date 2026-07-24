@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Animate } from "@restrobooth/ui";
+import { Animate, Chip } from "@restrobooth/ui";
 import { getBoothHostRecommendationsAction } from "../actions";
 import type { BoothHostPreferences, BoothHostResult, Mood, SpiceLevel, Diet, BudgetBand } from "../../lib/booth-host";
 import { PickedForYouRail } from "./PickedForYouRail";
@@ -40,6 +40,12 @@ type Stage = "intake" | "results" | "dismissed";
  * blocking it; the menu itself has already painted by the time a guest
  * could even see this (apps/booth/app/menu/page.tsx fetches both in
  * parallel, this component owns none of that data fetch).
+ *
+ * Deliberately still ONE screen, not a multi-step wizard — every choice
+ * here is optional, and forcing a guest through N sequential screens to
+ * reach "skip" would be MORE friction than the brief's own "reduce
+ * friction" goal, not less. "Conversational" here means warmer questions
+ * and the new Chip primitive, not a longer path to get past it.
  *
  * Free text feeds the reason-string prompt as guest-stated context, not
  * a live re-embedding re-rank — that's a deliberately deferred piece
@@ -88,24 +94,27 @@ export function BoothHostIntake() {
     <Animate>
       <div className={styles.panel}>
         <div className={styles.header}>
-          <p className={styles.title}>Want a few picks made for you?</p>
+          <div>
+            <p className={styles.title}>Not sure what to order?</p>
+            <p className={styles.subtitle}>Answer a few quick questions and we&apos;ll pick for you.</p>
+          </div>
           <button type="button" className={styles.skip} onClick={() => setStage("dismissed")}>
             Skip
           </button>
         </div>
 
-        <ChipRow label="Mood" options={MOODS} value={mood} onChange={setMood} />
-        <ChipRow label="Spice" options={SPICE_LEVELS} value={spiceLevel} onChange={setSpiceLevel} />
-        <ChipRow label="Diet" options={DIETS} value={diet} onChange={setDiet} />
-        <ChipRow label="Budget" options={BUDGETS} value={budgetBand} onChange={setBudgetBand} />
+        <ChipRow question="What are you in the mood for?" options={MOODS} value={mood} onChange={setMood} />
+        <ChipRow question="How spicy?" options={SPICE_LEVELS} value={spiceLevel} onChange={setSpiceLevel} />
+        <ChipRow question="Any dietary preference?" options={DIETS} value={diet} onChange={setDiet} />
+        <ChipRow question="What's your budget?" options={BUDGETS} value={budgetBand} onChange={setBudgetBand} />
 
         <div className={styles.row}>
-          <span className={styles.rowLabel}>Avoid</span>
+          <span className={styles.question}>Avoiding anything?</span>
           <div className={styles.chips}>
             {ALLERGENS.map((a) => (
-              <button key={a} type="button" className={styles.chip} data-selected={avoidAllergens.includes(a)} onClick={() => toggleAllergen(a)}>
+              <Chip key={a} selected={avoidAllergens.includes(a)} onToggle={() => toggleAllergen(a)}>
                 {a}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -120,7 +129,7 @@ export function BoothHostIntake() {
         />
 
         <button type="button" className={styles.submit} disabled={pending} onClick={handleSubmit}>
-          {pending ? "Finding picks…" : "Show me picks"}
+          {pending ? "Finding your picks…" : "Show me picks"}
         </button>
       </div>
     </Animate>
@@ -128,24 +137,24 @@ export function BoothHostIntake() {
 }
 
 function ChipRow<T extends string>({
-  label,
+  question,
   options,
   value,
   onChange,
 }: {
-  label: string;
+  question: string;
   options: { value: T; label: string }[];
   value: T | undefined;
   onChange: (v: T | undefined) => void;
 }) {
   return (
     <div className={styles.row}>
-      <span className={styles.rowLabel}>{label}</span>
+      <span className={styles.question}>{question}</span>
       <div className={styles.chips}>
         {options.map((o) => (
-          <button key={o.value} type="button" className={styles.chip} data-selected={value === o.value} onClick={() => onChange(value === o.value ? undefined : o.value)}>
+          <Chip key={o.value} selected={value === o.value} onToggle={() => onChange(value === o.value ? undefined : o.value)}>
             {o.label}
-          </button>
+          </Chip>
         ))}
       </div>
     </div>
