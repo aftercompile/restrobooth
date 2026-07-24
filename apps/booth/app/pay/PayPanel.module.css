@@ -46,12 +46,16 @@
 
 /* The hero number — this whole card exists to show it. A filled band
    (same "one number, not one more row" idea as POS's own .grand total)
-   scaled up for a guest reading their phone across a table. */
+   scaled up for a guest reading their phone across a table.
+   Stacked, not side-by-side with the label — at --text-2xl (40px) a real
+   bill total (4+ digits is routine once a table's ordered a few rounds)
+   doesn't reliably fit next to "Total payable" in a space-between row on
+   a ~390px phone; neither flex child shrinks below its own content
+   width by default, so the amount was pushing past the card's edge. */
 .totalRow {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
+  flex-direction: column;
+  gap: 4px;
   padding: var(--space-2);
   margin-bottom: var(--space-2);
   background: var(--surface-sunken);
@@ -69,6 +73,7 @@
   font-variant-numeric: tabular-nums;
   font-size: var(--text-2xl);
   font-weight: 700;
+  word-break: break-word;
 }
 
 .methods {
