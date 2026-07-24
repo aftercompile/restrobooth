@@ -10,9 +10,10 @@ import { IdleLogoutGuard } from "./IdleLogoutGuard";
 
 const NAV = [
   { href: "/menu", label: "Menu" },
-  // Reports, Inventory, Outlets land in later phases. Deliberately not
-  // stubbed out as dead links — an empty nav destination that does nothing
-  // is worse than one that isn't there yet.
+  { href: "/reviews", label: "Reviews" },
+  // Inventory, Outlets land in later phases. Deliberately not stubbed out
+  // as dead links — an empty nav destination that does nothing is worse
+  // than one that isn't there yet.
 ];
 
 /**

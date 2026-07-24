@@ -4,7 +4,19 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-24 (latest), Booth UI/UX Redesign Pass 3 done
+## Where things stand — 2026-07-24 (latest), Phase 6 Slice 4 (Review → Action) done
+
+**The review→action pipeline is built and live**: post-meal guest feedback + staff-pasted aggregator reviews get extracted into aspect/sentiment/dish findings (taste/portion/temperature/wait/price/service), surfaced on a new Console `/reviews` page as per-dish sentiment and "3 things to fix this week." Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- **Data gap resolved** (owner decision): the promised review dataset never arrived, so a real staff-paste-review Console input ships alongside a clearly-labeled, deterministic **synthetic** guest-feedback corpus seeded onto Ember & Oak's real sessions (`packages/db/scripts/backfill-feedback.ts` — idempotent, non-destructive, safe to re-run) — 135 rows on both local and live now.
+- **`packages/ai/src/reviewExtraction.ts`** — the one AI slice that does genuine NLP, fully bounded by closed aspect/sentiment sets and a deterministic dish-matcher (real `resolve_menu()` names only, ambiguous → null, never a guess). AI-off degrades to a real keyword-rule classifier, never an empty result — verified live end-to-end with no `OPENROUTER_API_KEY` configured (the hard ADR-0007 §3 gate); **AI-on itself could not be verified live this session** (no key available in this dev environment), only via unit/eval tests exercising the same validation path.
+- Migration `0035` (two new non-partitioned RLS-scoped tables, `feedback` gets two additive columns) applied to all three DBs, including live (owner-approved, connection string supplied in-session only, never persisted to a file).
+- **A real mistake, corrected**: running the full test suite twice (`pnpm -w test`) triggered `packages/db`'s own test `globalSetup` — an unconditional `TRUNCATE CASCADE` against Supabase-local — wiping Ember & Oak entirely (same class of incident as Pass 2's `pnpm purge`). Recovered via full reimport + backfills. **Flagged, not fixed**: `packages/db`'s test suite is unsafe to run against any Supabase-local instance that also holds the Ember & Oak fixture; also surfaced a pre-existing parallel-execution race between that same truncate-reseed and `packages/ai/src/budgetGuard.test.ts` (a live-DB integration test) when both run under `pnpm -w test`.
+- **Next up: Slice 5**, the Phase 6 gate — a formal AI-off acceptance pass tying Slices 2–4 together, eval-harness green, budget guard proven to stop at 100%, no 86'd recommendation. Not new feature work.
+
+---
+
+## Where things stand — 2026-07-24, Booth UI/UX Redesign Pass 3 done
 
 **Booth guest-app redesign scope is now complete — Pass 1 (welcome/menu/item-detail), Pass 2 (AI-companion positioning), Pass 3 (cart/checkout/feedback) close out everything named in the original brief.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entry.
 

@@ -69,6 +69,7 @@ import { createDbClient, type Database } from "../src/client.js";
 import * as schema from "../src/schema/index.js";
 import * as id from "./data/steakhouse-fixture-ids.js";
 import { STEAKHOUSE_MENU, type StoreMenuItem } from "./data/steakhouse-menu.js";
+import { generateSyntheticFeedback, type FeedbackSessionMeta } from "./data/steakhouse-feedback.js";
 
 // ---------------------------------------------------------------------------
 // Local, seed-only money/invoice math — mirrors seed-believable-chain.ts's
@@ -174,6 +175,10 @@ function weightedChoice<T extends string>(options: { value: T; weight: number }[
 // this achieves for free and stays valid on every future re-run too.
 // ---------------------------------------------------------------------------
 const DAY_MS = 86_400_000;
+// Phase 6 Slice 4: not every visit leaves feedback — ~9% gives a realistic
+// (if generous) response rate, roughly 100-150 rows across ~60 days at
+// this file's order volume.
+const FEEDBACK_RATE = 0.09;
 const TODAY = new Date();
 const END_DATE = new Date(Date.UTC(TODAY.getUTCFullYear(), TODAY.getUTCMonth(), TODAY.getUTCDate() - 1)); // yesterday
 const START_DATE = new Date(END_DATE.getTime() - 60 * DAY_MS); // ~2 months back
@@ -379,6 +384,10 @@ export async function importSteakhouse(db: Database): Promise<void> {
 
   const kotNumberByDay = new Map<string, number>();
   let invoiceSeq = 1n;
+  // Phase 6 Slice 4: one entry per session, for the synthetic-feedback pass
+  // below — needs the session's real ordered dish names (never an invented
+  // one) and closedAt (feedback is submitted post-meal, not mid-service).
+  const sessionMeta: FeedbackSessionMeta[] = [];
 
   for (const order of orders) {
     const businessDayId = businessDayIds.get(order.businessDate)!;
@@ -386,6 +395,7 @@ export async function importSteakhouse(db: Database): Promise<void> {
     const orderId = crypto.randomUUID();
     const openedAt = order.timestamp;
     const closedAt = new Date(openedAt.getTime() + (45 + Math.floor(rand() * 45)) * 60000);
+    sessionMeta.push({ sessionId, businessDate: order.businessDate, closedAt, dishNames: order.items.map((i) => i.menuItem.name) });
 
     tableSessionRows.push({
       id: sessionId,
@@ -531,6 +541,11 @@ export async function importSteakhouse(db: Database): Promise<void> {
   await bulkInsert(db, schema.bills, billRows);
   await bulkInsert(db, schema.billTaxLines, billTaxLineRows);
   await bulkInsert(db, schema.payments, paymentRows);
+
+  console.log("Synthetic guest feedback (Phase 6 Slice 4 — generated fixture content, not real guest input)...");
+  const feedbackRows = generateSyntheticFeedback(sessionMeta, rand, { outletId: id.OUTLET, storeId: id.STORE }, FEEDBACK_RATE);
+  console.log(`  ${feedbackRows.length} feedback rows`);
+  if (feedbackRows.length > 0) await db.insert(schema.feedback).values(feedbackRows);
 
   console.log("Done.");
 }

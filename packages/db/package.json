@@ -24,7 +24,8 @@
     "import:steakhouse": "tsx scripts/import-steakhouse.ts",
     "backfill:menu-tags": "tsx scripts/backfill-menu-tags.ts",
     "backfill:menu-descriptions": "tsx scripts/backfill-menu-descriptions.ts",
-    "backfill:embeddings": "tsx scripts/backfill-embeddings.ts"
+    "backfill:embeddings": "tsx scripts/backfill-embeddings.ts",
+    "backfill:feedback": "tsx scripts/backfill-feedback.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

@@ -124,6 +124,9 @@ importers:
 
   apps/console:
     dependencies:
+      '@restrobooth/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@restrobooth/db':
         specifier: workspace:*
         version: link:../../packages/db

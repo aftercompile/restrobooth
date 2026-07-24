@@ -11,3 +11,15 @@ export { checkBudget, recordUsage, type AIFeature, type BudgetStatus, type Recor
 export { cacheKey, getCached, setCached } from "./cache.js";
 export { runEvalSuite, summarizeEvalResults, type EvalScenario, type EvalResult, type EvalSummary } from "./eval/harness.js";
 export { getUpsellSuggestions, type UpsellCandidate, type UpsellResult } from "./upsell.js";
+export {
+  extractReviewAspects,
+  matchDishName,
+  classifyByKeywords,
+  parseExtractionResponse,
+  type ReviewAspect,
+  type ReviewSentiment,
+  type ExtractedFinding,
+  type ReviewExtractionResult,
+  type MenuNameCandidate,
+  type ExtractReviewAspectsParams,
+} from "./reviewExtraction.js";

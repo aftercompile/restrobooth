@@ -7,3 +7,4 @@ export * from "./invoicing.js";
 export * from "./idempotency.js";
 export * from "./booth.js";
 export * from "./ai.js";
+export * from "./reviews.js";

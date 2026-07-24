@@ -333,6 +333,12 @@ export const feedback = pgTable(
     rating: integer("rating").notNull(),
     comment: text("comment"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Phase 6 Slice 4: stamped once packages/ai/src/reviewExtraction.ts has
+    // produced review_extractions rows for this comment. Null = not yet
+    // processed (or nothing to process, when comment is null) — the
+    // Console "extract pending feedback" action's own pending-work filter.
+    extractedAt: timestamp("extracted_at", { withTimezone: true }),
+    extractionAiUsed: boolean("extraction_ai_used").notNull().default(false),
   },
   (t) => [
     unique().on(t.tableSessionId, t.businessDate),

@@ -1,0 +1,4830 @@
+{
+  "id": "6be42dfe-89df-4724-8b49-7d258b8eb344",
+  "prevId": "c05ac644-ee2b-40d7-afa9-6483122304cb",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.areas": {
+      "name": "areas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "default_kot_route_id": {
+          "name": "default_kot_route_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "areas_outlet_id_outlets_id_fk": {
+          "name": "areas_outlet_id_outlets_id_fk",
+          "tableFrom": "areas",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.brands": {
+      "name": "brands",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "brands_org_id_organizations_id_fk": {
+          "name": "brands_org_id_organizations_id_fk",
+          "tableFrom": "brands",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "brands_slug_unique": {
+          "name": "brands_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.gst_registrations": {
+      "name": "gst_registrations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gstin": {
+          "name": "gstin",
+          "type": "char(15)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_code": {
+          "name": "state_code",
+          "type": "char(2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trade_name": {
+          "name": "trade_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "gst_registrations_org_id_organizations_id_fk": {
+          "name": "gst_registrations_org_id_organizations_id_fk",
+          "tableFrom": "gst_registrations",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "gst_registrations_gstin_unique": {
+          "name": "gst_registrations_gstin_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "gstin"
+          ]
+        },
+        "gst_registrations_org_id_state_code_unique": {
+          "name": "gst_registrations_org_id_state_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "org_id",
+            "state_code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "gstin_format": {
+          "name": "gstin_format",
+          "value": "\"gst_registrations\".\"gstin\" ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z][Z][0-9A-Z]$'"
+        },
+        "gstin_state_matches": {
+          "name": "gstin_state_matches",
+          "value": "\"gst_registrations\".\"state_code\" = substring(\"gst_registrations\".\"gstin\" from 1 for 2)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.organizations": {
+      "name": "organizations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pan": {
+          "name": "pan",
+          "type": "char(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.outlet_group_members": {
+      "name": "outlet_group_members",
+      "schema": "",
+      "columns": {
+        "outlet_group_id": {
+          "name": "outlet_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "outlet_group_members_outlet_id_idx": {
+          "name": "outlet_group_members_outlet_id_idx",
+          "columns": [
+            {
+              "expression": "outlet_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "outlet_group_members_outlet_group_id_outlet_groups_id_fk": {
+          "name": "outlet_group_members_outlet_group_id_outlet_groups_id_fk",
+          "tableFrom": "outlet_group_members",
+          "tableTo": "outlet_groups",
+          "columnsFrom": [
+            "outlet_group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "outlet_group_members_outlet_id_outlets_id_fk": {
+          "name": "outlet_group_members_outlet_id_outlets_id_fk",
+          "tableFrom": "outlet_group_members",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "outlet_group_members_outlet_group_id_outlet_id_pk": {
+          "name": "outlet_group_members_outlet_group_id_outlet_id_pk",
+          "columns": [
+            "outlet_group_id",
+            "outlet_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.outlet_groups": {
+      "name": "outlet_groups",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "outlet_groups_org_id_organizations_id_fk": {
+          "name": "outlet_groups_org_id_organizations_id_fk",
+          "tableFrom": "outlet_groups",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.outlets": {
+      "name": "outlets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gst_registration_id": {
+          "name": "gst_registration_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "char(3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Asia/Kolkata'"
+        },
+        "address": {
+          "name": "address",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'restaurant'"
+        },
+        "upi_vpa": {
+          "name": "upi_vpa",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upi_payee_name": {
+          "name": "upi_payee_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ai_monthly_token_budget": {
+          "name": "ai_monthly_token_budget",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 500000
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "outlets_org_id_organizations_id_fk": {
+          "name": "outlets_org_id_organizations_id_fk",
+          "tableFrom": "outlets",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "outlets_gst_registration_id_gst_registrations_id_fk": {
+          "name": "outlets_gst_registration_id_gst_registrations_id_fk",
+          "tableFrom": "outlets",
+          "tableTo": "gst_registrations",
+          "columnsFrom": [
+            "gst_registration_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "outlets_org_id_code_unique": {
+          "name": "outlets_org_id_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "org_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "outlet_kind_valid": {
+          "name": "outlet_kind_valid",
+          "value": "\"outlets\".\"kind\" in ('restaurant','cloud_kitchen','central_kitchen','warehouse')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.stores": {
+      "name": "stores",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "stores_brand_id_brands_id_fk": {
+          "name": "stores_brand_id_brands_id_fk",
+          "tableFrom": "stores",
+          "tableTo": "brands",
+          "columnsFrom": [
+            "brand_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "stores_outlet_id_outlets_id_fk": {
+          "name": "stores_outlet_id_outlets_id_fk",
+          "tableFrom": "stores",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "stores_brand_id_outlet_id_unique": {
+          "name": "stores_brand_id_outlet_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "brand_id",
+            "outlet_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "store_status_valid": {
+          "name": "store_status_valid",
+          "value": "\"stores\".\"status\" in ('active','paused','closed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tables": {
+      "name": "tables",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "area_id": {
+          "name": "area_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "capacity": {
+          "name": "capacity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 4
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'available'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tables_outlet_id_outlets_id_fk": {
+          "name": "tables_outlet_id_outlets_id_fk",
+          "tableFrom": "tables",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tables_area_id_areas_id_fk": {
+          "name": "tables_area_id_areas_id_fk",
+          "tableFrom": "tables",
+          "tableTo": "areas",
+          "columnsFrom": [
+            "area_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tables_outlet_id_label_unique": {
+          "name": "tables_outlet_id_label_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "outlet_id",
+            "label"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "table_status_valid": {
+          "name": "table_status_valid",
+          "value": "\"tables\".\"status\" in ('available','out_of_service')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.terminals": {
+      "name": "terminals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "char(2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "terminals_outlet_id_outlets_id_fk": {
+          "name": "terminals_outlet_id_outlets_id_fk",
+          "tableFrom": "terminals",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "terminals_outlet_id_code_unique": {
+          "name": "terminals_outlet_id_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "outlet_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "auth.users": {
+      "name": "users",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.memberships": {
+      "name": "memberships",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_type": {
+          "name": "scope_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_id": {
+          "name": "scope_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "memberships_user_id_idx": {
+          "name": "memberships_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memberships_user_id_users_id_fk": {
+          "name": "memberships_user_id_users_id_fk",
+          "tableFrom": "memberships",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "memberships_user_id_scope_type_scope_id_role_unique": {
+          "name": "memberships_user_id_scope_type_scope_id_role_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "scope_type",
+            "scope_id",
+            "role"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "scope_type_valid": {
+          "name": "scope_type_valid",
+          "value": "\"memberships\".\"scope_type\" in ('org','brand','outlet_group','outlet')"
+        },
+        "role_valid": {
+          "name": "role_valid",
+          "value": "\"memberships\".\"role\" in ('org_owner','brand_manager','cluster_manager','outlet_manager','cashier','captain','kitchen')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.dayparts": {
+      "name": "dayparts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "days_of_week": {
+          "name": "days_of_week",
+          "type": "integer[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{0,1,2,3,4,5,6}'"
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_time": {
+          "name": "end_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "dayparts_brand_id_brands_id_fk": {
+          "name": "dayparts_brand_id_brands_id_fk",
+          "tableFrom": "dayparts",
+          "tableTo": "brands",
+          "columnsFrom": [
+            "brand_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "dayparts_brand_id_code_unique": {
+          "name": "dayparts_brand_id_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "brand_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.menu_item_overrides": {
+      "name": "menu_item_overrides",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "menu_item_id": {
+          "name": "menu_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "channel_code": {
+          "name": "channel_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "daypart_id": {
+          "name": "daypart_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "promo_id": {
+          "name": "promo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_paise": {
+          "name": "price_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_available": {
+          "name": "is_available",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "publish_batch_id": {
+          "name": "publish_batch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "menu_item_overrides_lookup_idx": {
+          "name": "menu_item_overrides_lookup_idx",
+          "columns": [
+            {
+              "expression": "menu_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "menu_item_overrides_store_channel_idx": {
+          "name": "menu_item_overrides_store_channel_idx",
+          "columns": [
+            {
+              "expression": "store_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "channel_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "menu_item_overrides_menu_item_id_menu_items_id_fk": {
+          "name": "menu_item_overrides_menu_item_id_menu_items_id_fk",
+          "tableFrom": "menu_item_overrides",
+          "tableTo": "menu_items",
+          "columnsFrom": [
+            "menu_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_item_overrides_store_id_stores_id_fk": {
+          "name": "menu_item_overrides_store_id_stores_id_fk",
+          "tableFrom": "menu_item_overrides",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_item_overrides_daypart_id_dayparts_id_fk": {
+          "name": "menu_item_overrides_daypart_id_dayparts_id_fk",
+          "tableFrom": "menu_item_overrides",
+          "tableTo": "dayparts",
+          "columnsFrom": [
+            "daypart_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_item_overrides_promo_id_promos_id_fk": {
+          "name": "menu_item_overrides_promo_id_promos_id_fk",
+          "tableFrom": "menu_item_overrides",
+          "tableTo": "promos",
+          "columnsFrom": [
+            "promo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "price_non_negative": {
+          "name": "price_non_negative",
+          "value": "\"menu_item_overrides\".\"price_paise\" is null or \"menu_item_overrides\".\"price_paise\" >= 0"
+        },
+        "override_status_valid": {
+          "name": "override_status_valid",
+          "value": "\"menu_item_overrides\".\"status\" in ('draft','pending_approval','approved','published')"
+        },
+        "overrides_something": {
+          "name": "overrides_something",
+          "value": "\"menu_item_overrides\".\"price_paise\" is not null or \"menu_item_overrides\".\"is_available\" is not null"
+        },
+        "sane_dates": {
+          "name": "sane_dates",
+          "value": "\"menu_item_overrides\".\"effective_to\" is null or \"menu_item_overrides\".\"effective_to\" > \"menu_item_overrides\".\"effective_from\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.menu_items": {
+      "name": "menu_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base_price_paise": {
+          "name": "base_price_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_class_id": {
+          "name": "tax_class_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "diet": {
+          "name": "diet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "allergens": {
+          "name": "allergens",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "spice_level": {
+          "name": "spice_level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "kitchen_section": {
+          "name": "kitchen_section",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'hot'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "menu_items_brand_id_brands_id_fk": {
+          "name": "menu_items_brand_id_brands_id_fk",
+          "tableFrom": "menu_items",
+          "tableTo": "brands",
+          "columnsFrom": [
+            "brand_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_items_category_id_categories_id_fk": {
+          "name": "menu_items_category_id_categories_id_fk",
+          "tableFrom": "menu_items",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_items_tax_class_id_tax_classes_id_fk": {
+          "name": "menu_items_tax_class_id_tax_classes_id_fk",
+          "tableFrom": "menu_items",
+          "tableTo": "tax_classes",
+          "columnsFrom": [
+            "tax_class_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "base_price_non_negative": {
+          "name": "base_price_non_negative",
+          "value": "\"menu_items\".\"base_price_paise\" >= 0"
+        },
+        "diet_valid": {
+          "name": "diet_valid",
+          "value": "\"menu_items\".\"diet\" is null or \"menu_items\".\"diet\" in ('veg','non_veg','egg','jain')"
+        },
+        "spice_level_valid": {
+          "name": "spice_level_valid",
+          "value": "\"menu_items\".\"spice_level\" is null or \"menu_items\".\"spice_level\" in ('mild','medium','hot')"
+        },
+        "menu_item_status_valid": {
+          "name": "menu_item_status_valid",
+          "value": "\"menu_items\".\"status\" in ('draft','published','archived')"
+        },
+        "kitchen_section_valid": {
+          "name": "kitchen_section_valid",
+          "value": "\"menu_items\".\"kitchen_section\" in ('hot','cold','bar')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.promos": {
+      "name": "promos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "promos_brand_id_brands_id_fk": {
+          "name": "promos_brand_id_brands_id_fk",
+          "tableFrom": "promos",
+          "tableTo": "brands",
+          "columnsFrom": [
+            "brand_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "promos_brand_id_code_unique": {
+          "name": "promos_brand_id_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "brand_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "promo_status_valid": {
+          "name": "promo_status_valid",
+          "value": "\"promos\".\"status\" in ('draft','active','ended','cancelled')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tax_classes": {
+      "name": "tax_classes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate_bps": {
+          "name": "rate_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tax_classes_org_id_organizations_id_fk": {
+          "name": "tax_classes_org_id_organizations_id_fk",
+          "tableFrom": "tax_classes",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tax_classes_org_id_code_unique": {
+          "name": "tax_classes_org_id_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "org_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.categories": {
+      "name": "categories",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "categories_brand_id_brands_id_fk": {
+          "name": "categories_brand_id_brands_id_fk",
+          "tableFrom": "categories",
+          "tableTo": "brands",
+          "columnsFrom": [
+            "brand_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.menu_audit_log": {
+      "name": "menu_audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_status": {
+          "name": "from_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_status": {
+          "name": "to_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "old_value": {
+          "name": "old_value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_value": {
+          "name": "new_value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "menu_audit_log_entity_idx": {
+          "name": "menu_audit_log_entity_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "menu_audit_log_actor_user_id_users_id_fk": {
+          "name": "menu_audit_log_actor_user_id_users_id_fk",
+          "tableFrom": "menu_audit_log",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_entity_type_valid": {
+          "name": "audit_entity_type_valid",
+          "value": "\"menu_audit_log\".\"entity_type\" in ('menu_item','menu_item_override')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.option_groups": {
+      "name": "option_groups",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "menu_item_id": {
+          "name": "menu_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "min_select": {
+          "name": "min_select",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "max_select": {
+          "name": "max_select",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "option_groups_menu_item_id_menu_items_id_fk": {
+          "name": "option_groups_menu_item_id_menu_items_id_fk",
+          "tableFrom": "option_groups",
+          "tableTo": "menu_items",
+          "columnsFrom": [
+            "menu_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "option_group_kind_valid": {
+          "name": "option_group_kind_valid",
+          "value": "\"option_groups\".\"kind\" in ('variant','addon')"
+        },
+        "select_bounds_sane": {
+          "name": "select_bounds_sane",
+          "value": "\"option_groups\".\"min_select\" >= 0 and \"option_groups\".\"max_select\" >= \"option_groups\".\"min_select\""
+        },
+        "variant_is_pick_exactly_one": {
+          "name": "variant_is_pick_exactly_one",
+          "value": "\"option_groups\".\"kind\" != 'variant' or (\"option_groups\".\"min_select\" = 1 and \"option_groups\".\"max_select\" = 1)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.option_items": {
+      "name": "option_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "option_group_id": {
+          "name": "option_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price_paise": {
+          "name": "price_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_available": {
+          "name": "is_available",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "option_items_option_group_id_option_groups_id_fk": {
+          "name": "option_items_option_group_id_option_groups_id_fk",
+          "tableFrom": "option_items",
+          "tableTo": "option_groups",
+          "columnsFrom": [
+            "option_group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "option_item_price_non_negative": {
+          "name": "option_item_price_non_negative",
+          "value": "\"option_items\".\"price_paise\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.business_days": {
+      "name": "business_days",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opened_by": {
+          "name": "opened_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_by": {
+          "name": "closed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "one_open_day_per_outlet": {
+          "name": "one_open_day_per_outlet",
+          "columns": [
+            {
+              "expression": "outlet_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"business_days\".\"status\" = 'open'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "business_days_outlet_id_outlets_id_fk": {
+          "name": "business_days_outlet_id_outlets_id_fk",
+          "tableFrom": "business_days",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "business_days_outlet_id_business_date_unique": {
+          "name": "business_days_outlet_id_business_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "outlet_id",
+            "business_date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "business_day_status_valid": {
+          "name": "business_day_status_valid",
+          "value": "\"business_days\".\"status\" in ('open','closed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.feedback": {
+      "name": "feedback",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "table_session_id": {
+          "name": "table_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rating": {
+          "name": "rating",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "extracted_at": {
+          "name": "extracted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extraction_ai_used": {
+          "name": "extraction_ai_used",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "feedback_table_session_id_table_sessions_id_fk": {
+          "name": "feedback_table_session_id_table_sessions_id_fk",
+          "tableFrom": "feedback",
+          "tableTo": "table_sessions",
+          "columnsFrom": [
+            "table_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "feedback_outlet_id_outlets_id_fk": {
+          "name": "feedback_outlet_id_outlets_id_fk",
+          "tableFrom": "feedback",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "feedback_store_id_stores_id_fk": {
+          "name": "feedback_store_id_stores_id_fk",
+          "tableFrom": "feedback",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "feedback_table_session_id_business_date_unique": {
+          "name": "feedback_table_session_id_business_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "table_session_id",
+            "business_date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "feedback_rating_valid": {
+          "name": "feedback_rating_valid",
+          "value": "\"feedback\".\"rating\" between 1 and 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.kot_items": {
+      "name": "kot_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kot_id": {
+          "name": "kot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_item_id": {
+          "name": "order_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prep_notes": {
+          "name": "prep_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "kot_items_outlet_id_outlets_id_fk": {
+          "name": "kot_items_outlet_id_outlets_id_fk",
+          "tableFrom": "kot_items",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.kots": {
+      "name": "kots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "table_session_id": {
+          "name": "table_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kitchen_section": {
+          "name": "kitchen_section",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kot_number": {
+          "name": "kot_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reprint_count": {
+          "name": "reprint_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "fired_at": {
+          "name": "fired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "bumped_at": {
+          "name": "bumped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "kots_outlet_fired_idx": {
+          "name": "kots_outlet_fired_idx",
+          "columns": [
+            {
+              "expression": "outlet_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fired_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "kots_outlet_id_outlets_id_fk": {
+          "name": "kots_outlet_id_outlets_id_fk",
+          "tableFrom": "kots",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kots_store_id_stores_id_fk": {
+          "name": "kots_store_id_stores_id_fk",
+          "tableFrom": "kots",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kots_table_session_id_table_sessions_id_fk": {
+          "name": "kots_table_session_id_table_sessions_id_fk",
+          "tableFrom": "kots",
+          "tableTo": "table_sessions",
+          "columnsFrom": [
+            "table_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.order_item_voids": {
+      "name": "order_item_voids",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_item_id": {
+          "name": "order_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity_voided": {
+          "name": "quantity_voided",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requires_auth": {
+          "name": "requires_auth",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authorized_by": {
+          "name": "authorized_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "voided_by": {
+          "name": "voided_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "voided_at": {
+          "name": "voided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "order_item_voids_outlet_id_outlets_id_fk": {
+          "name": "order_item_voids_outlet_id_outlets_id_fk",
+          "tableFrom": "order_item_voids",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "order_item_voids_store_id_stores_id_fk": {
+          "name": "order_item_voids_store_id_stores_id_fk",
+          "tableFrom": "order_item_voids",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.order_items": {
+      "name": "order_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "menu_item_id": {
+          "name": "menu_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_price_paise": {
+          "name": "unit_price_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_class_id": {
+          "name": "tax_class_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_line_id": {
+          "name": "client_line_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "order_items_outlet_id_outlets_id_fk": {
+          "name": "order_items_outlet_id_outlets_id_fk",
+          "tableFrom": "order_items",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "order_items_store_id_stores_id_fk": {
+          "name": "order_items_store_id_stores_id_fk",
+          "tableFrom": "order_items",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "order_items_menu_item_id_menu_items_id_fk": {
+          "name": "order_items_menu_item_id_menu_items_id_fk",
+          "tableFrom": "order_items",
+          "tableTo": "menu_items",
+          "columnsFrom": [
+            "menu_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "order_items_tax_class_id_tax_classes_id_fk": {
+          "name": "order_items_tax_class_id_tax_classes_id_fk",
+          "tableFrom": "order_items",
+          "tableTo": "tax_classes",
+          "columnsFrom": [
+            "tax_class_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.order_status_events": {
+      "name": "order_status_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_seq": {
+          "name": "event_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "order_status_events_outlet_id_outlets_id_fk": {
+          "name": "order_status_events_outlet_id_outlets_id_fk",
+          "tableFrom": "order_status_events",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.orders": {
+      "name": "orders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_day_id": {
+          "name": "business_day_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "table_session_id": {
+          "name": "table_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "channel_code": {
+          "name": "channel_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'dinein'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "orders_outlet_id_outlets_id_fk": {
+          "name": "orders_outlet_id_outlets_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_store_id_stores_id_fk": {
+          "name": "orders_store_id_stores_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_business_day_id_business_days_id_fk": {
+          "name": "orders_business_day_id_business_days_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "business_days",
+          "columnsFrom": [
+            "business_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_table_session_id_table_sessions_id_fk": {
+          "name": "orders_table_session_id_table_sessions_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "table_sessions",
+          "columnsFrom": [
+            "table_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.outlet_event_counters": {
+      "name": "outlet_event_counters",
+      "schema": "",
+      "columns": {
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "next_seq": {
+          "name": "next_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "1"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "outlet_event_counters_outlet_id_outlets_id_fk": {
+          "name": "outlet_event_counters_outlet_id_outlets_id_fk",
+          "tableFrom": "outlet_event_counters",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.table_session_tables": {
+      "name": "table_session_tables",
+      "schema": "",
+      "columns": {
+        "table_session_id": {
+          "name": "table_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "table_id": {
+          "name": "table_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "table_session_tables_table_session_id_table_sessions_id_fk": {
+          "name": "table_session_tables_table_session_id_table_sessions_id_fk",
+          "tableFrom": "table_session_tables",
+          "tableTo": "table_sessions",
+          "columnsFrom": [
+            "table_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "table_session_tables_table_id_tables_id_fk": {
+          "name": "table_session_tables_table_id_tables_id_fk",
+          "tableFrom": "table_session_tables",
+          "tableTo": "tables",
+          "columnsFrom": [
+            "table_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "table_session_tables_table_session_id_table_id_unique": {
+          "name": "table_session_tables_table_session_id_table_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "table_session_id",
+            "table_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.table_sessions": {
+      "name": "table_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_day_id": {
+          "name": "business_day_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "merged_into_session_id": {
+          "name": "merged_into_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "covers": {
+          "name": "covers",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abandoned_reason": {
+          "name": "abandoned_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guest_name": {
+          "name": "guest_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "guest_phone": {
+          "name": "guest_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "guest_notes": {
+          "name": "guest_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opened_via": {
+          "name": "opened_via",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'staff'"
+        },
+        "waiter_called_at": {
+          "name": "waiter_called_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "table_sessions_outlet_opened_idx": {
+          "name": "table_sessions_outlet_opened_idx",
+          "columns": [
+            {
+              "expression": "outlet_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "opened_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "table_sessions_outlet_id_outlets_id_fk": {
+          "name": "table_sessions_outlet_id_outlets_id_fk",
+          "tableFrom": "table_sessions",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "table_sessions_store_id_stores_id_fk": {
+          "name": "table_sessions_store_id_stores_id_fk",
+          "tableFrom": "table_sessions",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "table_sessions_business_day_id_business_days_id_fk": {
+          "name": "table_sessions_business_day_id_business_days_id_fk",
+          "tableFrom": "table_sessions",
+          "tableTo": "business_days",
+          "columnsFrom": [
+            "business_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "table_sessions_idempotency_key_unique": {
+          "name": "table_sessions_idempotency_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "idempotency_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "table_session_status_valid": {
+          "name": "table_session_status_valid",
+          "value": "\"table_sessions\".\"status\" in ('open','ordering','dining','bill_requested','settling','closed','abandoned','merged_into')"
+        },
+        "merged_into_set_iff_status": {
+          "name": "merged_into_set_iff_status",
+          "value": "(\"table_sessions\".\"status\" = 'merged_into' and \"table_sessions\".\"merged_into_session_id\" is not null) or (\"table_sessions\".\"status\" != 'merged_into' and \"table_sessions\".\"merged_into_session_id\" is null)"
+        },
+        "abandoned_reason_required": {
+          "name": "abandoned_reason_required",
+          "value": "(\"table_sessions\".\"status\" = 'abandoned' and \"table_sessions\".\"abandoned_reason\" is not null) or (\"table_sessions\".\"status\" != 'abandoned')"
+        },
+        "opened_via_valid": {
+          "name": "opened_via_valid",
+          "value": "\"table_sessions\".\"opened_via\" in ('staff','guest')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.terminal_day_drawers": {
+      "name": "terminal_day_drawers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "business_day_id": {
+          "name": "business_day_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terminal_id": {
+          "name": "terminal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opening_float_paise": {
+          "name": "opening_float_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "counted_paise": {
+          "name": "counted_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "variance_paise": {
+          "name": "variance_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "variance_note": {
+          "name": "variance_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opened_by": {
+          "name": "opened_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "counted_by": {
+          "name": "counted_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "counted_at": {
+          "name": "counted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "terminal_day_drawers_business_day_id_business_days_id_fk": {
+          "name": "terminal_day_drawers_business_day_id_business_days_id_fk",
+          "tableFrom": "terminal_day_drawers",
+          "tableTo": "business_days",
+          "columnsFrom": [
+            "business_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "terminal_day_drawers_terminal_id_terminals_id_fk": {
+          "name": "terminal_day_drawers_terminal_id_terminals_id_fk",
+          "tableFrom": "terminal_day_drawers",
+          "tableTo": "terminals",
+          "columnsFrom": [
+            "terminal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "terminal_day_drawers_outlet_id_outlets_id_fk": {
+          "name": "terminal_day_drawers_outlet_id_outlets_id_fk",
+          "tableFrom": "terminal_day_drawers",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "terminal_day_drawers_business_day_id_terminal_id_unique": {
+          "name": "terminal_day_drawers_business_day_id_terminal_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "business_day_id",
+            "terminal_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bill_lines": {
+      "name": "bill_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_item_id": {
+          "name": "order_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_price_paise": {
+          "name": "unit_price_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_class_id": {
+          "name": "tax_class_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_rate_bps": {
+          "name": "tax_rate_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bill_lines_outlet_id_outlets_id_fk": {
+          "name": "bill_lines_outlet_id_outlets_id_fk",
+          "tableFrom": "bill_lines",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bill_lines_store_id_stores_id_fk": {
+          "name": "bill_lines_store_id_stores_id_fk",
+          "tableFrom": "bill_lines",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bill_lines_tax_class_id_tax_classes_id_fk": {
+          "name": "bill_lines_tax_class_id_tax_classes_id_fk",
+          "tableFrom": "bill_lines",
+          "tableTo": "tax_classes",
+          "columnsFrom": [
+            "tax_class_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "bill_line_quantity_positive": {
+          "name": "bill_line_quantity_positive",
+          "value": "\"bill_lines\".\"quantity\" > 0"
+        },
+        "bill_line_unit_price_non_negative": {
+          "name": "bill_line_unit_price_non_negative",
+          "value": "\"bill_lines\".\"unit_price_paise\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.bill_tax_lines": {
+      "name": "bill_tax_lines",
+      "schema": "",
+      "columns": {
+        "bill_id": {
+          "name": "bill_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_class_id": {
+          "name": "tax_class_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "component": {
+          "name": "component",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "taxable_paise": {
+          "name": "taxable_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate_bps": {
+          "name": "rate_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_paise": {
+          "name": "amount_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bill_tax_lines_outlet_id_outlets_id_fk": {
+          "name": "bill_tax_lines_outlet_id_outlets_id_fk",
+          "tableFrom": "bill_tax_lines",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bill_tax_lines_tax_class_id_tax_classes_id_fk": {
+          "name": "bill_tax_lines_tax_class_id_tax_classes_id_fk",
+          "tableFrom": "bill_tax_lines",
+          "tableTo": "tax_classes",
+          "columnsFrom": [
+            "tax_class_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tax_component_valid": {
+          "name": "tax_component_valid",
+          "value": "\"bill_tax_lines\".\"component\" in ('cgst','sgst','igst','cess')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.bills": {
+      "name": "bills",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gst_registration_id": {
+          "name": "gst_registration_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terminal_id": {
+          "name": "terminal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "table_session_id": {
+          "name": "table_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invoice_no": {
+          "name": "invoice_no",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subtotal_paise": {
+          "name": "subtotal_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discount_paise": {
+          "name": "discount_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "charges_paise": {
+          "name": "charges_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "tax_paise": {
+          "name": "tax_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "round_off_paise": {
+          "name": "round_off_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "payable_paise": {
+          "name": "payable_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finalised_at": {
+          "name": "finalised_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bills_outlet_id_outlets_id_fk": {
+          "name": "bills_outlet_id_outlets_id_fk",
+          "tableFrom": "bills",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bills_store_id_stores_id_fk": {
+          "name": "bills_store_id_stores_id_fk",
+          "tableFrom": "bills",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bills_gst_registration_id_gst_registrations_id_fk": {
+          "name": "bills_gst_registration_id_gst_registrations_id_fk",
+          "tableFrom": "bills",
+          "tableTo": "gst_registrations",
+          "columnsFrom": [
+            "gst_registration_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bills_terminal_id_terminals_id_fk": {
+          "name": "bills_terminal_id_terminals_id_fk",
+          "tableFrom": "bills",
+          "tableTo": "terminals",
+          "columnsFrom": [
+            "terminal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bills_table_session_id_table_sessions_id_fk": {
+          "name": "bills_table_session_id_table_sessions_id_fk",
+          "tableFrom": "bills",
+          "tableTo": "table_sessions",
+          "columnsFrom": [
+            "table_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "invoice_no_legal": {
+          "name": "invoice_no_legal",
+          "value": "\"bills\".\"invoice_no\" is null or (length(\"bills\".\"invoice_no\") <= 16 and \"bills\".\"invoice_no\" ~ '^[A-Za-z0-9/-]+$')"
+        },
+        "numbered_iff_finalised": {
+          "name": "numbered_iff_finalised",
+          "value": "(\"bills\".\"status\" = 'draft' and \"bills\".\"invoice_no\" is null) or (\"bills\".\"status\" = 'discarded' and \"bills\".\"invoice_no\" is null) or (\"bills\".\"status\" not in ('draft','discarded') and \"bills\".\"invoice_no\" is not null)"
+        },
+        "payable_is_whole_rupees": {
+          "name": "payable_is_whole_rupees",
+          "value": "\"bills\".\"payable_paise\" % 100 = 0"
+        },
+        "totals_reconcile": {
+          "name": "totals_reconcile",
+          "value": "\"bills\".\"payable_paise\" = \"bills\".\"subtotal_paise\" - \"bills\".\"discount_paise\" + \"bills\".\"charges_paise\" + \"bills\".\"tax_paise\" + \"bills\".\"round_off_paise\""
+        },
+        "bill_status_valid": {
+          "name": "bill_status_valid",
+          "value": "\"bills\".\"status\" in ('draft','finalised','settled','voided','refunded_partial','refunded_full','discarded')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.credit_notes": {
+      "name": "credit_notes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gst_registration_id": {
+          "name": "gst_registration_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terminal_id": {
+          "name": "terminal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credit_note_no": {
+          "name": "credit_note_no",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount_paise": {
+          "name": "amount_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issued_by": {
+          "name": "issued_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "credit_notes_outlet_id_outlets_id_fk": {
+          "name": "credit_notes_outlet_id_outlets_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "credit_notes_store_id_stores_id_fk": {
+          "name": "credit_notes_store_id_stores_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "credit_notes_gst_registration_id_gst_registrations_id_fk": {
+          "name": "credit_notes_gst_registration_id_gst_registrations_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "gst_registrations",
+          "columnsFrom": [
+            "gst_registration_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "credit_notes_terminal_id_terminals_id_fk": {
+          "name": "credit_notes_terminal_id_terminals_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "terminals",
+          "columnsFrom": [
+            "terminal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "credit_note_amount_positive": {
+          "name": "credit_note_amount_positive",
+          "value": "\"credit_notes\".\"amount_paise\" > 0"
+        },
+        "credit_note_no_legal": {
+          "name": "credit_note_no_legal",
+          "value": "length(\"credit_notes\".\"credit_note_no\") <= 16 and \"credit_notes\".\"credit_note_no\" ~ '^[A-Za-z0-9/-]+$'"
+        },
+        "credit_note_reason_valid": {
+          "name": "credit_note_reason_valid",
+          "value": "\"credit_notes\".\"reason_code\" in ('guest_dispute','billing_error','duplicate_payment','goodwill_gesture')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.invoice_number_blocks": {
+      "name": "invoice_number_blocks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "invoice_series_id": {
+          "name": "invoice_series_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terminal_id": {
+          "name": "terminal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_seq": {
+          "name": "start_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_seq": {
+          "name": "end_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "next_seq": {
+          "name": "next_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "invoice_number_blocks_invoice_series_id_invoice_series_id_fk": {
+          "name": "invoice_number_blocks_invoice_series_id_invoice_series_id_fk",
+          "tableFrom": "invoice_number_blocks",
+          "tableTo": "invoice_series",
+          "columnsFrom": [
+            "invoice_series_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "invoice_number_blocks_terminal_id_terminals_id_fk": {
+          "name": "invoice_number_blocks_terminal_id_terminals_id_fk",
+          "tableFrom": "invoice_number_blocks",
+          "tableTo": "terminals",
+          "columnsFrom": [
+            "terminal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "end_after_start": {
+          "name": "end_after_start",
+          "value": "\"invoice_number_blocks\".\"end_seq\" >= \"invoice_number_blocks\".\"start_seq\""
+        },
+        "next_in_range": {
+          "name": "next_in_range",
+          "value": "\"invoice_number_blocks\".\"next_seq\" between \"invoice_number_blocks\".\"start_seq\" and \"invoice_number_blocks\".\"end_seq\" + 1"
+        },
+        "block_status_valid": {
+          "name": "block_status_valid",
+          "value": "\"invoice_number_blocks\".\"status\" in ('active','exhausted','returned')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.invoice_number_gaps": {
+      "name": "invoice_number_gaps",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "invoice_series_id": {
+          "name": "invoice_series_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_seq": {
+          "name": "from_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to_seq": {
+          "name": "to_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_by": {
+          "name": "recorded_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "invoice_number_gaps_invoice_series_id_invoice_series_id_fk": {
+          "name": "invoice_number_gaps_invoice_series_id_invoice_series_id_fk",
+          "tableFrom": "invoice_number_gaps",
+          "tableTo": "invoice_series",
+          "columnsFrom": [
+            "invoice_series_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "gap_reason_valid": {
+          "name": "gap_reason_valid",
+          "value": "\"invoice_number_gaps\".\"reason\" in ('block_returned_unused','terminal_decommissioned','block_lost_device_failure','fy_rollover')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.invoice_series": {
+      "name": "invoice_series",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "gst_registration_id": {
+          "name": "gst_registration_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "series_code": {
+          "name": "series_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "financial_year": {
+          "name": "financial_year",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "next_seq": {
+          "name": "next_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "1"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "invoice_series_gst_registration_id_gst_registrations_id_fk": {
+          "name": "invoice_series_gst_registration_id_gst_registrations_id_fk",
+          "tableFrom": "invoice_series",
+          "tableTo": "gst_registrations",
+          "columnsFrom": [
+            "gst_registration_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "invoice_series_outlet_id_outlets_id_fk": {
+          "name": "invoice_series_outlet_id_outlets_id_fk",
+          "tableFrom": "invoice_series",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "invoice_series_gst_registration_id_outlet_id_series_code_financial_year_unique": {
+          "name": "invoice_series_gst_registration_id_outlet_id_series_code_financial_year_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "gst_registration_id",
+            "outlet_id",
+            "series_code",
+            "financial_year"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.payments": {
+      "name": "payments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "method": {
+          "name": "method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_paise": {
+          "name": "amount_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gateway": {
+          "name": "gateway",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gateway_txn_id": {
+          "name": "gateway_txn_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "payments_outlet_id_outlets_id_fk": {
+          "name": "payments_outlet_id_outlets_id_fk",
+          "tableFrom": "payments",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payments_store_id_stores_id_fk": {
+          "name": "payments_store_id_stores_id_fk",
+          "tableFrom": "payments",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "amount_positive": {
+          "name": "amount_positive",
+          "value": "\"payments\".\"amount_paise\" > 0"
+        },
+        "payment_method_valid": {
+          "name": "payment_method_valid",
+          "value": "\"payments\".\"method\" in ('cash','upi_intent','upi_collect','card','netbanking','wallet','pending_dues')"
+        },
+        "payment_status_valid": {
+          "name": "payment_status_valid",
+          "value": "\"payments\".\"status\" in ('pending','captured','failed','refunded')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.idempotency_keys": {
+      "name": "idempotency_keys",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "response": {
+          "name": "response",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "idempotency_keys_outlet_id_outlets_id_fk": {
+          "name": "idempotency_keys_outlet_id_outlets_id_fk",
+          "tableFrom": "idempotency_keys",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.guest_sessions": {
+      "name": "guest_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "table_session_id": {
+          "name": "table_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "qr_token_id": {
+          "name": "qr_token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preferences": {
+          "name": "preferences",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "guest_sessions_table_session_id_table_sessions_id_fk": {
+          "name": "guest_sessions_table_session_id_table_sessions_id_fk",
+          "tableFrom": "guest_sessions",
+          "tableTo": "table_sessions",
+          "columnsFrom": [
+            "table_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "guest_sessions_store_id_stores_id_fk": {
+          "name": "guest_sessions_store_id_stores_id_fk",
+          "tableFrom": "guest_sessions",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "guest_sessions_qr_token_id_qr_tokens_id_fk": {
+          "name": "guest_sessions_qr_token_id_qr_tokens_id_fk",
+          "tableFrom": "guest_sessions",
+          "tableTo": "qr_tokens",
+          "columnsFrom": [
+            "qr_token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.qr_tokens": {
+      "name": "qr_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "table_id": {
+          "name": "table_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rotates_at": {
+          "name": "rotates_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "one_live_token_per_table": {
+          "name": "one_live_token_per_table",
+          "columns": [
+            {
+              "expression": "table_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"qr_tokens\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "qr_tokens_outlet_id_outlets_id_fk": {
+          "name": "qr_tokens_outlet_id_outlets_id_fk",
+          "tableFrom": "qr_tokens",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "qr_tokens_table_id_tables_id_fk": {
+          "name": "qr_tokens_table_id_tables_id_fk",
+          "tableFrom": "qr_tokens",
+          "tableTo": "tables",
+          "columnsFrom": [
+            "table_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "qr_tokens_token_hash_unique": {
+          "name": "qr_tokens_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ai_response_cache": {
+      "name": "ai_response_cache",
+      "schema": "",
+      "columns": {
+        "cache_key": {
+          "name": "cache_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "feature": {
+          "name": "feature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "response": {
+          "name": "response",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ai_usage_ledger": {
+      "name": "ai_usage_ledger",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_date": {
+          "name": "business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "feature": {
+          "name": "feature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_tokens": {
+          "name": "input_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "output_tokens": {
+          "name": "output_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cost_paise": {
+          "name": "cost_paise",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ai_usage_ledger_outlet_id_outlets_id_fk": {
+          "name": "ai_usage_ledger_outlet_id_outlets_id_fk",
+          "tableFrom": "ai_usage_ledger",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ai_usage_ledger_store_id_stores_id_fk": {
+          "name": "ai_usage_ledger_store_id_stores_id_fk",
+          "tableFrom": "ai_usage_ledger",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "ai_usage_ledger_id_business_date_pk": {
+          "name": "ai_usage_ledger_id_business_date_pk",
+          "columns": [
+            "id",
+            "business_date"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ai_usage_feature_valid": {
+          "name": "ai_usage_feature_valid",
+          "value": "\"ai_usage_ledger\".\"feature\" in ('booth_host','upsell','review_extraction','menu_engineering','forecasting','ask_restrobooth','content_studio')"
+        },
+        "ai_usage_tokens_non_negative": {
+          "name": "ai_usage_tokens_non_negative",
+          "value": "\"ai_usage_ledger\".\"input_tokens\" >= 0 and \"ai_usage_ledger\".\"output_tokens\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.external_reviews": {
+      "name": "external_reviews",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_platform": {
+          "name": "source_platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_rating": {
+          "name": "external_rating",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_label": {
+          "name": "author_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_text": {
+          "name": "review_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reviewed_on": {
+          "name": "reviewed_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extracted_at": {
+          "name": "extracted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extraction_ai_used": {
+          "name": "extraction_ai_used",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "external_reviews_outlet_id_outlets_id_fk": {
+          "name": "external_reviews_outlet_id_outlets_id_fk",
+          "tableFrom": "external_reviews",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "external_reviews_store_id_stores_id_fk": {
+          "name": "external_reviews_store_id_stores_id_fk",
+          "tableFrom": "external_reviews",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "external_reviews_created_by_users_id_fk": {
+          "name": "external_reviews_created_by_users_id_fk",
+          "tableFrom": "external_reviews",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "external_review_platform_valid": {
+          "name": "external_review_platform_valid",
+          "value": "\"external_reviews\".\"source_platform\" in ('zomato','swiggy','google','other')"
+        },
+        "external_review_rating_valid": {
+          "name": "external_review_rating_valid",
+          "value": "\"external_reviews\".\"external_rating\" is null or \"external_reviews\".\"external_rating\" between 1 and 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.review_extractions": {
+      "name": "review_extractions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_type": {
+          "name": "source_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_review_id": {
+          "name": "external_review_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "feedback_id": {
+          "name": "feedback_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "feedback_business_date": {
+          "name": "feedback_business_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aspect": {
+          "name": "aspect",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sentiment": {
+          "name": "sentiment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "menu_item_id": {
+          "name": "menu_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "snippet": {
+          "name": "snippet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ai_used": {
+          "name": "ai_used",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "review_extractions_outlet_id_outlets_id_fk": {
+          "name": "review_extractions_outlet_id_outlets_id_fk",
+          "tableFrom": "review_extractions",
+          "tableTo": "outlets",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "review_extractions_store_id_stores_id_fk": {
+          "name": "review_extractions_store_id_stores_id_fk",
+          "tableFrom": "review_extractions",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "review_extractions_external_review_id_external_reviews_id_fk": {
+          "name": "review_extractions_external_review_id_external_reviews_id_fk",
+          "tableFrom": "review_extractions",
+          "tableTo": "external_reviews",
+          "columnsFrom": [
+            "external_review_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "review_extractions_menu_item_id_menu_items_id_fk": {
+          "name": "review_extractions_menu_item_id_menu_items_id_fk",
+          "tableFrom": "review_extractions",
+          "tableTo": "menu_items",
+          "columnsFrom": [
+            "menu_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "review_extraction_source_valid": {
+          "name": "review_extraction_source_valid",
+          "value": "\"review_extractions\".\"source_type\" in ('guest_feedback','external_review')"
+        },
+        "review_extraction_source_exclusive": {
+          "name": "review_extraction_source_exclusive",
+          "value": "(\"review_extractions\".\"external_review_id\" is not null)::int + (\"review_extractions\".\"feedback_id\" is not null)::int = 1"
+        },
+        "review_extraction_aspect_valid": {
+          "name": "review_extraction_aspect_valid",
+          "value": "\"review_extractions\".\"aspect\" in ('taste','portion','temperature','wait','price','service')"
+        },
+        "review_extraction_sentiment_valid": {
+          "name": "review_extraction_sentiment_valid",
+          "value": "\"review_extractions\".\"sentiment\" in ('positive','neutral','negative')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@restrobooth/ai": "workspace:*",
     "@restrobooth/db": "workspace:*",
     "@restrobooth/ui": "workspace:*",
     "@supabase/ssr": "^0.12.0",
