@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Button, Card, CardHeader, QuantityStepper, formatPaiseAsRupees, TabularNumber, useToast } from "@restrobooth/ui";
+import { Button, Card, CardHeader, QuantityStepper, TrashIcon, formatPaiseAsRupees, TabularNumber, useToast } from "@restrobooth/ui";
 import type { GuestOrderItem } from "../lib/order-queries";
 import { addToCartAction, placeOrderAction, removeFromCartAction, type SimpleActionState } from "./actions";
 import styles from "./CartSection.module.css";
@@ -79,6 +79,28 @@ export function CartSection({ items }: { items: GuestOrderItem[] }) {
     });
   }
 
+  // Removes the whole line in one tap — Pass 4 (2026-07-24): the only way
+  // to clear a dish before this was tapping "−" once per unit, which for
+  // 3+ of the same item meant 3+ taps to remove it entirely. No batch
+  // mutation exists for this (order-mutations.ts has no "remove all of
+  // menu_item_id X" — same one-row-per-unit contract the stepper already
+  // works around), so this sequentially removes each underlying row,
+  // matching ItemDetailSheet's own sequential "Add N" precedent.
+  function handleRemoveLine(group: GroupedLine) {
+    if (busy(group.menuItemId)) return;
+    setBusyMenuItemId(group.menuItemId);
+    startTransition(async () => {
+      for (const orderItemId of group.orderItemIds) {
+        const result = await removeFromCartAction(orderItemId);
+        if (result.error) {
+          toast(result.error, "critical");
+          break;
+        }
+      }
+      setBusyMenuItemId(null);
+    });
+  }
+
   return (
     <Card>
       <CardHeader title="Your cart" count={groups.length} />
@@ -92,6 +114,15 @@ export function CartSection({ items }: { items: GuestOrderItem[] }) {
               </span>
             </div>
             <div className={styles.stepperRow}>
+              <button
+                type="button"
+                className={styles.removeButton}
+                aria-label={`Remove ${group.name} from your order`}
+                disabled={busy(group.menuItemId)}
+                onClick={() => handleRemoveLine(group)}
+              >
+                <TrashIcon className={styles.removeIcon} />
+              </button>
               <QuantityStepper
                 quantity={group.orderItemIds.length}
                 min={0}

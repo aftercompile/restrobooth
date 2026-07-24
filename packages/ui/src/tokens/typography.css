@@ -40,11 +40,23 @@
   --text-xl: 24px;
 }
 
+/* --text-xl/--text-2xl are fluid (owner decision, "denser & efficient",
+   2026-07-24 Pass 4) — real content columns run 296px (320px phone) to
+   ~350px (414px phone), and a FIXED 36-40px hero either overflows its
+   own card at the small end ("Total payable" broke mid-digit) or wastes
+   width forcing an unnecessary wrap at the small end while looking
+   right-sized only on larger phones ("Your order" collided with the
+   "+ Add more items" link next to it). clamp() scales continuously
+   between those two real cases instead of picking one fixed size that's
+   wrong for the other. --text-base/--text-sm stay fixed — body text at
+   15-18px doesn't have this problem, only the display-scale hero sizes
+   do. */
 [data-density="booth"] {
   --text-base: 18px;
   --text-sm: 15px;
   --text-lg: 24px;
-  --text-xl: 36px;
+  --text-xl: clamp(24px, 8vw, 34px);
+  --text-2xl: clamp(26px, 8.5vw, 40px);
 }
 
 .rb-tabular {

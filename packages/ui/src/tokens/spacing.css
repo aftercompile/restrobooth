@@ -26,12 +26,22 @@
   --radius: 4px;
 }
 
+/* Retuned (owner decision, "denser & efficient", 2026-07-24 Pass 4) —
+   roughly halved from the original 24/32/48/64/96. That original scale
+   was calibrated for calm/comfort but the Booth's real content column is
+   ~296px (a phone's viewport minus 2x this same --space-2 as page
+   padding) — at the old values a 12-item menu fit ~1.3 cards per screen
+   and a "Total payable" hero didn't reliably fit its own card. Every
+   booth component reads these tokens, so this one change densifies the
+   whole app at once. --touch-target and --radius are UNCHANGED — the
+   44px+ touch floor (CLAUDE.md) and the rounded-corner identity aren't
+   spacing, they don't get smaller just because gaps did. */
 [data-density="booth"] {
-  --space-1: 24px;
-  --space-2: 32px;
-  --space-3: 48px;
-  --space-4: 64px;
-  --space-5: 96px;
+  --space-1: 12px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 48px;
   --touch-target: 48px;
   --radius: 12px;
 }

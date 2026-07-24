@@ -87,7 +87,7 @@ export default async function HomePage() {
               </Suspense>
             </div>
           )}
-          <OrderStatusBoard items={liveItems} estimatedMinutesRemaining={estimatedMinutesRemaining} />
+          <OrderStatusBoard items={liveItems} kots={status.kots} estimatedMinutesRemaining={estimatedMinutesRemaining} />
           {(guest.sessionStatus === "dining" || guest.sessionStatus === "bill_requested" || guest.sessionStatus === "settling") && (
             <RequestBillButton sessionStatus={guest.sessionStatus} />
           )}

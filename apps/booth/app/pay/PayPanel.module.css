@@ -84,12 +84,20 @@
   font-weight: 600;
 }
 
+/* A currency figure must never break mid-digit — word-break: break-word
+   (the previous fix here) allows breaking ANYWHERE, including inside the
+   number itself, which is exactly what happened: "₹851.00" split into
+   "₹851.0" / "0" at a fixed 40px on a real ~296px content column.
+   --text-2xl is now itself a fluid clamp() at booth density (tokens/
+   typography.css) for exactly this reason — nowrap here is what turns
+   "shrinks to fit" into an actual guarantee instead of just a smaller
+   fixed size that could still overflow on an even narrower device. */
 .totalAmount {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
   font-size: var(--text-2xl);
   font-weight: 700;
-  word-break: break-word;
+  white-space: nowrap;
 }
 
 .methods {
@@ -168,20 +176,97 @@
   font-size: var(--text-sm);
 }
 
-.confirmedBlock {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) 0;
-  font-weight: 700;
-  font-size: var(--text-base);
-  color: var(--ramp-fresh);
+/* The "you're done" moment (Pass 4, 2026-07-25) — one card, confirmation
+   first. The pre-payment breakdown is now secondary (real data a guest
+   might still want, e.g. for reimbursement — never deleted, just no
+   longer the thing the screen leads with). */
+.paidCard {
+  overflow: visible;
 }
 
-.confirmedIcon {
-  width: 28px;
-  height: 28px;
+.paidHero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-2) 0;
+  text-align: center;
+}
+
+.paidHeroIcon {
+  width: 44px;
+  height: 44px;
+  color: var(--ramp-fresh);
+  margin-bottom: 4px;
+}
+
+.paidHeroTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  color: var(--ramp-fresh);
+  margin: 0;
+}
+
+.paidHeroSub {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.receiptDisclosure {
+  margin: var(--space-1) 0;
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Native <details>/<summary> — zero JS, zero motion, keyboard/screen-reader
+   accessible for free. The custom marker below just swaps the browser's
+   own disclosure triangle for one that matches this app's hand-drawn icon
+   set (packages/ui/src/components/icons.tsx), same "no icon library"
+   constraint as everywhere else in Booth. */
+.receiptSummary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.receiptSummary::-webkit-details-marker {
+  display: none;
+}
+
+.receiptSummaryIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--enamel-700);
   flex-shrink: 0;
+}
+
+.receiptDisclosure[open] .receiptSummary {
+  margin-bottom: var(--space-1);
+}
+
+.receiptTotalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-1);
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.feedbackDivider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-2) 0;
 }
 
 .pendingBlock {

@@ -1,17 +1,47 @@
 "use client";
 
 import { AnimatePresence, BOOTH_TRANSITION, motion, StateRail, useMotionAllowed, type RailState } from "@restrobooth/ui";
-import type { GuestOrderItem } from "../lib/order-queries";
+import type { GuestKot, GuestOrderItem } from "../lib/order-queries";
 import styles from "./OrderStatusBoard.module.css";
+
+/** Real, derived stages — not invented ones. order_items only has
+ *  pending/fired/served (no "ready" of its own), but kots.status DOES
+ *  (queued/printed/.../preparing/ready/bumped) — a KOT can be fully
+ *  cooked (ready/bumped) while its order_items are still "fired" because
+ *  no staff member has marked them served/delivered yet. That gap IS a
+ *  real, honest third stage ("kitchen's done, food's on its way to your
+ *  table"), not a guess — Pass 4 (2026-07-24) surfaces it by reading the
+ *  SAME `kots` array apps/booth/app/page.tsx already fetches (used for
+ *  estimatedMinutesRemaining) and threading it one level deeper, not by
+ *  adding a new query. */
+type OrderStage = "cooking" | "ready" | "served";
+
+function deriveStage(items: GuestOrderItem[], kots: GuestKot[]): OrderStage {
+  if (items.length > 0 && items.every((i) => i.status === "served")) return "served";
+  if (kots.length > 0 && kots.every((k) => k.status === "ready" || k.status === "bumped" || k.status === "voided")) return "ready";
+  return "cooking";
+}
+
+const STAGES: { key: OrderStage; label: string }[] = [
+  { key: "cooking", label: "Cooking" },
+  { key: "ready", label: "Ready" },
+  { key: "served", label: "Served" },
+];
 
 /** order_item.status (fired/served/void_requested — pending items live in
  *  CartSection.tsx instead, not here) to a friendly label + the rail
  *  state that carries it. packages/domain doesn't own this mapping, it's
- *  guest-facing presentation, not a business rule. */
-function guestStatus(status: string): { label: string; rail: RailState } {
+ *  guest-facing presentation, not a business rule.
+ *
+ *  `stage` disambiguates "fired": order_items has no "ready" state of its
+ *  own (see deriveStage's own comment), so without this every item would
+ *  keep reading "Cooking" even after the header above has already said
+ *  the kitchen is done — a guest reading both at once would see them as
+ *  contradicting each other, not two views of the same order. */
+function guestStatus(status: string, stage: OrderStage): { label: string; rail: RailState } {
   switch (status) {
     case "fired":
-      return { label: "Cooking", rail: "warming" };
+      return stage === "ready" ? { label: "Ready", rail: "fresh" } : { label: "Cooking", rail: "warming" };
     case "served":
       return { label: "Served", rail: "fresh" };
     case "void_requested":
@@ -43,31 +73,49 @@ function guestStatus(status: string): { label: string; rail: RailState } {
  */
 export function OrderStatusBoard({
   items,
+  kots,
   estimatedMinutesRemaining,
 }: {
   items: GuestOrderItem[];
+  kots: GuestKot[];
   estimatedMinutesRemaining?: number | null;
 }) {
   const motionAllowed = useMotionAllowed();
 
   if (items.length === 0) return null;
 
-  const stillCooking = items.some((i) => i.status === "fired");
+  const stage = deriveStage(items, kots);
+  const stageIndex = STAGES.findIndex((s) => s.key === stage);
+
+  const headingText =
+    stage === "served"
+      ? "Enjoy your meal!"
+      : stage === "ready"
+        ? "Your food is ready — on its way to your table"
+        : "Your order is on its way";
 
   return (
     <>
-      {stillCooking && (
-        <p className={styles.heading}>
-          Your order is on its way
-          {estimatedMinutesRemaining != null && (
-            <span className={styles.estimate}> — usually ready in about {estimatedMinutesRemaining} min</span>
-          )}
-        </p>
-      )}
+      <div className={styles.stages} role="progressbar" aria-valuenow={stageIndex + 1} aria-valuemin={1} aria-valuemax={STAGES.length}>
+        {STAGES.map((s, i) => (
+          <div key={s.key} className={styles.stageStep} data-active={i === stageIndex} data-done={i < stageIndex}>
+            <span className={styles.stageDot} />
+            <span className={styles.stageLabel}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <p className={styles.heading}>
+        {headingText}
+        {stage === "cooking" && estimatedMinutesRemaining != null && (
+          <span className={styles.estimate}> — usually ready in about {estimatedMinutesRemaining} min</span>
+        )}
+      </p>
+
       <StateRail state="fresh" glow>
         <div className={styles.board}>
           {items.map((item) => {
-          const { label, rail } = guestStatus(item.status);
+          const { label, rail } = guestStatus(item.status, stage);
           const tile = (
             <div className={styles.tile}>
               <span>
@@ -75,7 +123,7 @@ export function OrderStatusBoard({
                 {item.quantity > 1 && <span className={styles.qty}>×{item.quantity}</span>}
               </span>
               <span className={styles.statusLabel} data-tone={rail}>
-                {item.status === "fired" &&
+                {item.status === "fired" && stage === "cooking" &&
                   (motionAllowed ? (
                     <motion.span
                       aria-hidden="true"

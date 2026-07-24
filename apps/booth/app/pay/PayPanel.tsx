@@ -106,6 +106,63 @@ export function PayPanel({ upiAvailable }: { upiAvailable: boolean }) {
   const altMethods = upiAvailable ? ALT_METHODS : ALT_METHODS.filter((m) => m.value !== "upi_intent");
   const paying = view === "paying";
 
+  const breakdownBlock = (
+    <div className={styles.breakdown}>
+      <div className={styles.breakdownRow}>
+        <span>Subtotal</span>
+        <span>₹{formatPaiseAsRupees(BigInt(bill.subtotalPaise))}</span>
+      </div>
+      <div className={styles.breakdownRow}>
+        <span>Tax</span>
+        <span>₹{formatPaiseAsRupees(BigInt(bill.taxPaise))}</span>
+      </div>
+      {BigInt(bill.roundOffPaise) !== 0n && (
+        <div className={styles.breakdownRow}>
+          <span>Round off</span>
+          <span>₹{formatPaiseAsRupees(BigInt(bill.roundOffPaise))}</span>
+        </div>
+      )}
+    </div>
+  );
+
+  // The paid view gets its own layout, not the pre-payment bill card with a
+  // confirmation line tacked on at the bottom (the old shape): the
+  // breakdown that mattered when a guest was deciding whether/how to pay
+  // is redundant the instant they're done, so it leads with the
+  // confirmation and collapses into a secondary <details> receipt instead
+  // — and FeedbackForm nests `bare` right below it, in the SAME card, so
+  // "you're done" reads as one moment instead of two stacked cards.
+  if (view === "paid") {
+    return (
+      <Animate>
+        <Card className={styles.paidCard}>
+          <div className={styles.paidHero}>
+            <CheckCircleIcon className={styles.paidHeroIcon} />
+            <p className={styles.paidHeroTitle}>Paid — thank you!</p>
+            <p className={styles.paidHeroSub}>
+              Invoice {bill.invoiceNo} · ₹{formatPaiseAsRupees(BigInt(bill.payablePaise))}
+            </p>
+          </div>
+
+          <details className={styles.receiptDisclosure}>
+            <summary className={styles.receiptSummary}>
+              <ReceiptIcon className={styles.receiptSummaryIcon} />
+              View receipt
+            </summary>
+            {breakdownBlock}
+            <div className={styles.receiptTotalRow}>
+              <span>Total payable</span>
+              <span>₹{formatPaiseAsRupees(BigInt(bill.payablePaise))}</span>
+            </div>
+          </details>
+
+          <div className={styles.feedbackDivider} />
+          <FeedbackForm bare />
+        </Card>
+      </Animate>
+    );
+  }
+
   return (
     <>
       <Animate>
@@ -120,22 +177,7 @@ export function PayPanel({ upiAvailable }: { upiAvailable: boolean }) {
             </div>
           </div>
 
-          <div className={styles.breakdown}>
-            <div className={styles.breakdownRow}>
-              <span>Subtotal</span>
-              <span>₹{formatPaiseAsRupees(BigInt(bill.subtotalPaise))}</span>
-            </div>
-            <div className={styles.breakdownRow}>
-              <span>Tax</span>
-              <span>₹{formatPaiseAsRupees(BigInt(bill.taxPaise))}</span>
-            </div>
-            {BigInt(bill.roundOffPaise) !== 0n && (
-              <div className={styles.breakdownRow}>
-                <span>Round off</span>
-                <span>₹{formatPaiseAsRupees(BigInt(bill.roundOffPaise))}</span>
-              </div>
-            )}
-          </div>
+          {breakdownBlock}
           <div className={styles.totalRow}>
             <span className={styles.totalLabel}>Total payable</span>
             <span className={styles.totalAmount}>₹{formatPaiseAsRupees(BigInt(bill.payablePaise))}</span>
@@ -165,15 +207,6 @@ export function PayPanel({ upiAvailable }: { upiAvailable: boolean }) {
                 })}
               </div>
             </div>
-          )}
-
-          {view === "paid" && (
-            <Animate>
-              <div className={styles.confirmedBlock}>
-                <CheckCircleIcon className={styles.confirmedIcon} />
-                <span>Paid — thank you!</span>
-              </div>
-            </Animate>
           )}
 
           {view === "pending-upi" && (

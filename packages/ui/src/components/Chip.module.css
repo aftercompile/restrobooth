@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: center;
   min-height: var(--touch-target);
-  padding: 0 var(--space-2);
+  padding: 8px var(--space-2);
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface-sunken);
@@ -11,7 +11,19 @@
   font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: 600;
-  white-space: nowrap;
+  /* Was nowrap — inside a narrow grid cell (BoothHostIntake's 2-column
+     option grid), a nowrap chip with a multi-word label like "Something
+     light" refuses to shrink below its own text width, which forced the
+     grid (and the whole page) wider than the viewport at 360px and
+     narrower — the real cause of the Booth's horizontal-scroll bug.
+     text-align keeps a wrapped 2-line label centered rather than
+     left-ragged; min-height (not a fixed height) already lets the pill
+     grow taller when it wraps. Safe globally: this component's only
+     other caller (MenuBrowser's category bar) uses short single-word
+     labels in a horizontally-scrolling row, never a shrink-constrained
+     grid cell, so wrapping never actually triggers there. */
+  white-space: normal;
+  text-align: center;
   cursor: pointer;
   transition: background var(--motion-duration) var(--motion-easing),
     border-color var(--motion-duration) var(--motion-easing),

@@ -23,8 +23,15 @@ function thanksMessage(rating: number): string {
  * breakdown: Phase 6's AI layer is the one that mines aspects/sentiment
  * out of this same comment text later (RESTROBOOTH_BRIEF.md) — this step
  * only captures the raw signal, it doesn't analyze it.
+ *
+ * `bare` (Pass 4, 2026-07-25): PayPanel's "paid" view nests this directly
+ * inside its own Card — a second, separately-bordered Card right below
+ * would read as two disconnected moments instead of one "you're done"
+ * screen. `bare` skips this component's own <Card> so the caller owns the
+ * single outer card; every other caller (or `bare` omitted) keeps the
+ * original standalone-card rendering.
  */
-export function FeedbackForm() {
+export function FeedbackForm({ bare = false }: { bare?: boolean } = {}) {
   const toast = useToast();
   const motionAllowed = useMotionAllowed();
   const [rating, setRating] = useState(0);
@@ -48,20 +55,17 @@ export function FeedbackForm() {
   }
 
   if (submitted) {
-    return (
-      <Animate>
-        <Card>
-          <div className={styles.thanks}>
-            <CheckCircleIcon className={styles.thanksIcon} />
-            <span>{thanksMessage(rating)}</span>
-          </div>
-        </Card>
-      </Animate>
+    const thanksBlock = (
+      <div className={styles.thanks}>
+        <CheckCircleIcon className={styles.thanksIcon} />
+        <span>{thanksMessage(rating)}</span>
+      </div>
     );
+    return bare ? <Animate>{thanksBlock}</Animate> : <Animate><Card>{thanksBlock}</Card></Animate>;
   }
 
-  return (
-    <Card>
+  const formBlock = (
+    <>
       <h2 className={styles.title}>How was your dining experience?</h2>
       <p className={styles.subtitle}>Your feedback helps our chef and team get even better.</p>
       <div className={styles.panel}>
@@ -97,6 +101,8 @@ export function FeedbackForm() {
           {submitting ? "Sending…" : "Send feedback"}
         </Button>
       </div>
-    </Card>
+    </>
   );
+
+  return bare ? formBlock : <Card>{formBlock}</Card>;
 }

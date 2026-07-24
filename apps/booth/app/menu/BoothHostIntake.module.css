@@ -1,3 +1,63 @@
+/* The collapsed default state (Pass 4, 2026-07-24) — a single-row
+   invitation, not the full wizard. Same card treatment as .panel (border,
+   shadow) so it still reads as one coherent surface, just far shorter. */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-2);
+  box-shadow: var(--highlight-top), var(--elevation-1);
+  cursor: pointer;
+  text-align: left;
+}
+
+.bannerIcon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.bannerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.bannerTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--enamel-700);
+}
+
+.bannerSub {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bannerDismiss {
+  flex-shrink: 0;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
 .panel {
   display: flex;
   flex-direction: column;
@@ -68,10 +128,16 @@
 }
 
 /* Larger, touch-friendly grid — one question fills the step, so its
-   options can afford more room than the old all-on-one-screen layout. */
+   options can afford more room than the old all-on-one-screen layout.
+   minmax(0, 1fr), not a bare 1fr — a bare 1fr track still respects its
+   content's min-content width, so a nowrap chip inside it refused to
+   shrink below its own text width and forced the grid (and the page)
+   wider than the viewport. minmax(0, ...) lets the track actually
+   shrink to the column width; Chip.module.css's own white-space: normal
+   handles what happens to the label once it does. */
 .chipsGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-1);
 }
 

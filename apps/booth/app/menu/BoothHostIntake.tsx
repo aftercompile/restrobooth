@@ -32,7 +32,7 @@ const BUDGETS: { value: BudgetBand; label: string }[] = [
 const ALLERGENS = ["dairy", "gluten", "shellfish", "soy", "egg", "nuts"];
 const TOTAL_STEPS = 6;
 
-type Stage = "intake" | "results" | "dismissed";
+type Stage = "collapsed" | "intake" | "results" | "dismissed";
 
 /**
  * ADR-0007 §5A — the Booth Host's guest-facing intake, redesigned as a
@@ -52,9 +52,15 @@ type Stage = "intake" | "results" | "dismissed";
  * 1200ms budget, which is a real fit for this dev server but not
  * guaranteed for every future deployment target, so it wasn't built into
  * the guest-facing path yet.
+ *
+ * Starts COLLAPSED (Pass 4, 2026-07-24) — the full 6-step wizard used to
+ * render open by default, which on a real phone pushed the entire food
+ * list below the fold; a guest opening the menu saw zero dishes. A
+ * diner scans the QR to see the MENU, not to fill out a form first — the
+ * wizard is still one tap away via the slim banner, not removed.
  */
 export function BoothHostIntake() {
-  const [stage, setStage] = useState<Stage>("intake");
+  const [stage, setStage] = useState<Stage>("collapsed");
   const [step, setStep] = useState(0);
   const [mood, setMood] = useState<Mood>();
   const [spiceLevel, setSpiceLevel] = useState<SpiceLevel>();
@@ -88,6 +94,47 @@ export function BoothHostIntake() {
   }
 
   if (stage === "dismissed") return null;
+  if (stage === "collapsed") {
+    // A div with button semantics, not a real <button> — same reasoning
+    // as MenuItemCard's card: the dismiss control below needs to be a
+    // genuine, independently-focusable <button>, and a real <button>
+    // can't nest another one (the HTML parser silently breaks it).
+    return (
+      <Animate>
+        <div
+          className={styles.banner}
+          role="button"
+          tabIndex={0}
+          onClick={() => setStage("intake")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setStage("intake");
+            }
+          }}
+        >
+          <span className={styles.bannerIcon} aria-hidden="true">
+            ✨
+          </span>
+          <span className={styles.bannerText}>
+            <span className={styles.bannerTitle}>Let our AI recommend your meal</span>
+            <span className={styles.bannerSub}>A few quick questions, then real picks for you</span>
+          </span>
+          <button
+            type="button"
+            className={styles.bannerDismiss}
+            aria-label="Dismiss AI recommendation"
+            onClick={(e) => {
+              e.stopPropagation();
+              setStage("dismissed");
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      </Animate>
+    );
+  }
   if (stage === "results" && result) return <PickedForYouRail result={result} onDismiss={() => setStage("dismissed")} />;
   // The submit -> real completion round-trip can take several real
   // seconds (owner decision, 2026-07-24 — raised from an instant 1200ms

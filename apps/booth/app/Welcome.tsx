@@ -39,7 +39,13 @@ function getGreeting(): string {
 export function Welcome({ brandName, popularItems }: { brandName: string; popularItems: BoothMenuItem[] }) {
   return (
     <div className={styles.hero}>
-      <p className={styles.eyebrow}>{getGreeting()}, welcome to</p>
+      {/* Pass 4 (2026-07-24): was "{greeting}, welcome to" trailing onto
+          its own line above the brand name — at a narrow phone width the
+          uppercase, letter-spaced eyebrow wrapped with a lone orphan word
+          ("TO") on its own line. Dropping "welcome to" isn't a loss of
+          meaning — the brand heading right below it already reads as a
+          welcome on its own. */}
+      <p className={styles.eyebrow}>{getGreeting()}!</p>
       <h1 className={styles.brand}>{brandName}</h1>
       <p className={styles.greeting}>Your personal dining assistant is here to help you discover something great.</p>
 
@@ -63,7 +69,7 @@ export function Welcome({ brandName, popularItems }: { brandName: string; popula
           Explore the menu
         </Link>
         <Link href="/menu" className={styles.secondaryAction}>
-          ✨ Let our AI recommend your meal
+          ✨ Get AI recommendations
         </Link>
       </div>
     </div>

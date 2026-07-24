@@ -36,6 +36,7 @@ export {
   BankIcon,
   WalletIcon,
   CheckCircleIcon,
+  TrashIcon,
 } from "./components/icons";
 export { Button, type ButtonVariant } from "./components/Button";
 export { Input } from "./components/Input";

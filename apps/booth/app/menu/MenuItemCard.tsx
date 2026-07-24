@@ -12,6 +12,28 @@ const DIET_LABEL: Record<string, string> = {
   jain: "Jain",
 };
 
+/** At most 2 badges, prioritized — Pass 4 (2026-07-24): the original card
+ *  could stack Popular + Non-veg + 🌶️ Medium + ✨ Chef's Signature
+ *  simultaneously, four equal-weight signals competing on one line at a
+ *  glance. Slot 1 is the single strongest "why this dish" signal (a
+ *  chef's own pick outranks a popularity stat); slot 2 folds diet AND
+ *  spice into one real label instead of two separate pills, since a
+ *  guest reads "Non-veg · Medium" as one fact, not two. */
+function badgesFor(item: { isChefSignature: boolean; isPopular: boolean; diet: string | null; spiceLevel: string | null }): {
+  hero: { tone: "warning" | "live"; label: string } | null;
+  dietSpice: string | null;
+} {
+  const hero = item.isChefSignature
+    ? { tone: "warning" as const, label: "✨ Chef's Signature" }
+    : item.isPopular
+      ? { tone: "live" as const, label: "Popular" }
+      : null;
+  const dietLabel = item.diet ? (DIET_LABEL[item.diet] ?? item.diet) : null;
+  const spiceSuffix = item.spiceLevel === "hot" ? " · 🌶️ Hot" : item.spiceLevel === "medium" ? " · 🌶️ Medium" : "";
+  const dietSpice = dietLabel ? `${dietLabel}${spiceSuffix}` : null;
+  return { hero, dietSpice };
+}
+
 /**
  * The redesigned menu card — art, name/description/price, and a badge
  * row built ONLY from real menu_items columns (diet, spice_level,
@@ -49,7 +71,7 @@ export function MenuItemCard({
   justAdded: boolean;
 }) {
   const motionAllowed = useMotionAllowed();
-  const showSpice = item.spiceLevel === "medium" || item.spiceLevel === "hot";
+  const { hero, dietSpice } = badgesFor(item);
 
   const addButtonProps = {
     type: "button" as const,
@@ -84,20 +106,22 @@ export function MenuItemCard({
       <div className={styles.top}>
         <MenuItemArt imageUrl={item.imageUrl} categoryName={item.categoryName} />
         <div className={styles.info}>
-          <p className={styles.name}>{item.name}</p>
-          <div className={styles.badges}>
-            {item.isChefSignature && <Badge tone="warning">✨ Chef&apos;s Signature</Badge>}
-            {item.isPopular && <Badge tone="live">Popular</Badge>}
-            {item.diet && <Badge tone="neutral">{DIET_LABEL[item.diet] ?? item.diet}</Badge>}
-            {showSpice && <Badge tone="warning">{item.spiceLevel === "hot" ? "🌶️ Hot" : "🌶️ Medium"}</Badge>}
+          <div className={styles.nameRow}>
+            <p className={styles.name}>{item.name}</p>
+            <span className={styles.price}>₹{formatPaiseAsRupees(BigInt(item.pricePaise))}</span>
           </div>
+          {(hero || dietSpice) && (
+            <div className={styles.badges}>
+              {hero && <Badge tone={hero.tone}>{hero.label}</Badge>}
+              {dietSpice && <Badge tone="neutral">{dietSpice}</Badge>}
+            </div>
+          )}
         </div>
       </div>
 
       {item.description && <p className={styles.description}>{item.description}</p>}
 
       <div className={styles.footer}>
-        <span className={styles.price}>₹{formatPaiseAsRupees(BigInt(item.pricePaise))}</span>
         {motionAllowed ? (
           <motion.button {...addButtonProps} whileTap={{ scale: 0.9 }}>
             {addButtonLabel}

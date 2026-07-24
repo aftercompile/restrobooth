@@ -4,7 +4,20 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-24 (latest), Phase 6 complete; guest-facing AI moved off the free tier
+## Where things stand — 2026-07-25 (latest), Booth UI/UX Redesign Pass 4 done
+
+**A live 360px evaluation found the Booth genuinely breaking on common Android widths — CartPill invisible below the fold, AI-intake chips forcing the whole page to scroll sideways, the money hero word-breaking mid-digit — plus a systemic density tier over-scaled for a ~296px content column. All fixed; 8 screens redesigned denser on top.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- **Two root-caused structural bugs, both fixed**: the AI-intake chip grid's `repeat(2, 1fr)` (should have been `minmax(0, 1fr)`) was forcing horizontal page scroll, which was in turn what mis-anchored the persistent `CartPill` — fixing the grid alone fixed both, no React portal needed (the plan's original hedge). The "Total payable" money hero's `word-break: break-word` at a fixed 40px could split a digit in half (`₹851.0`/`0`) — replaced with `nowrap` + a fluid `clamp()` size.
+- **Booth's `[data-density="booth"]` token tier retuned tighter** (`packages/ui/src/tokens/spacing.css`/`typography.css`, scoped — zero effect on Console/POS/KDS/Hub) — menu cards went from ~1.3/screen to ~2.5-3/screen, and this single retune also fixed the item-detail sheet's padding and the Welcome carousel's severed price as side effects.
+- **Menu card, AI intake, cart, Welcome, order status board, and Pay/Paid all redesigned** — badges capped at 2, AI intake collapses behind a dismissible banner instead of eating the fold, cart got an explicit trash affordance, order status board now shows a real Cooking→Ready→Served indicator driven by actual `kots.status` (no invented stages — surfaced by threading the already-fetched `kots` array one prop deeper, zero new queries), and the paid screen merged two stacked cards into one "you're done" moment (confirmation leads, receipt collapses into a native `<details>`, feedback form nests inline).
+- **A real environment landmine found**: `mint-table-tokens.ts` defaults to a different local Postgres than the one the booth dev server actually reads (`apps/booth/.env.local` vs. repo-root `.env`) — worked around by passing `DATABASE_URL` explicitly each time; not reconciled, worth remembering next session.
+- **Verified live** at 320/360/390px, every route, zero horizontal scroll anywhere including 320px (tighter than any prior pass checked). `pnpm -w typecheck && pnpm -w lint` green across all 13 packages including `lint-brass`/`lint-motion`. Diff confirmed presentation-only via `git diff --stat`.
+- **Next up**: no open Booth UI scope remains from either the original redesign brief or this mobile-robustness pass. Phase 7 (Channels) is next per the roadmap, unaffected by this work.
+
+---
+
+## Where things stand — 2026-07-24, Phase 6 complete; guest-facing AI moved off the free tier
 
 **Phase 6 (AI Layer v1) is done. Booth Host and Upsell now run on a real, low-cost paid model (`openai/gpt-4o-mini`) after the free tier proved unreliably slow even after tuning.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest two entries.
 

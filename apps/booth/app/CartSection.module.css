@@ -4,18 +4,18 @@
   gap: var(--space-1);
 }
 
-/* Stacked, not side-by-side: name+price get the full card width on their
-   own row, and the QuantityStepper (~3 x 48px + gaps — fixed, non-
-   negotiable touch-target width) sits on a separate row below. Squeezing
-   both into one row left too little space for even a heavily-truncated
-   name to read as anything (the same overflow class fixed elsewhere in
-   this redesign — see MenuItemCard/ItemDetailSheet/PayPanel's own
-   comments — but there min-width:0+ellipsis alone was enough; here the
-   stepper's footprint was too large for that to be sufficient). */
+/* Name+price share one row (Pass 4, 2026-07-24) — the stepper still gets
+   its OWN row below, not squeezed alongside them: the QuantityStepper's
+   ~3 x 48px + gaps footprint is still real. But name+price alone fits a
+   single line fine now that the booth density tokens were retuned
+   smaller (tokens/spacing.css) — the original 48px-padding scale is what
+   made even that pairing too tight; min-width:0 + ellipsis on .name is
+   what makes it safe regardless (same overflow class fixed elsewhere in
+   this app — see MenuItemCard/ItemDetailSheet/PayPanel's own comments). */
 .row {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 6px;
   padding: var(--space-1) 0;
 }
 
@@ -25,22 +25,54 @@
 
 .rowInfo {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1);
 }
 
 .name {
   font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .linePrice {
   color: var(--text-muted);
   font-size: var(--text-sm);
+  flex-shrink: 0;
 }
 
 .stepperRow {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.removeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.removeButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.removeIcon {
+  width: 18px;
+  height: 18px;
 }
 
 .totalRow {
