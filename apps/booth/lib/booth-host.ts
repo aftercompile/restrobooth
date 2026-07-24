@@ -46,7 +46,20 @@ export interface BoothHostResult {
   aiUsed: boolean;
 }
 
-const BOOTH_TIMEOUT_MS = 1200; // ADR-0007 §3 — hard, guest-facing.
+// ADR-0007 §3 — hard, guest-facing. Raised from 1200ms (owner decision,
+// 2026-07-24): real benchmarking against OpenRouter's actual free-tier
+// models found NONE complete inside 1200ms (gpt-oss-20b: 10-24s;
+// gemma-4-26b-a4b-it, the fastest correct-output free model: 3.7-7.6s on
+// a 2-candidate benchmark prompt). Set to 10s, the top of the owner's
+// stated 8-10s range — 9s was tried first and measured too tight live:
+// this function's real SHORTLIST_LIMIT=5 prompt (more candidates, more
+// output tokens than the 2-candidate benchmark) landed at 9116-9151ms
+// against the real API twice in a row, consistently just over a 9000ms
+// ceiling. The guest now sees an explicit "Personalizing your
+// recommendation…" loading state (BoothHostIntake.tsx) for the wait
+// instead of an instant-or-nothing fallback. The hard rule is unchanged
+// — SOME response inside the budget, never an indefinite hang.
+const BOOTH_TIMEOUT_MS = 10000;
 const SHORTLIST_LIMIT = 5;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h — menu_version isn't tracked yet (Phase 2's resolver has no version counter), so this is the safety net against a stale cache outliving a same-day menu change, not the primary invalidation ADR-0007 §5 describes.
 
@@ -145,7 +158,19 @@ function getProvider(): AIProvider | null {
   // exactly this: unset the key, every surface below still works.
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  return new OpenRouterProvider({ model: "openai/gpt-oss-20b:free", apiKey, costPer1kTokens: { input: 0, output: 0 }, id: "openai/gpt-oss-20b:free" });
+  // Swapped from openai/gpt-oss-20b:free (owner decision, 2026-07-24) —
+  // real benchmarking found gpt-oss-20b spends its token budget on hidden
+  // chain-of-thought before any visible content (10-24s observed,
+  // needing 300+ maxTokens just to survive it), where gemma-4-26b-a4b-it
+  // is a plain instruct model with no hidden reasoning: 3.7-7.6s observed
+  // for this exact prompt shape, and correct JSON every time even at a
+  // 100-token cap. See DECISIONS.md for the full benchmark.
+  return new OpenRouterProvider({
+    model: "google/gemma-4-26b-a4b-it:free",
+    apiKey,
+    costPer1kTokens: { input: 0, output: 0 },
+    id: "google/gemma-4-26b-a4b-it:free",
+  });
 }
 
 const REASON_SYSTEM_PROMPT =
@@ -203,7 +228,11 @@ export async function getBoothHostRecommendations(guest: { storeId: string; outl
   }
 
   const prompt = buildReasonPrompt(candidates, prefs);
-  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 2000, temperature: 0.4 }), BOOTH_TIMEOUT_MS);
+  // 400 tokens: real headroom above gemma's observed ~15 tokens/reason
+  // (SHORTLIST_LIMIT=5 candidates), not gpt-oss-20b's old 2000 — that
+  // budget existed only because gpt-oss-20b needed 300+ tokens of hidden
+  // reasoning headroom BEFORE any visible content; gemma has none.
+  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 400, temperature: 0.4 }), BOOTH_TIMEOUT_MS);
   if (!result) return withFallback();
 
   const reasons = parseReasons(result.text, candidates);

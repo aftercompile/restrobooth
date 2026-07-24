@@ -187,7 +187,17 @@ export function parseExtractionResponse(text: string, candidates: MenuNameCandid
 function getProvider(): AIProvider | null {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  return new OpenRouterProvider({ model: "openai/gpt-oss-20b:free", apiKey, costPer1kTokens: { input: 0, output: 0 }, id: "openai/gpt-oss-20b:free" });
+  // Swapped from openai/gpt-oss-20b:free (owner decision, 2026-07-24) —
+  // see apps/booth/lib/booth-host.ts's getProvider() comment for the
+  // benchmark data. This surface's 30s budget was never the bottleneck
+  // (verified live: real extraction completed in ~19s on the old model),
+  // but gemma is meaningfully faster here too, not just a guest-facing fix.
+  return new OpenRouterProvider({
+    model: "google/gemma-4-26b-a4b-it:free",
+    apiKey,
+    costPer1kTokens: { input: 0, output: 0 },
+    id: "google/gemma-4-26b-a4b-it:free",
+  });
 }
 
 const EXTRACTION_SYSTEM_PROMPT =

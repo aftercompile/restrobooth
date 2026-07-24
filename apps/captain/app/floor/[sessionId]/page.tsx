@@ -1,9 +1,10 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getUpsellSuggestions, type UpsellResult } from "@restrobooth/ai";
 import { CaptainShell } from "../../CaptainShell";
-import { queryAsCurrentUser, getDb } from "../../../lib/db";
+import { queryAsCurrentUser } from "../../../lib/db";
 import { getSessionDetail, getOpenOrder, getKotsForSession, getOrderableMenu } from "./queries";
 import { OrderScreen } from "./OrderScreen";
+import { UpsellSection, UpsellSectionSkeleton } from "./UpsellSection";
 
 export default async function OrderPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
@@ -21,21 +22,28 @@ export default async function OrderPage({ params }: { params: Promise<{ sessionI
 
   if (!data) notFound();
 
-  // Outside queryAsCurrentUser's RLS-scoped tx on purpose — getUpsellSuggestions
-  // needs its own budget/cache transactions (packages/ai's own contract,
-  // same as the Booth Host), not a nested transaction on an already-scoped one.
-  const upsell: UpsellResult | null =
-    data.order && data.order.items.length > 0
-      ? await getUpsellSuggestions(getDb(), {
-          storeId: data.session.storeId,
-          outletId: data.session.outletId,
-          cartMenuItemIds: data.order.items.map((i) => i.menuItemId),
-        })
-      : null;
+  // Suspense-streamed (see UpsellSection.tsx) so the shared 9s AI budget
+  // (packages/ai/src/upsell.ts, raised from 1200ms alongside the Booth
+  // Host — owner decision, 2026-07-24) never blocks the order/menu/KOT
+  // content above it, which is already ready. Outside queryAsCurrentUser's
+  // RLS-scoped tx on purpose — getUpsellSuggestions needs its own
+  // budget/cache transactions (packages/ai's own contract), not a nested
+  // transaction on an already-scoped one.
+  const upsellSlot =
+    data.order && data.order.items.length > 0 ? (
+      <Suspense fallback={<UpsellSectionSkeleton />}>
+        <UpsellSection
+          sessionId={data.session.sessionId}
+          storeId={data.session.storeId}
+          outletId={data.session.outletId}
+          cartMenuItemIds={data.order.items.map((i) => i.menuItemId)}
+        />
+      </Suspense>
+    ) : null;
 
   return (
     <CaptainShell>
-      <OrderScreen session={data.session} order={data.order} kots={data.kots} menu={data.menu} upsell={upsell} />
+      <OrderScreen session={data.session} order={data.order} kots={data.kots} menu={data.menu} upsellSlot={upsellSlot} />
     </CaptainShell>
   );
 }

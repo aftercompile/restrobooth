@@ -1,17 +1,16 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { getUpsellSuggestions } from "@restrobooth/ai";
 import { getGuestContext } from "../lib/guest-context";
 import { getGuestOrderStatus } from "../lib/order-queries";
 import { getBoothMenu } from "../lib/menu-queries";
 import { getAvgPrepTimeMinutes, estimateMinutesRemaining } from "../lib/prep-time";
-import { getDb } from "../lib/db";
 import { BoothShell } from "./BoothShell";
 import { BoothPoll } from "./BoothPoll";
 import { CartSection } from "./CartSection";
 import { RequestBillButton } from "./RequestBillButton";
-import { UpsellRail } from "./UpsellRail";
+import { UpsellSection, UpsellSectionSkeleton } from "./UpsellSection";
 import { Welcome } from "./Welcome";
 
 // The only component on this page that imports framer-motion — dynamic()
@@ -36,20 +35,6 @@ export default async function HomePage() {
   const cartItems = status.items.filter((i) => i.status === "pending");
   const liveItems = status.items.filter((i) => i.status !== "pending");
   const isFreshGuest = cartItems.length === 0 && liveItems.length === 0;
-
-  // Every order_item already in the cart or fired/served counts as "the
-  // basket so far" — not just what's still pending — so the suggestion
-  // stays relevant even after a first round has already gone to the
-  // kitchen (RESTROBOOTH_BRIEF.md §5E: "goes well with" the order, not
-  // just the not-yet-fired remainder of it).
-  const upsell =
-    cartItems.length > 0
-      ? await getUpsellSuggestions(getDb(), {
-          storeId: guest.storeId,
-          outletId: guest.outletId,
-          cartMenuItemIds: status.items.map((i) => i.menuItemId),
-        })
-      : null;
 
   // Only fetched for a fresh guest (Welcome's "Popular today" teaser) —
   // no point paying for this query once there's a real cart/board to show
@@ -86,7 +71,20 @@ export default async function HomePage() {
           {cartItems.length > 0 && (
             <div style={{ marginBottom: "var(--space-3)" }}>
               <CartSection items={cartItems} />
-              {upsell && <UpsellRail result={upsell} />}
+              {/* Every order_item already in the cart or fired/served counts
+                  as "the basket so far" — not just what's still pending — so
+                  the suggestion stays relevant even after a first round has
+                  already gone to the kitchen (RESTROBOOTH_BRIEF.md §5E:
+                  "goes well with" the order, not just the not-yet-fired
+                  remainder of it). Suspense-streamed (see UpsellSection.tsx)
+                  so the 9s AI budget never blocks the rest of this page. */}
+              <Suspense fallback={<UpsellSectionSkeleton />}>
+                <UpsellSection
+                  storeId={guest.storeId}
+                  outletId={guest.outletId}
+                  cartMenuItemIds={status.items.map((i) => i.menuItemId)}
+                />
+              </Suspense>
             </div>
           )}
           <OrderStatusBoard items={liveItems} estimatedMinutesRemaining={estimatedMinutesRemaining} />

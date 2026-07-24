@@ -38,7 +38,17 @@ export interface UpsellResult {
   aiUsed: boolean;
 }
 
-const UPSELL_TIMEOUT_MS = 1200; // Same budget as the Booth Host (ADR-0007 §3) — both callers compute this synchronously during a page render, guest- or staff-facing.
+// Same budget as the Booth Host (ADR-0007 §3), raised from 1200ms to
+// 10000ms alongside it (owner decision, 2026-07-24 — see booth-host.ts's
+// own comment for the real benchmark data this is based on: a 9000ms
+// ceiling measured too tight live for Booth Host's own 5-candidate
+// prompt, landing at 9116-9151ms twice in a row; set uniformly to the
+// top of the owner's stated 8-10s range rather than leaving the two
+// shared-code-path features at different budgets). Both callers
+// (apps/booth's cart, apps/captain's order screen) now stream this
+// section in via Suspense rather than blocking the whole page — see
+// UpsellSection.tsx in each app.
+const UPSELL_TIMEOUT_MS = 10000;
 const SUGGESTION_LIMIT = 3;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // Same menu_version gap as booth-host.ts's cache — see that file's comment.
 const MIN_CO_OCCURRENCE = 2; // A single coincidental pairing isn't a pattern — matches the "real signal, not noise" bar the Booth Host's popularity scoring already applies.
@@ -152,7 +162,14 @@ export function fallbackReason(c: RankedCandidate): string {
 function getProvider(): AIProvider | null {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  return new OpenRouterProvider({ model: "openai/gpt-oss-20b:free", apiKey, costPer1kTokens: { input: 0, output: 0 }, id: "openai/gpt-oss-20b:free" });
+  // Swapped from openai/gpt-oss-20b:free (owner decision, 2026-07-24) —
+  // see booth-host.ts's own getProvider() comment for the benchmark data.
+  return new OpenRouterProvider({
+    model: "google/gemma-4-26b-a4b-it:free",
+    apiKey,
+    costPer1kTokens: { input: 0, output: 0 },
+    id: "google/gemma-4-26b-a4b-it:free",
+  });
 }
 
 const REASON_SYSTEM_PROMPT =
@@ -220,7 +237,8 @@ export async function getUpsellSuggestions(
   if (cached) return toResult(JSON.parse(cached) as Record<string, string>, true);
 
   const prompt = buildReasonPrompt(candidates);
-  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 2000, temperature: 0.4 }), UPSELL_TIMEOUT_MS);
+  // 300 tokens: real headroom above gemma's observed usage (SUGGESTION_LIMIT=3), not gpt-oss-20b's old reasoning-headroom budget.
+  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 300, temperature: 0.4 }), UPSELL_TIMEOUT_MS);
   if (!result) return toResult({}, false);
 
   const reasons = parseReasons(result.text, candidates);

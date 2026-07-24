@@ -4,18 +4,17 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-24 (latest), Phase 6 complete, AI-on now verified live
+## Where things stand — 2026-07-24 (latest), Phase 6 complete; guest-facing AI re-tuned against real latency data
 
-**Phase 6 (AI Layer v1) is done, and — for the first time this session — actually verified with a real, working `OPENROUTER_API_KEY`.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest two entries.
+**Phase 6 (AI Layer v1) is done and now tuned against real OpenRouter behavior, not assumptions.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entries.
 
-- **Booth Host / Upsell (1200ms guest budget): confirmed always falling back to the deterministic template under real free-tier latency** — not a bug, the timeout guarantee (ADR-0007 §3) working exactly as designed. `openai/gpt-oss-20b:free` simply can't complete inside 1200ms reliably; a faster/paid provider is the actual lever if guest-facing AI reasons are wanted, not a code change.
-- **Review Extraction (30s staff budget): real AI confirmed working end to end** — a genuine multi-aspect review correctly extracted 3 distinct findings via Console's `/reviews`, correctly declining to extract anything outside the six closed aspects. First real (non-fallback) AI output this project has produced.
-- **A real bug found and fixed along the way**: `ai_response_cache` had RLS enabled with zero policies (fine when only guest-facing, privileged-connection callers existed; broken the moment Slice 4 added a staff-triggered Console call under real RLS) — invisible until a real completion actually reached the write path. Fixed with migration `0036`, applied to all three DBs including live.
-- **Real eval coverage added for Booth Host and Upsell** (Slice 5) — neither had any before; both now assert their deterministic fallback/parser contracts. Budget-stop and 86'd-exclusion proven with real integration tests against live Ember & Oak data, not just code inspection.
+- **Model swapped to `google/gemma-4-26b-a4b-it:free`** everywhere (Booth Host, Upsell, Review Extraction) — chosen after live-benchmarking OpenRouter's actual currently-free model list (the originally-proposed model, Qwen3-Next, turned out to be discontinued on the free tier — caught via a live API call, not assumed). A plain instruct model, no hidden reasoning tax like the old `gpt-oss-20b`.
+- **Guest-facing timeout raised from 1200ms to 10000ms** (Booth Host + Upsell) — real evidence pushed it to the top of the owner's stated 8-10s range: even at 10s, Booth Host's real 5-candidate prompt still fell back live once (10071ms); Upsell's smaller 3-candidate prompt succeeded with genuine AI prose. The model swap is a real improvement, not a full fix — Booth Host will still fall back often at real free-tier latency, reported honestly rather than silently pushing the timeout past what was authorized.
+- **A real "still working" loading state** replaces the old instant-fallback-or-nothing UX: Booth Host's intake shows a dedicated "Personalizing your recommendation…" panel with skeleton preview cards; Upsell (both Booth's cart and Captain's order screen, which share the same function) now streams in via `<Suspense>` instead of blocking the whole page behind the AI call — verified live: the cart renders in ~300ms regardless of AI status.
 - **Next up: Phase 7 (Channels)** — `ChannelAdapter` interface, MockAggregator simulator, DirectAdapter, ONDC staging, manual CSV payout reconciliation. Not started.
 
 ### Local dev note
-`OPENROUTER_API_KEY` is now set in `apps/booth/.env.local`, `apps/console/.env.local`, and `apps/captain/.env.local` (gitignored, not committed) — AI-on is live-testable going forward without re-adding it.
+`OPENROUTER_API_KEY` is set in `apps/booth/.env.local`, `apps/console/.env.local`, and `apps/captain/.env.local` (gitignored, not committed) — AI-on is live-testable going forward without re-adding it.
 
 ---
 

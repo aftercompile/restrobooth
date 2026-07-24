@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Animate, AnimatePresence, BOOTH_TRANSITION, Chip, motion, useMotionAllowed } from "@restrobooth/ui";
+import { Animate, AnimatePresence, BOOTH_TRANSITION, Chip, Skeleton, motion, useMotionAllowed } from "@restrobooth/ui";
 import { getBoothHostRecommendationsAction } from "../actions";
 import type { BoothHostPreferences, BoothHostResult, Mood, SpiceLevel, Diet, BudgetBand } from "../../lib/booth-host";
 import { PickedForYouRail } from "./PickedForYouRail";
@@ -89,6 +89,14 @@ export function BoothHostIntake() {
 
   if (stage === "dismissed") return null;
   if (stage === "results" && result) return <PickedForYouRail result={result} onDismiss={() => setStage("dismissed")} />;
+  // The submit -> real completion round-trip can take several real
+  // seconds (owner decision, 2026-07-24 — raised from an instant 1200ms
+  // fallback-or-nothing to a real up-to-9s wait so genuine AI reasons can
+  // land more often; see booth-host.ts). A guest staring at a disabled
+  // button for that long reads as broken, so this replaces the whole
+  // panel with an explicit "still working" view instead of just
+  // disabling the Continue button in place.
+  if (pending) return <PersonalizingPanel />;
 
   const isLastStep = step === TOTAL_STEPS - 1;
 
@@ -173,9 +181,47 @@ export function BoothHostIntake() {
               Back
             </button>
           )}
-          <button type="button" className={styles.continue} disabled={pending} onClick={handleContinue}>
-            {pending ? "Finding your picks…" : isLastStep ? "Show me picks" : "Continue"}
+          <button type="button" className={styles.continue} onClick={handleContinue}>
+            {isLastStep ? "Show me picks" : "Continue"}
           </button>
+        </div>
+      </div>
+    </Animate>
+  );
+}
+
+/** The wait view for however long the real completion takes (up to
+ *  BOOTH_TIMEOUT_MS) — skeleton cards preview the shape of what's coming
+ *  (real PickedForYouRail cards, once they land) so there's no layout
+ *  jump when the actual result replaces this. The pulse is gated the
+ *  same way every other Booth motion is (`useMotionAllowed()`); the
+ *  Skeleton shimmer itself is CSS-only and already reduced-motion-safe
+ *  regardless. */
+function PersonalizingPanel() {
+  const motionAllowed = useMotionAllowed();
+  const Icon = motionAllowed ? motion.span : "span";
+  return (
+    <Animate>
+      <div className={styles.panel}>
+        <div className={styles.personalizing}>
+          <Icon
+            aria-hidden="true"
+            className={styles.personalizingIcon}
+            {...(motionAllowed ? { animate: { scale: [1, 1.15, 1] }, transition: { duration: 1.4, repeat: Infinity, ease: "easeInOut" } } : {})}
+          >
+            ✨
+          </Icon>
+          <p className={styles.personalizingText}>Personalizing your recommendation…</p>
+          <p className={styles.personalizingSub}>Our AI host is matching dishes to what you told us.</p>
+        </div>
+        <div className={styles.personalizingCards}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={styles.personalizingCard}>
+              <Skeleton width="70%" height="1.1em" />
+              <Skeleton width="90%" />
+              <Skeleton width="40%" />
+            </div>
+          ))}
         </div>
       </div>
     </Animate>

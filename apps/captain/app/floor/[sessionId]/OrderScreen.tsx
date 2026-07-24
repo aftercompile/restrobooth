@@ -1,13 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { Badge, Card, CardHeader, Button } from "@restrobooth/ui";
-import type { UpsellResult } from "@restrobooth/ai";
 import { callForBill, fireOrder, markKotServed, requestVoid, voidPendingItem, type ActionState } from "./actions";
 import type { KotSummary, OrderableMenuItem, OrderItemRow, SessionDetail } from "./queries";
 import { AddItemPicker } from "./AddItemPicker";
 import { UnseatDialog } from "./UnseatDialog";
-import { UpsellStrip } from "./UpsellStrip";
 import styles from "./OrderScreen.module.css";
 
 const INITIAL: ActionState = { error: null };
@@ -22,13 +20,16 @@ export function OrderScreen({
   order,
   kots,
   menu,
-  upsell,
+  upsellSlot,
 }: {
   session: SessionDetail;
   order: { orderId: string; businessDate: string; items: OrderItemRow[] } | null;
   kots: KotSummary[];
   menu: OrderableMenuItem[];
-  upsell: UpsellResult | null;
+  /** A Server Component slot (Suspense-wrapped, page.tsx builds it), not
+   *  raw data — this screen is a Client Component and can't itself await
+   *  the 9s-budgeted AI call; the parent streams it in instead. */
+  upsellSlot: ReactNode;
 }) {
   const [showUnseat, setShowUnseat] = useState(false);
 
@@ -93,7 +94,7 @@ export function OrderScreen({
         ))}
       </Card>
 
-      {upsell && <UpsellStrip sessionId={session.sessionId} result={upsell} />}
+      {upsellSlot}
 
       <div className={styles.fireBar}>
         <FireButton sessionId={session.sessionId} disabled={pendingItems.length === 0} />
