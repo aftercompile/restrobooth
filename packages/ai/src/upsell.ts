@@ -4,6 +4,7 @@ import { OpenRouterProvider } from "./openRouterProvider.js";
 import { withTimeout } from "./timeout.js";
 import { checkBudget, recordUsage } from "./budgetGuard.js";
 import { cacheKey, getCached, setCached } from "./cache.js";
+import { estimateCostPaise } from "./cost.js";
 
 /**
  * Smart upsell — RESTROBOOTH_BRIEF.md §5E / ADR-0007's own worked example:
@@ -162,13 +163,16 @@ export function fallbackReason(c: RankedCandidate): string {
 function getProvider(): AIProvider | null {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  // Swapped from openai/gpt-oss-20b:free (owner decision, 2026-07-24) —
-  // see booth-host.ts's own getProvider() comment for the benchmark data.
+  // openai/gpt-oss-20b:free -> google/gemma-4-26b-a4b-it:free ->
+  // openai/gpt-4o-mini (owner decision, 2026-07-24) — see
+  // apps/booth/lib/booth-host.ts's own getProvider() comment for the
+  // benchmark data this is based on and why it's a real, tracked cost
+  // now rather than free.
   return new OpenRouterProvider({
-    model: "google/gemma-4-26b-a4b-it:free",
+    model: "openai/gpt-4o-mini",
     apiKey,
-    costPer1kTokens: { input: 0, output: 0 },
-    id: "google/gemma-4-26b-a4b-it:free",
+    costPer1kTokens: { input: 0.00015, output: 0.0006 },
+    id: "openai/gpt-4o-mini",
   });
 }
 
@@ -237,8 +241,11 @@ export async function getUpsellSuggestions(
   if (cached) return toResult(JSON.parse(cached) as Record<string, string>, true);
 
   const prompt = buildReasonPrompt(candidates);
-  // 300 tokens: real headroom above gemma's observed usage (SUGGESTION_LIMIT=3), not gpt-oss-20b's old reasoning-headroom budget.
-  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 300, temperature: 0.4 }), UPSELL_TIMEOUT_MS);
+  // 500 tokens — matches booth-host.ts's own bump (real margin observed
+  // live against gpt-4o-mini on the 5-candidate Booth Host prompt;
+  // applied here too for consistency, this prompt has fewer candidates
+  // so 500 is comfortable headroom, not a tight fit).
+  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 500, temperature: 0.4 }), UPSELL_TIMEOUT_MS);
   if (!result) return toResult({}, false);
 
   const reasons = parseReasons(result.text, candidates);
@@ -254,7 +261,7 @@ export async function getUpsellSuggestions(
       providerId: provider.id,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
-      costPaise: 0n,
+      costPaise: estimateCostPaise(provider.costPer1kTokens, result.inputTokens, result.outputTokens),
     });
     await setCached(tx, key, "upsell", JSON.stringify(reasons), CACHE_TTL_MS);
   });

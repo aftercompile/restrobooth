@@ -8,6 +8,7 @@ export { OpenRouterProvider, type OpenRouterProviderConfig } from "./openRouterP
 export { StubProvider } from "./stubProvider.js";
 export { withTimeout } from "./timeout.js";
 export { checkBudget, recordUsage, type AIFeature, type BudgetStatus, type RecordUsageParams } from "./budgetGuard.js";
+export { estimateCostPaise } from "./cost.js";
 export { cacheKey, getCached, setCached } from "./cache.js";
 export { runEvalSuite, summarizeEvalResults, type EvalScenario, type EvalResult, type EvalSummary } from "./eval/harness.js";
 export {

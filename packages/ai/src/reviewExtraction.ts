@@ -4,6 +4,7 @@ import { OpenRouterProvider } from "./openRouterProvider.js";
 import { withTimeout } from "./timeout.js";
 import { checkBudget, recordUsage } from "./budgetGuard.js";
 import { cacheKey, getCached, setCached } from "./cache.js";
+import { estimateCostPaise } from "./cost.js";
 
 /**
  * Review → Action — RESTROBOOTH_BRIEF.md §5B: "Post-meal QR feedback +
@@ -274,7 +275,7 @@ export async function extractReviewAspects(db: Database | RlsTx, params: Extract
       providerId: provider.id,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
-      costPaise: 0n,
+      costPaise: estimateCostPaise(provider.costPer1kTokens, result.inputTokens, result.outputTokens),
     });
     await setCached(tx, key, "review_extraction", JSON.stringify(findings), CACHE_TTL_MS);
   });

@@ -4,17 +4,19 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-24 (latest), Phase 6 complete; guest-facing AI re-tuned against real latency data
+## Where things stand — 2026-07-24 (latest), Phase 6 complete; guest-facing AI moved off the free tier
 
-**Phase 6 (AI Layer v1) is done and now tuned against real OpenRouter behavior, not assumptions.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entries.
+**Phase 6 (AI Layer v1) is done. Booth Host and Upsell now run on a real, low-cost paid model (`openai/gpt-4o-mini`) after the free tier proved unreliably slow even after tuning.** Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest two entries.
 
-- **Model swapped to `google/gemma-4-26b-a4b-it:free`** everywhere (Booth Host, Upsell, Review Extraction) — chosen after live-benchmarking OpenRouter's actual currently-free model list (the originally-proposed model, Qwen3-Next, turned out to be discontinued on the free tier — caught via a live API call, not assumed). A plain instruct model, no hidden reasoning tax like the old `gpt-oss-20b`.
-- **Guest-facing timeout raised from 1200ms to 10000ms** (Booth Host + Upsell) — real evidence pushed it to the top of the owner's stated 8-10s range: even at 10s, Booth Host's real 5-candidate prompt still fell back live once (10071ms); Upsell's smaller 3-candidate prompt succeeded with genuine AI prose. The model swap is a real improvement, not a full fix — Booth Host will still fall back often at real free-tier latency, reported honestly rather than silently pushing the timeout past what was authorized.
-- **A real "still working" loading state** replaces the old instant-fallback-or-nothing UX: Booth Host's intake shows a dedicated "Personalizing your recommendation…" panel with skeleton preview cards; Upsell (both Booth's cart and Captain's order screen, which share the same function) now streams in via `<Suspense>` instead of blocking the whole page behind the AI call — verified live: the cart renders in ~300ms regardless of AI status.
+- **`openai/gpt-4o-mini` replaces the free-tier model for Booth Host + Upsell** — a deliberate, owner-approved departure from ADR-0007's "stay free" framing, decided after a real benchmark showed it completing both real prompt shapes in 1.6-2.2s (vs. the free model's 9-10s+, which had missed even a 10s ceiling live). Real cost is trivial (~$0.0004 for a 6-call benchmark; ~1 paisa per real guest recommendation). **Review Extraction stays on the free `gemma-4-26b-a4b-it:free`** — its 30s budget was never the bottleneck, no reason to spend there.
+- **A real bug fixed before it could matter**: `recordUsage()` was hardcoding `costPaise: 0n` everywhere (harmless while every provider was free). Now computed for real via a new `estimateCostPaise()` helper — confirmed live: the new gpt-4o-mini calls record a real non-zero cost, the still-free ones correctly still show 0.
+- **`maxTokens` raised to 500** (from 400/300) after live testing showed gpt-4o-mini's Booth Host output occasionally running past 400 tokens and getting cut off mid-JSON.
+- **Verified live**: Booth Host now returns genuine, context-aware AI reasons ("Indulgent fries, but not spicy enough for your mood") in ~4.6s total; Upsell resolves in well under a second with real prose.
+- **Flagged, not yet acted on**: the budget guard is still token-count-based (`outlets.ai_monthly_token_budget`), not cost-based — now that real money flows through two features, a runaway guest surface is bounded by token volume, not a dollar ceiling. Worth a look if usage ever scales up.
 - **Next up: Phase 7 (Channels)** — `ChannelAdapter` interface, MockAggregator simulator, DirectAdapter, ONDC staging, manual CSV payout reconciliation. Not started.
 
 ### Local dev note
-`OPENROUTER_API_KEY` is set in `apps/booth/.env.local`, `apps/console/.env.local`, and `apps/captain/.env.local` (gitignored, not committed) — AI-on is live-testable going forward without re-adding it.
+`OPENROUTER_API_KEY` is set in `apps/booth/.env.local`, `apps/console/.env.local`, and `apps/captain/.env.local` (gitignored, not committed) — AI-on is live-testable going forward without re-adding it. This key now has real (if low) spend against it via Booth Host/Upsell.
 
 ---
 

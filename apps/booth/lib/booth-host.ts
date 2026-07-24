@@ -1,6 +1,6 @@
 import "server-only";
 import { sql } from "@restrobooth/db";
-import { OpenRouterProvider, withTimeout, checkBudget, recordUsage, getCached, setCached, cacheKey, type AIProvider } from "@restrobooth/ai";
+import { OpenRouterProvider, withTimeout, checkBudget, recordUsage, getCached, setCached, cacheKey, estimateCostPaise, type AIProvider } from "@restrobooth/ai";
 import { getDb } from "./db";
 import { fallbackReason, parseReasons, type RankedCandidate } from "./booth-host-reasons";
 
@@ -158,18 +158,21 @@ function getProvider(): AIProvider | null {
   // exactly this: unset the key, every surface below still works.
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  // Swapped from openai/gpt-oss-20b:free (owner decision, 2026-07-24) —
-  // real benchmarking found gpt-oss-20b spends its token budget on hidden
-  // chain-of-thought before any visible content (10-24s observed,
-  // needing 300+ maxTokens just to survive it), where gemma-4-26b-a4b-it
-  // is a plain instruct model with no hidden reasoning: 3.7-7.6s observed
-  // for this exact prompt shape, and correct JSON every time even at a
-  // 100-token cap. See DECISIONS.md for the full benchmark.
+  // openai/gpt-oss-20b:free -> google/gemma-4-26b-a4b-it:free ->
+  // openai/gpt-4o-mini (owner decision, 2026-07-24, in that order). The
+  // free models' latency made the 10s guest budget marginal at best
+  // (gemma: 9-10s+ on this exact 5-candidate prompt, missed live once);
+  // gpt-4o-mini benchmarked at 1.6-2.2s for the same prompt shape,
+  // comfortably inside budget, at a real but trivial cost (~$0.0004 for
+  // a 6-call benchmark). This is a deliberate, owner-approved departure
+  // from ADR-0007's original "stay on OpenRouter's free tier" framing —
+  // real (if small) money now flows through this call, tracked honestly
+  // via estimateCostPaise() below rather than the old hardcoded 0n.
   return new OpenRouterProvider({
-    model: "google/gemma-4-26b-a4b-it:free",
+    model: "openai/gpt-4o-mini",
     apiKey,
-    costPer1kTokens: { input: 0, output: 0 },
-    id: "google/gemma-4-26b-a4b-it:free",
+    costPer1kTokens: { input: 0.00015, output: 0.0006 },
+    id: "openai/gpt-4o-mini",
   });
 }
 
@@ -228,11 +231,11 @@ export async function getBoothHostRecommendations(guest: { storeId: string; outl
   }
 
   const prompt = buildReasonPrompt(candidates, prefs);
-  // 400 tokens: real headroom above gemma's observed ~15 tokens/reason
-  // (SHORTLIST_LIMIT=5 candidates), not gpt-oss-20b's old 2000 — that
-  // budget existed only because gpt-oss-20b needed 300+ tokens of hidden
-  // reasoning headroom BEFORE any visible content; gemma has none.
-  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 400, temperature: 0.4 }), BOOTH_TIMEOUT_MS);
+  // 500 tokens — bumped from 400 after live benchmarking gpt-4o-mini: 2
+  // of 3 runs on this exact 5-candidate prompt got cut off mid-JSON at
+  // 400 (some reasons ran a little longer than budgeted); 500 gives real
+  // margin without reintroducing gpt-oss-20b's old reasoning-headroom problem.
+  const result = await withTimeout(provider.complete({ system: REASON_SYSTEM_PROMPT, prompt, maxTokens: 500, temperature: 0.4 }), BOOTH_TIMEOUT_MS);
   if (!result) return withFallback();
 
   const reasons = parseReasons(result.text, candidates);
@@ -248,7 +251,7 @@ export async function getBoothHostRecommendations(guest: { storeId: string; outl
       providerId: provider.id,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
-      costPaise: 0n,
+      costPaise: estimateCostPaise(provider.costPer1kTokens, result.inputTokens, result.outputTokens),
     });
     await setCached(tx, key, "booth_host", JSON.stringify(reasons), CACHE_TTL_MS);
   });

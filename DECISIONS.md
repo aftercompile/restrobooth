@@ -4,7 +4,24 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
-## 2026-07-24 (latest) — Guest-facing AI: model swap, 10s budget, and a real "waiting" UX
+## 2026-07-24 (latest) — Guest-facing AI moves off the free tier: gpt-4o-mini
+
+**Decided by:** Mohammed, after asking for a real benchmark of `openai/gpt-4o-mini` against the exact Booth Host (5-candidate) and Upsell (3-candidate) prompt shapes — checked and flagged first that this is a **paid** model (~$0.15/1M input, $0.60/1M output tokens, confirmed via OpenRouter's real `/models` pricing), got explicit go-ahead before spending anything given ADR-0007's original "stay on the free tier" framing.
+
+**Real benchmark, real decision:** gpt-4o-mini completed the Upsell shape in 1.6-2.0s and the Booth Host shape in 1.6-2.2s (3/3 runs each) — dramatically faster and more reliable than `gemma-4-26b-a4b-it:free`, which had just been measured missing even the 10s ceiling on the real Booth Host prompt. Real cost for the full 6-call benchmark: ~$0.0004. Owner chose to switch.
+
+**What shipped:**
+- **Model swapped to `openai/gpt-4o-mini`** in `booth-host.ts` and `upsell.ts` (the two guest-facing surfaces the benchmark targeted) — Review Extraction stays on `gemma-4-26b-a4b-it:free`, deliberately not switched: its 30s staff-facing budget was never the bottleneck, and there's no reason to spend real money where free already works well within budget.
+- **`maxTokens` raised to 500** in both (from 400/300) — 2 of 3 live gpt-4o-mini runs on the real 5-candidate Booth Host prompt got cut off mid-JSON at 400 tokens (some reasons ran a little longer than budgeted); 500 gives real margin.
+- **A real bug in waiting, caught before it mattered**: both `recordUsage()` call sites hardcoded `costPaise: 0n` — harmless while every provider was free, but would have silently under-reported real spend the moment a paid model went live. Added `packages/ai/src/cost.ts`'s `estimateCostPaise()` (provider's USD `costPer1kTokens` × real token counts × an approximate, clearly-labeled USD→INR rate — this is `ai_usage_ledger`, an operational cost-tracking table, not the guest bill CLAUDE.md's money non-negotiable governs, so an approximate FX rate is an honest, proportionate choice, not a precision violation) and wired it into all three `recordUsage` calls (`booth-host.ts`, `upsell.ts`, `reviewExtraction.ts` — the last one stays `0n` in practice since it's still free, but the ledger is now correct by construction rather than by coincidence).
+
+**Verified live** against real Ember & Oak data: Booth Host returned genuine, context-aware AI reasons ("Indulgent fries, but not spicy enough for your mood" — correctly referencing the guest's actual stated preference) in 4.6s total round-trip; Upsell resolved in 821ms with real prose ("A lovely starter before your steak"). Confirmed `ai_usage_ledger` recorded the real provider id and a real non-zero `cost_paise` (1 paise) for the gpt-4o-mini call, while the pre-existing gemma rows correctly still show 0. `pnpm -w typecheck && pnpm -w lint` green across all 13 packages.
+
+**Note for future sessions**: `checkBudget`'s guard is still token-count-based (`outlets.ai_monthly_token_budget`, default 500,000/month), not cost-based — now that real money is involved for two features, a runaway high-frequency guest surface is bounded by TOKEN volume, not by a dollar ceiling. Not redesigned this pass (not asked for, and the token cap still provides a real backstop), but worth naming as a real operational-cost risk now that "free" is no longer universally true across every AI feature.
+
+---
+
+## 2026-07-24 — Guest-facing AI: model swap, 10s budget, and a real "waiting" UX
 
 **Decided by:** Mohammed, in direct response to the AI-on latency findings from the previous entry — proposed 5 changes, all evaluated against real OpenRouter data (not assumed) before implementing: swap the model, raise the guest timeout to 8-10s, cap output tokens, and add a real loading state instead of instant-fallback-or-nothing.
 
