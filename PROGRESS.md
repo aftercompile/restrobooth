@@ -4,7 +4,23 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-23 (latest), Phase 6 Slice 2 (Booth Host) done
+## Where things stand — 2026-07-24 (latest), live deployment now serves Ember & Oak
+
+**The live Booth (`https://restrobooth-booth.vercel.app`) now serves Ember & Oak, not the believable-chain fixture.** The owner's call, via `AskUserQuestion`: fully replace the live cloud DB's believable-chain org (Ahmedabad/Surat/Andheri) with Ember & Oak, not add alongside it. Full sequence and the one real gap found (`memberships.scope_id` is polymorphic, doesn't FK-cascade) in [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- Live cloud Supabase (`sehgfgusiqxnmearhuzl`) schema was already current (migrations through `0033`) — no migration step needed, just data.
+- Believable-chain org, its 4 outlets, all transactional data, and its 3 staff accounts (`owner@`/`cashier@`/`kitchen@restrobooth.test`) are gone from the live DB. Ember & Oak (12 items, 1,423 orders, real embeddings + spice/tags) is live in its place, today's `business_day` open.
+- **New live accounts** (password `restrobooth`, same convention as every seeded account): `owner@restrobooth.test` (org-scoped), `kitchen@restrobooth.test` and `captain@restrobooth.test` (outlet-scoped). No live `cashier@` account exists anymore — wasn't requested; add one the same way (`scope_type=outlet, role=cashier`) if POS access to the live deployment is needed later.
+- Real, scannable QR codes for all 8 tables now point at the live Booth URL with 180-day-rotating tokens: `packages/db/qr-codes/BW1/T1.png`–`T8.png` (gitignored — regenerate with `pnpm --filter @restrobooth/db tokens:mint BW1` against the live `DATABASE_URL`/`BOOTH_URL` if they need reprinting; re-running always revokes-and-replaces, so old printed copies stop working the moment you do).
+- Verified live end-to-end via a real `fetch()` round-trip (not just assumed): scan → `307` + guest cookie → `/menu` renders real Ember & Oak items and the Booth Host intake.
+- **Not addressed, flagged and explicitly deferred by the owner**: CLAUDE.md's own rule says shipping payment processing should have triggered a Vercel Hobby → Pro move; there's no record that happened, and the owner chose to keep the live deployment on Hobby anyway when asked directly. Worth revisiting before treating this deployment as more than a demo.
+
+### Local dev note
+The believable-chain fixture (Ahmedabad/Surat/Andheri, `owner@`/`cashier@`/`kitchen@restrobooth.test`) is **only in local Postgres now** (docker-compose 54329, Supabase-local 54322) — it no longer exists on the live cloud DB. Local dev workflows, tests, and the restore ritual below are unaffected; this only changed the live/production data.
+
+---
+
+## Where things stand — 2026-07-23, Phase 6 Slice 2 (Booth Host) done
 
 **The plan of record changed.** Phase 5 shipped with no pilot restaurant available; the owner made a deliberate call to build Phases 6–10 now rather than wait, explicitly overriding R1/the Phase 8 gate with the trade-off named. Full reasoning: [DECISIONS.md](DECISIONS.md). Docs updated to match: `CLAUDE.md`'s gate section, `RESTROBOOTH_BRIEF.md`'s Phase 8 blockquote, `docs/ROADMAP.md` §2 (two banners), `docs/RISKS.md` R1, `docs/OPEN-DECISIONS.md` — all now carry a superseded-status note rather than the original gate language; nothing was silently deleted.
 

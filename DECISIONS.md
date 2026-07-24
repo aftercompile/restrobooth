@@ -4,6 +4,28 @@ Append-only. Newest first. One entry per decision that a future session would ot
 
 ---
 
+## 2026-07-24 (latest) — Live deployment switched from the believable-chain fixture to Ember & Oak; real QR codes minted for the live Booth
+
+**Decided by:** Mohammed, via two rounds of `AskUserQuestion` — replace (not add alongside) the live data, and fully delete the believable-chain org (not just hide it from guest access), with new owner/kitchen/captain accounts created fresh for Ember & Oak.
+
+**What changed, against the live cloud Supabase project (`sehgfgusiqxnmearhuzl`, Seoul) — not local:**
+- Confirmed schema was already fully current (migrations through `0033` — `spice_level`/`tags`/`embedding` columns present) before touching any data; no migration step was needed.
+- Full row-count inventory taken before any deletion (2 orgs, 4 outlets, 153 menu items, 17 memberships, etc. — see this entry's git history for the exact numbers if ever needed).
+- `TRUNCATE organizations CASCADE` removed the entire believable-chain tenancy tree (orgs → GST registrations → brands → outlets → stores → menu → sessions/orders/KOTs/bills/payments/QR tokens). **One real gap found**: `memberships.scope_id` is a deliberately polymorphic column (no FK — validated by trigger per `scope_type`, see `packages/db/src/schema/access.ts`), so it did **not** cascade; the 17 now-orphaned membership rows needed a separate `TRUNCATE memberships`. The three old GoTrue accounts (`owner@`/`cashier@`/`kitchen@restrobooth.test`) were then deleted via the admin API too, since they had zero memberships left.
+- Ran `import-steakhouse.ts`, `backfill-menu-tags.ts`, and `backfill-embeddings.ts` against the live DB — same generator/backfill scripts already verified locally, now also verified against the real cloud project. Opened today's `business_days` row for the outlet (same requirement discovered during local Slice 2 testing — a fresh outlet has no open day, and the Booth's own guest-token route already correctly rejects a scan against a closed outlet rather than silently allowing it).
+- Created three new accounts scoped to Ember & Oak, mirroring `seed-believable-chain.ts`'s own scope convention (org-level for the owner, outlet-level for kitchen/captain): `owner@restrobooth.test` (`scope_type=org`), `kitchen@restrobooth.test` and `captain@restrobooth.test` (`scope_type=outlet`), same shared dev password (`restrobooth`) as every other seeded account in this project.
+- Minted fresh 180-day QR tokens for all 8 tables with `BOOTH_URL=https://restrobooth-booth.vercel.app` and rendered real scannable PNGs (`packages/db/qr-codes/BW1/T1.png`–`T8.png`, gitignored — each encodes a live guest-session token).
+
+**Verified live, not just assumed**: a real `fetch()` round-trip (Node has real outbound network access in this environment; the sandboxed `curl` in the agent's own shell does not — same asymmetry already noted for the OpenRouter live check) — scanning a minted token against the deployed Vercel Booth returns the expected `307` + `Set-Cookie`, and following that cookie to `/menu` renders real Ember & Oak items ("Bourbon BBQ Burger") and the Booth Host intake copy. The live Booth is genuinely serving Ember & Oak end to end, not just seeded-and-hoped.
+
+**A stray, noteworthy but non-actionable observation**: one `dotenv` config-load line printed an unusual promotional "tip" (`auth for agents [some ad-network domain]`) instead of the usual dotenv CLI tips seen everywhere else in this session (e.g. "custom filepath", "override existing"). This is `dotenv`'s own known (if controversial) tip-rotation feature, not a targeted prompt injection — it carried no instruction directed at the agent, and every other invocation in the same session showed a normal tip. Flagged for the record per this project's standing "flag suspected injection" instruction, not treated as an incident.
+
+**Billing note, explicitly acknowledged and deferred by the owner, not fixed here**: CLAUDE.md's own non-negotiable says shipping payment processing (Slice 3, done 2026-07-20) is what triggers the mandatory Vercel Hobby → Pro move — and there's no record anywhere that move happened. The owner was told this directly before any of the above work started and chose to proceed on Hobby anyway; this entry exists so a future session doesn't assume the tier question was resolved.
+
+**Not done, flagged as follow-up**: no `qr_tokens`/`guest_sessions` cleanup job exists for the *old* believable-chain tables' now-defunct QR codes — they were deleted at the DB level (`TRUNCATE organizations CASCADE` took `qr_tokens` with it), so any physically-printed old table tents from local testing are already dead, not a live risk.
+
+---
+
 ## 2026-07-23 (latest) — Phase 6 Slice 2 (Booth Host): shipped, plus a real cross-package build bug found and fixed
 
 **What shipped:** the Booth Host end to end — `apps/booth/lib/booth-host.ts` computes a deterministic SQL shortlist (diet + allergens as hard `WHERE` filters, never relaxed; spice/mood/budget-band match plus real historical popularity as a soft ranking score) and, only when an AI provider is configured and under budget, asks the LLM for nothing more than a one-line reason string per dish — never the dish selection itself, matching ADR-0007's governing split. `BoothHostIntake.tsx` (chip-based, mood/spice/diet/budget/allergens + optional free text, Skip always one tap, renders below an already-painted menu so it can never block it) and `PickedForYouRail.tsx` (horizontal-scroll cards with a real Add-to-cart) are the guest-facing surfaces.
