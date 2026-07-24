@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { getUpsellSuggestions, type UpsellResult } from "@restrobooth/ai";
 import { CaptainShell } from "../../CaptainShell";
-import { queryAsCurrentUser } from "../../../lib/db";
+import { queryAsCurrentUser, getDb } from "../../../lib/db";
 import { getSessionDetail, getOpenOrder, getKotsForSession, getOrderableMenu } from "./queries";
 import { OrderScreen } from "./OrderScreen";
 
@@ -20,9 +21,21 @@ export default async function OrderPage({ params }: { params: Promise<{ sessionI
 
   if (!data) notFound();
 
+  // Outside queryAsCurrentUser's RLS-scoped tx on purpose — getUpsellSuggestions
+  // needs its own budget/cache transactions (packages/ai's own contract,
+  // same as the Booth Host), not a nested transaction on an already-scoped one.
+  const upsell: UpsellResult | null =
+    data.order && data.order.items.length > 0
+      ? await getUpsellSuggestions(getDb(), {
+          storeId: data.session.storeId,
+          outletId: data.session.outletId,
+          cartMenuItemIds: data.order.items.map((i) => i.menuItemId),
+        })
+      : null;
+
   return (
     <CaptainShell>
-      <OrderScreen session={data.session} order={data.order} kots={data.kots} menu={data.menu} />
+      <OrderScreen session={data.session} order={data.order} kots={data.kots} menu={data.menu} upsell={upsell} />
     </CaptainShell>
   );
 }

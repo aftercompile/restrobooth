@@ -8,7 +8,7 @@ import { createClient } from "./supabase/server";
  */
 const globalForDb = globalThis as unknown as { __restroboothDb?: Database };
 
-function getDb(): Database {
+export function getDb(): Database {
   if (!globalForDb.__restroboothDb) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("DATABASE_URL is not set (apps/captain/.env.local).");

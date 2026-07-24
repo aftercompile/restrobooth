@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   // @restrobooth/db, and @restrobooth/domain all ship raw source (no build
   // step), so Next needs to run them through its own transform rather than
   // treating them as opaque node_modules.
-  transpilePackages: ["@restrobooth/ui", "@restrobooth/db", "@restrobooth/domain"],
+  transpilePackages: ["@restrobooth/ui", "@restrobooth/db", "@restrobooth/domain", "@restrobooth/ai"],
   serverExternalPackages: ["pg"],
   turbopack: {
     root: path.join(__dirname, "../.."),

@@ -2,10 +2,12 @@
 
 import { useActionState, useState } from "react";
 import { Badge, Card, CardHeader, Button } from "@restrobooth/ui";
+import type { UpsellResult } from "@restrobooth/ai";
 import { callForBill, fireOrder, markKotServed, requestVoid, voidPendingItem, type ActionState } from "./actions";
 import type { KotSummary, OrderableMenuItem, OrderItemRow, SessionDetail } from "./queries";
 import { AddItemPicker } from "./AddItemPicker";
 import { UnseatDialog } from "./UnseatDialog";
+import { UpsellStrip } from "./UpsellStrip";
 import styles from "./OrderScreen.module.css";
 
 const INITIAL: ActionState = { error: null };
@@ -20,11 +22,13 @@ export function OrderScreen({
   order,
   kots,
   menu,
+  upsell,
 }: {
   session: SessionDetail;
   order: { orderId: string; businessDate: string; items: OrderItemRow[] } | null;
   kots: KotSummary[];
   menu: OrderableMenuItem[];
+  upsell: UpsellResult | null;
 }) {
   const [showUnseat, setShowUnseat] = useState(false);
 
@@ -88,6 +92,8 @@ export function OrderScreen({
           <OrderItemRowView key={item.orderItemId} item={item} sessionId={session.sessionId} />
         ))}
       </Card>
+
+      {upsell && <UpsellStrip sessionId={session.sessionId} result={upsell} />}
 
       <div className={styles.fireBar}>
         <FireButton sessionId={session.sessionId} disabled={pendingItems.length === 0} />

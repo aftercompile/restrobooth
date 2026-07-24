@@ -4,6 +4,7 @@ import { getDb } from "./db";
 
 export interface GuestOrderItem {
   orderItemId: string;
+  menuItemId: string;
   name: string;
   quantity: number;
   status: string; // pending | fired | served | void_requested (voided is excluded)
@@ -38,12 +39,13 @@ export async function getGuestOrderStatus(guestSessionId: string): Promise<Guest
     const itemsResult = await tx.execute<{
       [key: string]: unknown;
       order_item_id: string;
+      menu_item_id: string;
       name: string;
       quantity: number;
       status: string;
       unit_price_paise: string;
     }>(sql`
-      select oi.id as order_item_id, mi.name, oi.quantity, oi.status, oi.unit_price_paise
+      select oi.id as order_item_id, oi.menu_item_id, mi.name, oi.quantity, oi.status, oi.unit_price_paise
       from order_items oi
       join menu_items mi on mi.id = oi.menu_item_id
       join orders o on o.id = oi.order_id
@@ -73,6 +75,7 @@ export async function getGuestOrderStatus(guestSessionId: string): Promise<Guest
     return {
       items: itemsResult.rows.map((r) => ({
         orderItemId: r.order_item_id,
+        menuItemId: r.menu_item_id,
         name: r.name,
         quantity: r.quantity,
         status: r.status,

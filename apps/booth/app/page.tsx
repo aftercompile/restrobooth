@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
+import { getUpsellSuggestions } from "@restrobooth/ai";
 import { getGuestContext } from "../lib/guest-context";
 import { getGuestOrderStatus } from "../lib/order-queries";
+import { getDb } from "../lib/db";
 import { BoothShell } from "./BoothShell";
 import { BoothPoll } from "./BoothPoll";
 import { CartSection, EmptyOrderState } from "./CartSection";
 import { RequestBillButton } from "./RequestBillButton";
+import { UpsellRail } from "./UpsellRail";
 
 // The only component on this page that imports framer-motion — dynamic()
 // still renders it server-side (the split-flap board's real content is in
@@ -29,6 +32,20 @@ export default async function HomePage() {
   const cartItems = status.items.filter((i) => i.status === "pending");
   const liveItems = status.items.filter((i) => i.status !== "pending");
 
+  // Every order_item already in the cart or fired/served counts as "the
+  // basket so far" — not just what's still pending — so the suggestion
+  // stays relevant even after a first round has already gone to the
+  // kitchen (RESTROBOOTH_BRIEF.md §5E: "goes well with" the order, not
+  // just the not-yet-fired remainder of it).
+  const upsell =
+    cartItems.length > 0
+      ? await getUpsellSuggestions(getDb(), {
+          storeId: guest.storeId,
+          outletId: guest.outletId,
+          cartMenuItemIds: status.items.map((i) => i.menuItemId),
+        })
+      : null;
+
   return (
     <BoothShell tableLabel={guest.tableLabel} brandName={guest.brandName} waiterCalled={guest.waiterCalled}>
       <BoothPoll />
@@ -39,6 +56,7 @@ export default async function HomePage() {
       {cartItems.length > 0 && (
         <div style={{ marginBottom: "var(--space-3)" }}>
           <CartSection items={cartItems} />
+          {upsell && <UpsellRail result={upsell} />}
         </div>
       )}
       <OrderStatusBoard items={liveItems} />

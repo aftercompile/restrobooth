@@ -82,6 +82,23 @@ async function getRankedCandidates(storeId: string, prefs: BoothHostPreferences,
   const [budgetMin, budgetMax] =
     prefs.budgetBand === "low" ? [0, low] : prefs.budgetBand === "high" ? [high, Number.MAX_SAFE_INTEGER] : [low, high];
 
+  // sql`${array}::text[]` does NOT bind a JS array as a single Postgres
+  // array parameter — drizzle expands each element into its own scalar
+  // placeholder, so `mi.allergens && $array::text[]` receives a bare
+  // (a,b,c) ROW constructor and Postgres rejects the cast ("cannot cast
+  // type record to text[]"). This path was never exercised with a real
+  // non-empty avoidAllergens array during Slice 2's own live testing —
+  // found and fixed alongside the identical bug in packages/ai/src/upsell.ts.
+  // sql.join + an explicit array[...] constructor (the pattern this
+  // codebase already uses for IN-lists) fixes it.
+  const avoidAllergensArray =
+    prefs.avoidAllergens && prefs.avoidAllergens.length > 0
+      ? sql`array[${sql.join(
+          prefs.avoidAllergens.map((a) => sql`${a}`),
+          sql`, `,
+        )}]::text[]`
+      : sql`null::text[]`;
+
   const result = await db.execute<{
     [key: string]: unknown;
     menu_item_id: string;
@@ -105,8 +122,8 @@ async function getRankedCandidates(storeId: string, prefs: BoothHostPreferences,
     where rm.is_available
       and (${prefs.diet ?? null}::text is null or mi.diet = ${prefs.diet ?? null})
       and (
-        ${prefs.avoidAllergens && prefs.avoidAllergens.length > 0 ? prefs.avoidAllergens : null}::text[] is null
-        or not (mi.allergens && ${prefs.avoidAllergens && prefs.avoidAllergens.length > 0 ? prefs.avoidAllergens : null}::text[])
+        ${avoidAllergensArray} is null
+        or not (mi.allergens && ${avoidAllergensArray})
       )
     order by
       (

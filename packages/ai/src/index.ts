@@ -10,3 +10,4 @@ export { withTimeout } from "./timeout.js";
 export { checkBudget, recordUsage, type AIFeature, type BudgetStatus, type RecordUsageParams } from "./budgetGuard.js";
 export { cacheKey, getCached, setCached } from "./cache.js";
 export { runEvalSuite, summarizeEvalResults, type EvalScenario, type EvalResult, type EvalSummary } from "./eval/harness.js";
+export { getUpsellSuggestions, type UpsellCandidate, type UpsellResult } from "./upsell.js";
