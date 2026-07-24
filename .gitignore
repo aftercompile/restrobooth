@@ -33,3 +33,6 @@ coverage/
 # self-inspection tool output (screenshots, saved auth state)
 tools/out/
 tools/.auth/
+
+# minted QR codes — each PNG encodes a live, scannable guest-session token
+packages/db/qr-codes/
