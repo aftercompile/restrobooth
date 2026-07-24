@@ -4,7 +4,19 @@ Maintained at the end of every session so the next one starts warm. Current stat
 
 ---
 
-## Where things stand — 2026-07-24 (latest), Phase 6 Slice 4 (Review → Action) done
+## Where things stand — 2026-07-24 (latest), Phase 6 complete (Slice 5, the phase gate, done)
+
+**Phase 6 (AI Layer v1) is done.** All five slices shipped: the AI spine, Booth Host, Smart Upsell, Review→Action, and this gate. Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entry.
+
+- **Real eval coverage added for Booth Host and Upsell** — neither actually had any until this slice (a gap the DECISIONS.md history didn't catch until now); both now have real `EvalScenario` suites asserting their deterministic fallback/parser contracts, matching Slice 4's Review→Action precedent. `booth-host.ts`'s pure logic got split into a new `booth-host-reasons.ts` (no `server-only` guard) specifically so it's testable outside Next's server-component resolution.
+- **Budget-stop and 86'd-exclusion are now proven with real integration tests** against live Ember & Oak data (rolled-back transactions, zero residue confirmed by direct row count afterward) — not just unit-tested in isolation or assumed from code reading. One real test bug found and fixed along the way: Postgres's `now()` is frozen at transaction start, so a client-side `effectiveFrom` timestamp read as "not yet effective."
+- **Lesson from Slice 4 applied**: every new test this slice ran via `pnpm --filter <pkg> test`, never the full workspace test command, specifically to avoid re-triggering `packages/db`'s test-suite truncate that wiped Ember & Oak last time.
+- **Still open, honestly**: no `OPENROUTER_API_KEY` is configured in this dev environment, so the AI-ON path has never been verified live this session for any Phase 6 feature — only via unit/eval tests exercising the same validation the real LLM branch would hit.
+- **Next up: Phase 7 (Channels)** — `ChannelAdapter` interface, MockAggregator simulator, DirectAdapter, ONDC staging, manual CSV payout reconciliation. Not started.
+
+---
+
+## Where things stand — 2026-07-24, Phase 6 Slice 4 (Review → Action) done
 
 **The review→action pipeline is built and live**: post-meal guest feedback + staff-pasted aggregator reviews get extracted into aspect/sentiment/dish findings (taste/portion/temperature/wait/price/service), surfaced on a new Console `/reviews` page as per-dish sentiment and "3 things to fix this week." Full reasoning in [DECISIONS.md](DECISIONS.md)'s latest entry.
 

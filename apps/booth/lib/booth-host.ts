@@ -2,6 +2,9 @@ import "server-only";
 import { sql } from "@restrobooth/db";
 import { OpenRouterProvider, withTimeout, checkBudget, recordUsage, getCached, setCached, cacheKey, type AIProvider } from "@restrobooth/ai";
 import { getDb } from "./db";
+import { fallbackReason, parseReasons, type RankedCandidate } from "./booth-host-reasons";
+
+export type { RankedCandidate } from "./booth-host-reasons";
 
 /**
  * The Booth Host — ADR-0007 §5A, the headline AI feature. Governing
@@ -46,19 +49,6 @@ export interface BoothHostResult {
 const BOOTH_TIMEOUT_MS = 1200; // ADR-0007 §3 — hard, guest-facing.
 const SHORTLIST_LIMIT = 5;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h — menu_version isn't tracked yet (Phase 2's resolver has no version counter), so this is the safety net against a stale cache outliving a same-day menu change, not the primary invalidation ADR-0007 §5 describes.
-
-interface RankedCandidate {
-  menuItemId: string;
-  name: string;
-  description: string | null;
-  pricePaise: string;
-  tags: string[];
-  spiceLevel: string | null;
-  matchedMood: boolean;
-  matchedSpice: boolean;
-  matchedBudget: boolean;
-  popularity: number;
-}
 
 /** Tertiles of this store's own available prices — a fixed rupee
  *  threshold would be meaningless across stores as different as Spice
@@ -150,19 +140,6 @@ async function getRankedCandidates(storeId: string, prefs: BoothHostPreferences,
   }));
 }
 
-/** No AI needed at all — real signals from the SQL scoring itself, still
- *  useful on its own (ADR-0007 §3: "still useful" is the bar for every
- *  fallback, not just "not broken"). */
-function fallbackReason(c: RankedCandidate): string {
-  if (c.matchedSpice && c.matchedMood) return "Matches your spice and mood picks";
-  if (c.matchedMood) return "Fits what you're in the mood for";
-  if (c.matchedSpice) return "Right at your spice level";
-  if (c.matchedBudget && c.popularity > 0) return "Popular with guests, and in your budget";
-  if (c.popularity > 0) return "Popular with similar guests";
-  if (c.matchedBudget) return "Fits your budget";
-  return "Worth trying";
-}
-
 function getProvider(): AIProvider | null {
   // "Turn the AI provider off" (ADR-0007 §3's acceptance demo) means
   // exactly this: unset the key, every surface below still works.
@@ -192,24 +169,6 @@ function buildReasonPrompt(candidates: RankedCandidate[], prefs: BoothHostPrefer
     .map((c) => `${c.menuItemId}: ${c.name}${c.description ? " — " + c.description : ""} (tags: ${c.tags.join(", ") || "none"}, spice: ${c.spiceLevel ?? "unspecified"})`)
     .join("\n");
   return `Guest preferences: ${guestContext || "none stated"}.\n\nDishes:\n${dishLines}\n\nWrite one short, specific reason per dish id as JSON.`;
-}
-
-function parseReasons(text: string, candidates: RankedCandidate[]): Record<string, string> {
-  try {
-    // Models occasionally wrap JSON in prose or fences despite instructions — extract the first {...} block.
-    const match = /\{[\s\S]*\}/.exec(text);
-    if (!match) return {};
-    const parsed: unknown = JSON.parse(match[0]);
-    if (typeof parsed !== "object" || parsed === null) return {};
-    const known = new Set(candidates.map((c) => c.menuItemId));
-    const out: Record<string, string> = {};
-    for (const [id, reason] of Object.entries(parsed as Record<string, unknown>)) {
-      if (known.has(id) && typeof reason === "string" && reason.trim().length > 0) out[id] = reason.trim();
-    }
-    return out;
-  } catch {
-    return {};
-  }
 }
 
 export async function getBoothHostRecommendations(guest: { storeId: string; outletId: string }, prefs: BoothHostPreferences): Promise<BoothHostResult> {

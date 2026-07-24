@@ -1,4 +1,4 @@
-import { sql, type Database } from "@restrobooth/db";
+import { sql, type Database, type RlsTx } from "@restrobooth/db";
 import type { AIProvider } from "./provider.js";
 import { OpenRouterProvider } from "./openRouterProvider.js";
 import { withTimeout } from "./timeout.js";
@@ -43,7 +43,7 @@ const SUGGESTION_LIMIT = 3;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // Same menu_version gap as booth-host.ts's cache — see that file's comment.
 const MIN_CO_OCCURRENCE = 2; // A single coincidental pairing isn't a pattern — matches the "real signal, not noise" bar the Booth Host's popularity scoring already applies.
 
-interface RankedCandidate {
+export interface RankedCandidate {
   candidateId: string;
   candidateName: string;
   pricePaise: string;
@@ -61,7 +61,7 @@ interface RankedCandidate {
  * market-basket-analysis definition. Never recommends an unavailable
  * (86'd) item — joined through resolve_menu(), same as the Booth Host.
  */
-async function getRankedCandidates(db: Database, storeId: string, cartMenuItemIds: string[], limit: number): Promise<RankedCandidate[]> {
+async function getRankedCandidates(db: Database | RlsTx, storeId: string, cartMenuItemIds: string[], limit: number): Promise<RankedCandidate[]> {
   if (cartMenuItemIds.length === 0) return [];
 
   // sql`${array}::uuid[]` does NOT bind a JS array as a single Postgres
@@ -145,7 +145,7 @@ async function getRankedCandidates(db: Database, storeId: string, cartMenuItemId
   }));
 }
 
-function fallbackReason(c: RankedCandidate): string {
+export function fallbackReason(c: RankedCandidate): string {
   return `Guests who ordered ${c.pairedWithName} loved this too`;
 }
 
@@ -169,7 +169,7 @@ function buildReasonPrompt(candidates: RankedCandidate[]): string {
   return `Write one short, natural upsell line per suggestion id as JSON:\n${lines}`;
 }
 
-function parseReasons(text: string, candidates: RankedCandidate[]): Record<string, string> {
+export function parseReasons(text: string, candidates: RankedCandidate[]): Record<string, string> {
   try {
     const match = /\{[\s\S]*\}/.exec(text);
     if (!match) return {};
@@ -186,8 +186,12 @@ function parseReasons(text: string, candidates: RankedCandidate[]): Record<strin
   }
 }
 
+/** `db` accepts either a top-level `Database` (guest paths, apps/booth's
+ *  cart / apps/captain's order screen) or an `RlsTx` (a staff Console
+ *  action running under RLS, or a caller already inside its own
+ *  transaction — see budgetExhaustion.test.ts). */
 export async function getUpsellSuggestions(
-  db: Database,
+  db: Database | RlsTx,
   target: { storeId: string; outletId: string; cartMenuItemIds: string[] },
 ): Promise<UpsellResult> {
   const candidates = await getRankedCandidates(db, target.storeId, target.cartMenuItemIds, SUGGESTION_LIMIT);
