@@ -21,6 +21,14 @@
   overflow-x: auto;
   padding-bottom: var(--space-1);
   scroll-snap-type: x proximity;
+  /* Hidden native scrollbar — same reasoning as MenuBrowser.module.css's
+     .chipBar. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
 }
 
 .card {
@@ -50,11 +58,14 @@
   flex-grow: 1;
 }
 
+/* Stacked, not side-by-side — a 180px card at booth's padding (32px each
+   side, 116px left for content) doesn't reliably fit a price plus a
+   labeled Add button on one row; the button's text won't shrink below
+   its own content width, so it was pushing past the card's edge. */
 .footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
+  flex-direction: column;
+  gap: 6px;
 }
 
 .price {
@@ -65,6 +76,7 @@
 }
 
 .addButton {
+  width: 100%;
   min-height: var(--touch-target);
   padding: 0 var(--space-2);
   background: var(--enamel-700);

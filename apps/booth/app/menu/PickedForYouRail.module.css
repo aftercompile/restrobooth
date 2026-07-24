@@ -38,6 +38,14 @@
   overflow-x: auto;
   padding-bottom: var(--space-1);
   scroll-snap-type: x proximity;
+  /* Hidden native scrollbar — same reasoning as MenuBrowser.module.css's
+     .chipBar. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
 }
 
 .card {
@@ -68,11 +76,13 @@
   flex-grow: 1;
 }
 
+/* Stacked, not side-by-side — same overflow reasoning as UpsellRail's own
+   .footer: a fixed-width rail card doesn't reliably fit a price beside a
+   labeled Add button, so the button was pushing past the card's edge. */
 .footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
+  flex-direction: column;
+  gap: 6px;
 }
 
 .price {
@@ -83,6 +93,7 @@
 }
 
 .addButton {
+  width: 100%;
   min-height: var(--touch-target);
   padding: 0 var(--space-2);
   background: var(--enamel-700);

@@ -18,6 +18,15 @@
   max-height: 85vh;
   overflow-y: auto;
   box-shadow: 0 -8px 32px rgb(18 32 29 / 20%);
+  /* Hidden native scrollbar — same reasoning as MenuBrowser.module.css's
+     .chipBar (a different app, but the same "native app, not a desktop
+     web page" goal applies to this shared primitive too). */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.panel::-webkit-scrollbar {
+  display: none;
 }
 
 /* The visible bar is 4px, but the pointer-down hit area (padding, not

@@ -53,6 +53,15 @@
   gap: var(--space-1);
   overflow-x: auto;
   padding-bottom: 4px;
+  /* Hidden native scrollbar — same reasoning as MenuBrowser.module.css's
+     .chipBar: a swipeable rail with a visible OS scrollbar reads as a
+     desktop web page, not a native app. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.picksRail::-webkit-scrollbar {
+  display: none;
 }
 
 .pickCard {

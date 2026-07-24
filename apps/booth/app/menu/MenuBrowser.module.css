@@ -15,6 +15,15 @@
   /* A soft bottom edge so cards scrolling underneath don't read as
      clipping through the bar. */
   box-shadow: 0 8px 8px -8px rgb(18 32 29 / 8%);
+  /* A visible OS scrollbar under a swipeable chip row reads as a desktop
+     web page, not the native-feeling app this redesign is going for —
+     scrolling itself is untouched, only the bar's own rendering is hidden. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chipBar::-webkit-scrollbar {
+  display: none;
 }
 
 .list {
